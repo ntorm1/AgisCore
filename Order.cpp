@@ -1,0 +1,43 @@
+#include "pch.h" 
+#include "Order.h"
+#include <mutex>
+
+std::atomic<size_t> Order::order_counter(0);
+
+Order::Order(OrderType order_type_,
+    size_t asset_index_,
+    double units_,
+    size_t strategy_index_,
+    size_t portfolio_index_
+    )
+{   
+    this->order_type = order_type_;
+    this->asset_index = asset_index_;
+    this->units = units_;
+    this->strategy_index = strategy_index_;
+    this->portfolio_index = portfolio_index_;
+
+    this->order_id = order_counter++;
+}
+
+void Order::fill(double avg_price_, long long fill_time)
+{
+    this->avg_price = avg_price_;
+    this->order_fill_time = fill_time;
+    this->order_state = OrderState::FILLED;
+}
+
+void Order::cancel(long long order_cancel_time_)
+{
+    this->order_cancel_time = order_cancel_time_;
+    this->order_state = OrderState::CANCELED;
+}
+
+MarketOrder::MarketOrder(
+    size_t asset_index_, 
+    double units_, 
+    size_t strategy_index_, 
+    size_t portfolio_index_) : 
+    Order(OrderType::MARKET_ORDER, asset_index_, units_, strategy_index_, portfolio_index_)
+{
+}
