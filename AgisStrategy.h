@@ -3,6 +3,7 @@
 
 #include "AgisRouter.h"
 #include "Order.h"
+#include "Portfolio.h"
 
 static std::atomic<size_t> strategy_counter(0);
 

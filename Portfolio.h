@@ -1,54 +1,33 @@
 #pragma once
+#ifdef AGISCORE_EXPORTS
+#define AGIS_API __declspec(dllexport)
+#else
+#define AGIS_API __declspec(dllimport)
+#endif
+
 #include "pch.h"
 #include <atomic>
 
 #include "AgisPointers.h"
+#include "AgisRouter.h"
 #include "Exchange.h"
 #include "Order.h"
-
+#include "Trade.h"
 
 class Portfolio;
-struct Trade;
 struct Position;
 
-typedef std::unique_ptr<Portfolio> PortfolioPtr;
-typedef std::unique_ptr<Position> PositionPtr;
-typedef std::unique_ptr<Trade> TradePtr;
+AGIS_API typedef std::unique_ptr<Portfolio> PortfolioPtr;
+AGIS_API typedef std::unique_ptr<Position> PositionPtr;
 
-
-struct Trade {
-    double units;
-    double average_price;
-    double close_price;
-    double last_price;
-
-    double unrealized_pl;
-    double realized_pl;
-
-    long long trade_open_time;
-    long long trade_close_time;
-    size_t bars_held;
-
-    size_t trade_id;
-    size_t asset_id;
-    size_t strategy_id;
-
-    Trade(OrderPtr const& order);
-
-    void close(OrderPtr const& filled_order);
-    void increase(OrderPtr const& filled_order);
-    void reduce(OrderPtr const& filled_order);
-    void adjust(OrderPtr const& filled_order);;
-
-private:
-    static std::atomic<size_t> trade_counter;
-};
 
 struct Position
 {
     
     size_t position_id;
     size_t asset_id;
+    size_t portfolio_id;
+
 
     double close_price = 0;
     double average_price;
@@ -67,7 +46,7 @@ struct Position
     Position(OrderPtr const& order);
 
     Trade* __get_trade(size_t strategy_index);
-    void __evaluate(double market_price, bool on_close);
+    std::vector<OrderPtr> __evaluate(double market_price, bool on_close);
 
     void close(OrderPtr const& order, std::vector<TradePtr>& trade_history);
     void adjust(OrderPtr const& order, std::vector<TradePtr>& trade_history);
@@ -103,7 +82,7 @@ public:
     /// Evaluate the portfolio using the current exchange map and assets
     /// </summary>
     /// <param name="exchanges">Const ref to a Hydra's exchange map instance</param>
-    void __evaluate(ExchangeMap const& exchanges, bool on_close);
+    void __evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close);
 
     /// <summary>
     /// Get the unique id of the portfolio
@@ -176,7 +155,7 @@ class PortfolioMap
 public:
 	PortfolioMap() = default;
 
-    void __evaluate(ExchangeMap const& exchanges, bool on_close);
+    void __evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close);
     void __clear() { this->portfolios.clear(); }
 	void __on_order_fill(OrderPtr const& order);
     void __register_portfolio(PortfolioPtr portfolio);

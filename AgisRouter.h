@@ -9,7 +9,8 @@
 
 #include "Order.h"
 #include "Exchange.h"
-#include "Portfolio.h"
+
+class PortfolioMap;
 
 
 class AgisRouter {
@@ -28,33 +29,14 @@ private:
     /// <summary>
     /// Reference to an exsiting portfolio map that handles filled orders
     /// </summary>
-    PortfolioMap& portfolios;
+    PortfolioMap* portfolios;
 
     std::vector<OrderPtr> order_history;
 
-
-
-    void processOrder(OrderPtr order) {
-        if (!order) { return; }
-        switch (order->get_order_state())
-        {
-        case OrderState::PENDING:
-            this->exchanges.__place_order(std::move(order));
-            return;
-        case OrderState::FILLED:
-            this->portfolios.__on_order_fill(order);
-            break;
-        default:
-            break;
-        }
-
-        LOCK_GUARD
-        this->order_history.push_back(std::move(order));
-        UNLOCK_GUARD
-    }
+    void processOrder(OrderPtr order);
 
 public:
-    AgisRouter(ExchangeMap& exchanges_, PortfolioMap& portfolios_) :
+    AgisRouter(ExchangeMap& exchanges_, PortfolioMap* portfolios_) :
         exchanges(exchanges_),
         portfolios(portfolios_)
     {}

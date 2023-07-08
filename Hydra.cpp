@@ -10,7 +10,7 @@
 Hydra::Hydra(int logging_):
     router(
         this->exchanges,
-        this->portfolios)
+        &this->portfolios)
 {
     this->logging = logging_;
 }
@@ -33,7 +33,7 @@ void Hydra::__step()
     this->router.__process();
 
     // evaluate the portfolios on close
-    this->portfolios.__evaluate(this->exchanges, true);
+    this->portfolios.__evaluate(this->router, this->exchanges, true);
 }
 
 //============================================================================

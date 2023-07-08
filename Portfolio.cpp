@@ -1,74 +1,18 @@
 #include "pch.h"
 #include <tbb/parallel_for_each.h>
+#include <algorithm>
 
 #include "Portfolio.h"
 
-std::atomic<size_t> Trade::trade_counter(0);
 std::atomic<size_t> Position::position_counter(0);
 std::atomic<size_t> Portfolio::portfolio_counter(0);
 
-
-Trade::Trade(OrderPtr const& filled_order)
-{
-    this->asset_id = filled_order->get_asset_index();
-    this->strategy_id = filled_order->get_strategy_index();
-
-    // set the trade member variables
-    this->units = filled_order->get_units();
-    this->average_price = filled_order->get_average_price();
-    this->unrealized_pl = 0;
-    this->realized_pl = 0;
-    this->close_price = 0;
-    this->last_price = filled_order->get_average_price();
-
-    // set the times
-    this->trade_close_time = 0;
-    this->trade_open_time = filled_order->get_fill_time();
-    this->trade_id = trade_counter++;
-}
-
-
-void Trade::close(OrderPtr const& filled_order)
-{
-    this->close_price = filled_order->get_average_price();
-    this->trade_close_time = filled_order->get_fill_time();
-    this->realized_pl += this->units * (this->close_price - this->average_price);
-    this->unrealized_pl = 0;
-}
-
-void Trade::increase(OrderPtr const& filled_order)
-{
-    auto units_ = filled_order->get_units();
-    auto p = filled_order->get_average_price();
-    double new_units = abs(this->units) + abs(units_);
-    this->average_price = ((abs(this->units) * this->average_price) + (abs(units_) * p)) / new_units;
-    this->units += units_;
-}
-void Trade::reduce(OrderPtr const& filled_order)
-{
-    auto units_ = filled_order->get_units();
-    this->realized_pl += abs(units_) * (filled_order->get_average_price() - this->average_price);
-    this->units += units_;
-}
-
-void Trade::adjust(OrderPtr const& filled_order)
-{
-    // extract order information
-    auto units_ = filled_order->get_units();
-    if (units_ * this->units > 0)
-    {
-        this->increase(filled_order);
-    }
-    else
-    {
-        this->reduce(filled_order);
-    }
-}
 
 Position::Position(OrderPtr const& filled_order_)
 {
     //populate common position values
     this->asset_id = filled_order_->get_asset_index();
+    this->portfolio_id = filled_order_->get_portfolio_index();
     this->units = filled_order_->get_units();
 
     // populate order values
@@ -96,20 +40,31 @@ Trade* Position::__get_trade(size_t strategy_index)
     return nullptr;
 }
 
-void Position::__evaluate(double market_price, bool on_close)
+std::vector<OrderPtr> Position::__evaluate(double market_price, bool on_close)
 {
     this->last_price = market_price;
     this->unrealized_pl = this->units * (market_price - this->average_price);
     this->nlv = gmp_mult(market_price, this->units);
     if (on_close) { this->bars_held++; }
 
+    std::vector<OrderPtr> orders;
     for (auto& trade_pair : this->trades) 
     {
         auto& trade = trade_pair.second;
         trade->last_price = market_price;
         trade->unrealized_pl = trade->units * (market_price - trade->average_price);
         if (on_close) { trade->bars_held++; }
+
+        // test trade exit
+        if (!trade->exit.has_value()) { continue; }
+        auto& trade_exit = trade->exit.value();
+        if (trade_exit->exit())
+        {
+            auto order = trade->generate_trade_inverse();
+            orders.push_back(std::move(order));
+        }
     }
+    return orders;
 }
 
 void Position::close(OrderPtr const& order, std::vector<TradePtr>& trade_history)
@@ -174,11 +129,11 @@ void Position::adjust(OrderPtr const& order, std::vector<TradePtr>& trade_histor
 }
 
 
-void PortfolioMap::__evaluate(ExchangeMap const& exchanges, bool on_close)
+void PortfolioMap::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close)
 {
     // Define a lambda function that calls next for each strategy
     auto portfolio_evaluate = [&](auto& portfolio) {
-        portfolio.second->__evaluate(exchanges, on_close);
+        portfolio.second->__evaluate(router, exchanges, on_close);
     };
 
     tbb::parallel_for_each(
@@ -243,12 +198,13 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
     UNLOCK_GUARD
 }
 
-void Portfolio::__evaluate(ExchangeMap const& exchanges, bool on_close)
+void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close)
 {
     this->nlv = this->cash;
     this->unrealized_pl = 0;
     for (auto it = this->positions.begin(); it != positions.end(); ++it)
     {
+        // attempt to get the current market price of the underlying asset of the position
         auto& position = it->second;
         auto market_price = exchanges.__get_market_price(position->asset_id, on_close);
         if(market_price == 0.0)
@@ -256,7 +212,18 @@ void Portfolio::__evaluate(ExchangeMap const& exchanges, bool on_close)
             continue;
         }
         
-        position->__evaluate(market_price, on_close);
+        // evaluate the indivual positions and allow for any orders that are generated
+        // as a result of the new valuation
+        auto orders = position->__evaluate(market_price, on_close);
+        if (orders.size())
+        {
+            for (int i = 0; i < orders.size(); i++) {
+                OrderPtr order = std::move(orders.back());
+                orders.pop_back();
+                router.place_order(std::move(order));
+;            }
+        }
+
         gmp_add_assign(this->nlv, position->nlv);
         this->unrealized_pl += position->unrealized_pl;
     }
