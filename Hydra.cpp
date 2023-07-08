@@ -15,26 +15,24 @@ Hydra::Hydra(int logging_):
     this->logging = logging_;
 }
 
-void Hydra::step()
+void Hydra::__step()
 {
     // step assets and exchanges forward in time
     this->exchanges.step();
 
     // begin listening for orders
-    this->router.__start_listening(NUM_THREADS);
     
     // process orders on the open exchange and route to their portfolios on fill
     this->exchanges.__process_orders(this->router, false);
+    this->router.__process();
     
     // process strategy logic at end of each time step
     this->strategies.__next();
+    this->router.__process();
 
     // process orders on the exchange and route to their portfolios on fill
     this->exchanges.__process_orders(this->router, true);
-    
-    // stop listening for order routing
-    this->router.__stop_listening();
-
+    this->router.__process();
 }
 
 //============================================================================
@@ -59,10 +57,16 @@ AGIS_API void Hydra::new_portfolio(std::string id, double cash)
 //============================================================================
 AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
 {
-    strategy->__build(&this->router, &this->portfolios, &this->exchanges);
+    strategy->__build(&this->router, &this->exchanges);
     this->strategies.register_strategy(std::move(strategy));
 }
 
+
+//============================================================================
+AGIS_API PortfolioPtr const& Hydra::get_portfolio(std::string const& portfolio_id)
+{
+    return this->portfolios.__get_portfolio(portfolio_id);
+}
 
 //============================================================================
 NexusStatusCode Hydra::remove_exchange(std::string exchange_id_)

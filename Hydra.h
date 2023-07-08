@@ -27,9 +27,6 @@ extern "C" {
 class Hydra
 {
 private:
-	
-	void step();
-
 	/// <summary>
 	/// Container holding all exchange objects that are currently registered
 	/// </summary>
@@ -61,6 +58,9 @@ public:
 	AGIS_API void build();
 	AGIS_API void save_state(json& j);
 
+	AGIS_API void __step();
+
+
 	/// <summary>
 	/// Build a new exchange on the hydra instance
 	/// </summary>
@@ -85,9 +85,10 @@ public:
 	AGIS_API void new_portfolio(std::string id, double cash);
 
 	/// <summary>
-	/// Register a new strategy to the hydra instance 
+	/// Register new strategy to hydra instance
 	/// </summary>
-	/// <param name="strategy">an unique pointer to AgisStrategy object</param>
+	/// <param name="strategy">Unique pointer to a AgisStrategy</param>
+	/// <param name="portfolio_id">portfolio id of the strategy</param>
 	/// <returns></returns>
 	AGIS_API void register_strategy(std::unique_ptr<AgisStrategy> strategy);
 
@@ -103,6 +104,13 @@ public:
 	/// <returns></returns>
 	AGIS_API PortfolioMap const& get_portfolios() { return this->portfolios; }
 	
+	/// <summary>
+	/// Get const ref to a portfolio registered to the hydra instance
+	/// </summary>
+	/// <param name="portfolio_id">unique id of the portfolio to get</param>
+	/// <returns></returns>
+	AGIS_API PortfolioPtr const& get_portfolio(std::string const& portfolio_id);
+
 	AGIS_API std::vector<OrderPtr> const& get_order_history() { return this->router.get_order_history(); }
 
 	/// <summary>

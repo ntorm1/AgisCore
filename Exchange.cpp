@@ -245,6 +245,7 @@ void Exchange::__place_order(std::unique_ptr<Order> order)
 	LOCK_GUARD;
 	order->set_order_create_time(this->exchange_time);
 	this->orders.push_back(std::move(order));
+	UNLOCK_GUARD
 }
 
 void Exchange::__process_orders(AgisRouter& router, bool on_close)
@@ -275,6 +276,7 @@ void Exchange::__process_orders(AgisRouter& router, bool on_close)
 		}
 		i++;
 	}
+	UNLOCK_GUARD
 }
 
 void Exchange::__process_market_order(std::unique_ptr<Order>& order, bool on_close)
@@ -376,6 +378,11 @@ std::optional<std::shared_ptr<Asset> const> ExchangeMap::get_asset(std::string c
 #endif
 	auto index = this->asset_map.at(asset_id);
 	return this->assets[index];
+}
+
+AGIS_API ExchangePtr const ExchangeMap::get_exchange(std::string exchange_id_)
+{
+	return this->exchanges.at(exchange_id_);
 }
 
 bool ExchangeMap::asset_exists(std::string const&  asset_id) const

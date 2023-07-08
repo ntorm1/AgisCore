@@ -9,7 +9,7 @@
 #include <atomic>
 
 class Order;
-typedef std::unique_ptr<Order> OrderPtr;
+AGIS_API typedef std::unique_ptr<Order> OrderPtr;
 
 using namespace std;
 

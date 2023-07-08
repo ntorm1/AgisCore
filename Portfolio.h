@@ -163,6 +163,7 @@ public:
     void __clear() { this->portfolios.clear(); }
 	void __on_order_fill(OrderPtr const& order);
     void __register_portfolio(PortfolioPtr portfolio);
+    PortfolioPtr const& __get_portfolio(std::string const& id);
 
 private:
 	std::unordered_map<size_t, PortfolioPtr> portfolios;

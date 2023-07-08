@@ -11,11 +11,16 @@ Order::Order(OrderType order_type_,
     size_t portfolio_index_
     )
 {   
+    this->order_state = OrderState::PENDING;
     this->order_type = order_type_;
     this->asset_index = asset_index_;
     this->units = units_;
     this->strategy_index = strategy_index_;
     this->portfolio_index = portfolio_index_;
+
+    this->avg_price = 0.0;
+    this->order_cancel_time = 0;
+    this->order_fill_time = 0;
 
     this->order_id = order_counter++;
 }

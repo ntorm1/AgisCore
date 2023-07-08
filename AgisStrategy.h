@@ -4,12 +4,13 @@
 #include "AgisRouter.h"
 #include "Order.h"
 
+static std::atomic<size_t> strategy_counter(0);
 
 class AgisStrategy
 {
 public:
 	
-	AgisStrategy() {
+	AgisStrategy(PortfolioPtr const& portfolio_): portfolio(portfolio_) {
 		this->strategy_index = strategy_counter++;
 		this->router = nullptr;
 	}
@@ -25,24 +26,24 @@ public:
 	/// <param name="router_"></param>
 	/// <param name="portfolo_map"></param>
 	/// <param name="exchange_map"></param>
-	void __build(AgisRouter* router_, PortfolioMap* portfolo_map, ExchangeMap* exchange_map);
+	void __build(AgisRouter* router_, ExchangeMap* exchange_map);
 
-	/// <summary>
-	/// Get the unique index of the strategy
-	/// </summary>
-	/// <returns></returns>
+
 	size_t get_strategy_index() { return this->strategy_index; }
+	size_t get_portfolio_index() { return this->portfolio->__get_index(); }
 
 protected:
-
-	void place_market_order(
+	void AGIS_API place_market_order(
 		size_t asset_index,
-		double units,
-		size_t portfilio_index
+		double units
+	);
+	void AGIS_API place_market_order(
+		std::string asset_id,
+		double units
 	);
 
 private:
-	static std::atomic<size_t> strategy_counter;
+	
 
 	/// <summary>
 	/// Pointer to the Agis order router
@@ -52,7 +53,7 @@ private:
 	/// <summary>
 	/// Pointer to the main portfolio map object
 	/// </summary>
-	PortfolioMap* portfolo_map = nullptr;
+	PortfolioPtr const& portfolio;
 	
 	/// <summary>
 	/// Pointer to the main exchange map object

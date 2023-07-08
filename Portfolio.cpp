@@ -169,6 +169,12 @@ void PortfolioMap::__register_portfolio(PortfolioPtr portfolio)
     this->portfolios.emplace(portfolio->__get_index(), std::move(portfolio));
 }
 
+PortfolioPtr const& PortfolioMap::__get_portfolio(std::string const& id)
+{
+    auto portfolio_index = this->portfolio_map.at(id);
+    return this->portfolios.at(portfolio_index);
+}
+
 Portfolio::Portfolio(std::string portfolio_id_, double cash_)
 {
     this->portfolio_id = portfolio_id_;
@@ -200,6 +206,7 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
     // adjust account levels
     auto amount = gmp_mult(order->get_units(), order->get_average_price());
     gmp_sub_assign(this->cash, amount);
+    UNLOCK_GUARD
 }
 
 void Portfolio::open_position(OrderPtr const& order)

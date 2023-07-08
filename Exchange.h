@@ -22,6 +22,7 @@ class ExchangeMap;
 class AgisRouter;
 
 AGIS_API typedef std::unordered_map<std::string, std::shared_ptr<Exchange>> Exchanges;
+AGIS_API typedef std::shared_ptr<Exchange> ExchangePtr;
 
 class  Exchange
 {
@@ -149,6 +150,15 @@ public:
 	/// <returns>shared pointer to asset if it is found</returns>
 	AGIS_API std::optional<std::shared_ptr<Asset> const> get_asset(std::string const& asset_id) const;
 	
+	AGIS_API size_t get_asset_index(std::string const& id) { return this->asset_map.at(id); }
+	
+	/// <summary>
+	/// Get a shared pointer to an existing exchange
+	/// </summary>
+	/// <param name="exchange_id">Unique id of the exchange to get</param>
+	/// <returns></returns>
+	AGIS_API ExchangePtr const get_exchange(std::string exchange_id);
+	
 	/// <summary>
 	/// Does a asset with this id exist already
 	/// </summary>
@@ -174,7 +184,7 @@ public:
 
 private:
 	std::mutex _mutex;
-	std::unordered_map<std::string, std::shared_ptr<Exchange>> exchanges;
+	std::unordered_map<std::string, ExchangePtr> exchanges;
 	std::unordered_map<std::string, size_t> asset_map;
 	std::vector<std::shared_ptr<Asset>> assets;
 

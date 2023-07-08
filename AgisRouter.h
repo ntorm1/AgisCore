@@ -1,8 +1,10 @@
 #pragma once
 
 #include <tbb/concurrent_queue.h>
+#include <tbb/parallel_for_each.h>
 #include <memory>
 #include <thread>
+#include <mutex>
 #include <atomic>
 
 #include "Order.h"
@@ -16,6 +18,7 @@ private:
 
     std::vector<std::thread> listenerThreads_;
     std::atomic<bool> stopListening_;
+    std::mutex _mutex;
     
     /// <summary>
     /// Reference to an exsiting exchange map that handles new orders
@@ -32,6 +35,7 @@ private:
 
 
     void processOrder(OrderPtr order) {
+        if (!order) { return; }
         switch (order->get_order_state())
         {
         case OrderState::PENDING:
@@ -43,7 +47,10 @@ private:
         default:
             break;
         }
+
+        LOCK_GUARD
         this->order_history.push_back(std::move(order));
+        UNLOCK_GUARD
     }
 
 public:
@@ -56,32 +63,16 @@ public:
         channel.push(std::move(order));
     }
 
-    void __start_listening(int thread_num) {
-        for (int i = 0; i < thread_num; ++i) {
-            listenerThreads_.emplace_back([this]() {
-                while (!stopListening_) {
-                    OrderPtr order;
-                    if (channel.try_pop(order)) {
-                        processOrder(std::move(order));
-                    }
-                    else {
-                        std::this_thread::yield(); // Allow other threads to run
-                    }
-                }
-                });
-        }
-    }
-
-    void __stop_listening() {
-        stopListening_ = true;
-
-        for (auto& thread : listenerThreads_) {
-            if (thread.joinable()) {
-                thread.join();
+    void __process() {
+        tbb::parallel_for_each(
+            this->channel.unsafe_begin(),
+            this->channel.unsafe_end(),
+            [this](OrderPtr& order) {
+                processOrder(std::move(order));
             }
-        }
-        listenerThreads_.clear();
+        );
     }
+
 
     std::vector<OrderPtr> const& get_order_history() { return this->order_history; }
 };

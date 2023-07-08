@@ -4,33 +4,31 @@
 
 #include "AgisStrategy.h"
 
-std::atomic<size_t> AgisStrategy::strategy_counter(0);
-
-
-
-
 void AgisStrategy::__build(
 	AgisRouter* router_,
-	PortfolioMap* portfolo_map,
 	ExchangeMap* exchange_map
 )
 {
 	this->router = router_;
-	this->portfolo_map = portfolo_map;
 	this->exchange_map = exchange_map;
 }
 
 void AgisStrategy::place_market_order(
 	size_t asset_index_,
-	double units_,
-	size_t portfilio_index)
+	double units_)
 {
 	this->router->place_order(std::make_unique<MarketOrder>(
 		asset_index_,
 		units_,
 		this->strategy_index,
-		portfilio_index
+		this->get_portfolio_index()
 	));
+}
+
+void AgisStrategy::place_market_order(std::string asset_id, double units)
+{
+	auto asset_index = this->exchange_map->get_asset_index(asset_id);
+	return this->place_market_order(asset_index, units);
 }
 
 
