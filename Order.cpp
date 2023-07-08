@@ -38,6 +38,12 @@ void Order::cancel(long long order_cancel_time_)
     this->order_state = OrderState::CANCELED;
 }
 
+void Order::reject(long long reject_time)
+{
+    this->order_cancel_time = reject_time;
+    this->order_state = OrderState::REJECTED;
+}
+
 MarketOrder::MarketOrder(
     size_t asset_index_, 
     double units_, 

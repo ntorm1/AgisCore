@@ -122,6 +122,7 @@ public:
 
     virtual void fill(double market_price, long long fill_time);
     virtual void cancel(long long cancel_time);
+    virtual void reject(long long reject_time);
 
 };
 

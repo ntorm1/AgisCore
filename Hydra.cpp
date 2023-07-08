@@ -19,8 +19,6 @@ void Hydra::__step()
 {
     // step assets and exchanges forward in time
     this->exchanges.step();
-
-    // begin listening for orders
     
     // process orders on the open exchange and route to their portfolios on fill
     this->exchanges.__process_orders(this->router, false);
@@ -33,6 +31,9 @@ void Hydra::__step()
     // process orders on the exchange and route to their portfolios on fill
     this->exchanges.__process_orders(this->router, true);
     this->router.__process();
+
+    // evaluate the portfolios on close
+    this->portfolios.__evaluate(this->exchanges, true);
 }
 
 //============================================================================

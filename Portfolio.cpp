@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <tbb/parallel_for_each.h>
 
 #include "Portfolio.h"
 
@@ -19,7 +20,6 @@ Trade::Trade(OrderPtr const& filled_order)
     this->realized_pl = 0;
     this->close_price = 0;
     this->last_price = filled_order->get_average_price();
-    this->nlv = this->units * this->average_price;
 
     // set the times
     this->trade_close_time = 0;
@@ -96,6 +96,22 @@ Trade* Position::__get_trade(size_t strategy_index)
     return nullptr;
 }
 
+void Position::__evaluate(double market_price, bool on_close)
+{
+    this->last_price = market_price;
+    this->unrealized_pl = this->units * (market_price - this->average_price);
+    this->nlv = gmp_mult(market_price, this->units);
+    if (on_close) { this->bars_held++; }
+
+    for (auto& trade_pair : this->trades) 
+    {
+        auto& trade = trade_pair.second;
+        trade->last_price = market_price;
+        trade->unrealized_pl = trade->units * (market_price - trade->average_price);
+        if (on_close) { trade->bars_held++; }
+    }
+}
+
 void Position::close(OrderPtr const& order, std::vector<TradePtr>& trade_history)
 {
     // close the position
@@ -157,6 +173,23 @@ void Position::adjust(OrderPtr const& order, std::vector<TradePtr>& trade_histor
     }
 }
 
+
+void PortfolioMap::__evaluate(ExchangeMap const& exchanges, bool on_close)
+{
+    // Define a lambda function that calls next for each strategy
+    auto portfolio_evaluate = [&](auto& portfolio) {
+        portfolio.second->__evaluate(exchanges, on_close);
+    };
+
+    tbb::parallel_for_each(
+        this->portfolios.begin(),
+        this->portfolios.end(),
+        portfolio_evaluate
+    );
+}
+
+
+
 void PortfolioMap::__on_order_fill(OrderPtr const& order)
 {
     auto& portfolio = this->portfolios[order->get_portfolio_index()];
@@ -179,6 +212,7 @@ Portfolio::Portfolio(std::string portfolio_id_, double cash_)
 {
     this->portfolio_id = portfolio_id_;
     this->cash = cash_;
+    this->nlv = cash_;
     this->portfolio_index = portfolio_counter++;
 }
 
@@ -207,6 +241,25 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
     auto amount = gmp_mult(order->get_units(), order->get_average_price());
     gmp_sub_assign(this->cash, amount);
     UNLOCK_GUARD
+}
+
+void Portfolio::__evaluate(ExchangeMap const& exchanges, bool on_close)
+{
+    this->nlv = this->cash;
+    this->unrealized_pl = 0;
+    for (auto it = this->positions.begin(); it != positions.end(); ++it)
+    {
+        auto& position = it->second;
+        auto market_price = exchanges.__get_market_price(position->asset_id, on_close);
+        if(market_price == 0.0)
+        {
+            continue;
+        }
+        
+        position->__evaluate(market_price, on_close);
+        gmp_add_assign(this->nlv, position->nlv);
+        this->unrealized_pl += position->unrealized_pl;
+    }
 }
 
 void Portfolio::open_position(OrderPtr const& order)

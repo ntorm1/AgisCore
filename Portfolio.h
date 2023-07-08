@@ -3,6 +3,7 @@
 #include <atomic>
 
 #include "AgisPointers.h"
+#include "Exchange.h"
 #include "Order.h"
 
 
@@ -23,7 +24,6 @@ struct Trade {
 
     double unrealized_pl;
     double realized_pl;
-    double nlv;
 
     long long trade_open_time;
     long long trade_close_time;
@@ -67,6 +67,7 @@ struct Position
     Position(OrderPtr const& order);
 
     Trade* __get_trade(size_t strategy_index);
+    void __evaluate(double market_price, bool on_close);
 
     void close(OrderPtr const& order, std::vector<TradePtr>& trade_history);
     void adjust(OrderPtr const& order, std::vector<TradePtr>& trade_history);
@@ -97,7 +98,12 @@ public:
     /// </summary>
     /// <returns></returns>
     size_t __get_index()const { return this->portfolio_index; }
-    
+
+    /// <summary>
+    /// Evaluate the portfolio using the current exchange map and assets
+    /// </summary>
+    /// <param name="exchanges">Const ref to a Hydra's exchange map instance</param>
+    void __evaluate(ExchangeMap const& exchanges, bool on_close);
 
     /// <summary>
     /// Get the unique id of the portfolio
@@ -105,8 +111,16 @@ public:
     /// <returns></returns>
     std::string __get_portfolio_id()const { return this->portfolio_id; }
 
-
+    /// <summary>
+    /// Does a position exist in the portfolio with a given asset index
+    /// </summary>
+    /// <param name="asset_index">unique asset index to search for</param>
+    /// <returns></returns>
     bool position_exists(size_t asset_index) { return positions.contains(asset_index); }
+
+    double get_cash() const { return this->cash; }
+    double get_nlv() const { return this->nlv; }
+
 
 private:
 	/// <summary>
@@ -143,6 +157,8 @@ private:
 
 
     double cash;
+    double nlv;
+    double unrealized_pl = 0;
 
     /// <summary>
     /// Map between asset index and a position
@@ -160,6 +176,7 @@ class PortfolioMap
 public:
 	PortfolioMap() = default;
 
+    void __evaluate(ExchangeMap const& exchanges, bool on_close);
     void __clear() { this->portfolios.clear(); }
 	void __on_order_fill(OrderPtr const& order);
     void __register_portfolio(PortfolioPtr portfolio);

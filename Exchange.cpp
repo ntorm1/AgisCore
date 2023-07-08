@@ -1,6 +1,6 @@
 #include "pch.h" 
 #include <execution>
-#include <mutex>
+#include <tbb/parallel_for_each.h>
 
 #include "utils_array.h"
 #include "Exchange.h"
@@ -252,8 +252,19 @@ void Exchange::__process_orders(AgisRouter& router, bool on_close)
 {
 	LOCK_GUARD
 	size_t i = 0;
-	for (auto& order : this->orders)
+	for (auto orderIter = this->orders.begin(); orderIter != this->orders.end(); )
 	{
+		auto& order = *orderIter;
+
+		// make sure it is a valid order
+		if (!this->assets[order->get_asset_index()])
+		{
+			order->reject(this->exchange_time);
+			router.place_order(std::move(*orderIter));
+			orderIter = this->orders.erase(orderIter);
+			continue;
+		}
+
 		switch (order->get_order_type())
 		{
 			case OrderType::MARKET_ORDER:
@@ -271,10 +282,13 @@ void Exchange::__process_orders(AgisRouter& router, bool on_close)
 
 		if (order->is_filled())
 		{
-			auto order = unsorted_unique_ptr_remove(this->orders, i);
-			router.place_order(std::move(order));
+			router.place_order(std::move(*orderIter));
+			orderIter = this->orders.erase(orderIter);
 		}
-		i++;
+		else
+		{
+			++orderIter;
+		}
 	}
 	UNLOCK_GUARD
 }
@@ -487,10 +501,15 @@ void ExchangeMap::__set_asset(size_t asset_index, std::shared_ptr<Asset> asset)
 
 void ExchangeMap::__process_orders(AgisRouter& router, bool on_close)
 {
-	for (auto& exchange : this->exchanges)
-	{
+	auto exchange_process = [&](auto& exchange) {
 		exchange.second->__process_orders(router, on_close);
-	}
+	};
+
+	tbb::parallel_for_each(
+		this->exchanges.begin(),
+		this->exchanges.end(),
+		exchange_process
+	);
 }
 
 void ExchangeMap::__place_order(std::unique_ptr<Order> order)
