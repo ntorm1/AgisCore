@@ -37,6 +37,7 @@ void Hydra::__step()
     this->router.__process();
 }
 
+
 //============================================================================
 NexusStatusCode Hydra::new_exchange(
     std::string exchange_id_,
@@ -71,7 +72,7 @@ AGIS_API PortfolioPtr const& Hydra::get_portfolio(std::string const& portfolio_i
 }
 
 //============================================================================
-NexusStatusCode Hydra::remove_exchange(std::string exchange_id_)
+AGIS_API NexusStatusCode Hydra::remove_exchange(std::string exchange_id_)
 {
     return this->exchanges.remove_exchange(exchange_id_);
 }
@@ -110,6 +111,15 @@ void Hydra::clear()
 AGIS_API void Hydra::build()
 {
     this->exchanges.build();
+}
+
+
+//============================================================================
+AGIS_API void Hydra::reset()
+{
+    this->exchanges.__reset();
+    this->portfolios.__reset();
+    this->router.__reset();
 }
 
 

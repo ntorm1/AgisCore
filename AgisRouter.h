@@ -45,6 +45,10 @@ public:
         channel.push(std::move(order));
     }
 
+    void __reset() {
+        this->channel.clear();
+    }
+
     void __process() {
         if (this->channel.unsafe_size() == 0) { return; }
         tbb::parallel_for_each(

@@ -115,6 +115,7 @@ public:
     AGIS_API std::vector<PositionPtr> const& get_position_history() { return this->position_history; }
     AGIS_API std::vector<TradePtr> const& get_trade_history() { return this->trade_history; }
 
+    void __reset();
 
 
 private:
@@ -152,6 +153,7 @@ private:
 
 
     double cash;
+    double starting_cash;
     double nlv;
     double unrealized_pl = 0;
 
@@ -163,6 +165,8 @@ private:
 
     std::vector<PositionPtr> position_history;
     std::vector<TradePtr> trade_history;
+    std::vector<double> nlv_history;
+    std::vector<double> cash_history;
 
 };
 
@@ -173,6 +177,7 @@ public:
 
     void __evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close);
     void __clear() { this->portfolios.clear(); }
+    void __reset();
 	void __on_order_fill(OrderPtr const& order);
     void __register_portfolio(PortfolioPtr portfolio);
     PortfolioPtr const& __get_portfolio(std::string const& id);

@@ -8,6 +8,7 @@ std::atomic<size_t> Position::position_counter(0);
 std::atomic<size_t> Portfolio::portfolio_counter(0);
 
 
+//============================================================================
 Position::Position(OrderPtr const& filled_order_)
 {
     //populate common position values
@@ -30,6 +31,8 @@ Position::Position(OrderPtr const& filled_order_)
 
 }
 
+
+//============================================================================
 Trade* Position::__get_trade(size_t strategy_index)
 {
     auto it = this->trades.find(strategy_index);
@@ -40,6 +43,8 @@ Trade* Position::__get_trade(size_t strategy_index)
     return nullptr;
 }
 
+
+//============================================================================
 void Position::__evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close)
 {
     this->last_price = market_price;
@@ -68,6 +73,8 @@ void Position::__evaluate(ThreadSafeVector<OrderPtr>& orders, double market_pric
     }
 }
 
+
+//============================================================================
 void Position::close(OrderPtr const& order, std::vector<TradePtr>& trade_history)
 {
     // close the position
@@ -87,6 +94,8 @@ void Position::close(OrderPtr const& order, std::vector<TradePtr>& trade_history
     }
 }
 
+
+//============================================================================
 void Position::adjust(OrderPtr const& order, std::vector<TradePtr>& trade_history)
 {
     auto units_ = order->get_units();
@@ -131,6 +140,8 @@ void Position::adjust(OrderPtr const& order, std::vector<TradePtr>& trade_histor
 }
 
 
+
+//============================================================================
 void PortfolioMap::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close)
 {
     // Define a lambda function that calls next for each strategy
@@ -146,33 +157,52 @@ void PortfolioMap::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, 
 }
 
 
+//============================================================================
+void PortfolioMap::__reset()
+{
+    for(auto& portfolio_pair : this->portfolios)
+    {
+        auto& portfolio = portfolio_pair.second;
+        portfolio->__reset();
+    }
+}
 
+//============================================================================
 void PortfolioMap::__on_order_fill(OrderPtr const& order)
 {
     auto& portfolio = this->portfolios[order->get_portfolio_index()];
     portfolio->__on_order_fill(order);
 }
 
+
+//============================================================================
 void PortfolioMap::__register_portfolio(PortfolioPtr portfolio)
 {
     this->portfolio_map.emplace(portfolio->__get_portfolio_id(), portfolio->__get_index());
     this->portfolios.emplace(portfolio->__get_index(), std::move(portfolio));
 }
 
+
+//============================================================================
 PortfolioPtr const& PortfolioMap::__get_portfolio(std::string const& id)
 {
     auto portfolio_index = this->portfolio_map.at(id);
     return this->portfolios.at(portfolio_index);
 }
 
+
+//============================================================================
 Portfolio::Portfolio(std::string portfolio_id_, double cash_)
 {
     this->portfolio_id = portfolio_id_;
     this->cash = cash_;
+    this->starting_cash = cash_;
     this->nlv = cash_;
     this->portfolio_index = portfolio_counter++;
 }
 
+
+//============================================================================
 void Portfolio::__on_order_fill(OrderPtr const& order)
 {
     LOCK_GUARD
@@ -200,6 +230,8 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
     UNLOCK_GUARD
 }
 
+
+//============================================================================
 void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close)
 {
     this->nlv = this->cash;
@@ -228,9 +260,12 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
             router.place_order(std::move(order.value()));
         }
     }
-
+    this->nlv_history.push_back(this->nlv);
+    this->cash_history.push_back(this->nlv);
 }
 
+
+//============================================================================
 std::optional<PositionRef> Portfolio::get_position(size_t asset_index) const
 {
     if (this->positions.contains(asset_index))
@@ -243,6 +278,23 @@ std::optional<PositionRef> Portfolio::get_position(size_t asset_index) const
     }
 }
 
+
+//============================================================================
+void Portfolio::__reset()
+{
+    this->nlv = this->starting_cash;
+    this->cash = this->starting_cash;
+    this->positions.clear();
+    this->unrealized_pl = 0;
+
+    this->position_history.clear();
+    this->trade_history.clear();
+    this->nlv_history.clear();
+    this->cash_history.clear();
+}
+
+
+//============================================================================
 void Portfolio::open_position(OrderPtr const& order)
 {
     this->positions.emplace(
@@ -251,12 +303,16 @@ void Portfolio::open_position(OrderPtr const& order)
     );
 }
 
+
+//============================================================================
 void Portfolio::modify_position(OrderPtr const& order)
 {
     auto& position = this->__get_position(order->get_asset_index());
     position->adjust(order, trade_history);
 }
 
+
+//============================================================================
 void Portfolio::close_position(OrderPtr const& order)
 {
     // close the position obj

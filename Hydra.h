@@ -56,6 +56,7 @@ public:
 	AGIS_API void restore(json const& j);
 	AGIS_API void clear();
 	AGIS_API void build();
+	AGIS_API void reset();
 	AGIS_API void save_state(json& j);
 
 	AGIS_API void __step();
