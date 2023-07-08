@@ -148,6 +148,34 @@ private:
 
 
 template<typename T>
+class ThreadSafeVector {
+public:
+    void push_back(T element) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        vector_.push_back(std::move(element));
+    }
+
+    size_t size() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return vector_.size();
+    }
+    
+    std::optional<T> pop_back() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!vector_.empty()) {
+            T element = std::move(vector_.back());
+            vector_.pop_back();
+            return std::move(element);
+        }
+        return std::nullopt;
+    }
+
+private:
+    std::vector<T> vector_;
+    mutable std::mutex mutex_;
+};
+
+template<typename T>
 class AGIS_API AgisMatrix {
 public:
     // Constructor

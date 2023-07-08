@@ -265,20 +265,7 @@ void Exchange::__process_orders(AgisRouter& router, bool on_close)
 			continue;
 		}
 
-		switch (order->get_order_type())
-		{
-			case OrderType::MARKET_ORDER:
-				this->__process_market_order(order, on_close);
-				break;
-			case OrderType::LIMIT_ORDER:
-				break;
-			case OrderType::STOP_LOSS_ORDER:
-				break;
-			case OrderType::TAKE_PROFIT_ORDER:
-				break;
-			default:
-				break;
-		}
+		this->__process_order(on_close, order);
 
 		if (order->is_filled())
 		{
@@ -291,6 +278,24 @@ void Exchange::__process_orders(AgisRouter& router, bool on_close)
 		}
 	}
 	UNLOCK_GUARD
+}
+
+void Exchange::__process_order(bool on_close, OrderPtr& order) {
+	// make sure it is a valid order
+	switch (order->get_order_type())
+	{
+	case OrderType::MARKET_ORDER:
+		this->__process_market_order(order, on_close);
+		break;
+	case OrderType::LIMIT_ORDER:
+		break;
+	case OrderType::STOP_LOSS_ORDER:
+		break;
+	case OrderType::TAKE_PROFIT_ORDER:
+		break;
+	default:
+		break;
+	}
 }
 
 void Exchange::__process_market_order(std::unique_ptr<Order>& order, bool on_close)
@@ -518,6 +523,13 @@ void ExchangeMap::__place_order(std::unique_ptr<Order> order)
 	auto& exchange = this->exchanges.at(asset->get_exchange_id());
 	exchange->__place_order(std::move(order));
 ;}
+
+void ExchangeMap::__process_order(bool on_close, OrderPtr& order)
+{
+	auto& asset = this->assets[order->get_asset_index()];
+	auto& exchange = this->exchanges.at(asset->get_exchange_id());
+	exchange->__process_order(on_close, order);
+}
 
 AGIS_API void ExchangeMap::build()
 {

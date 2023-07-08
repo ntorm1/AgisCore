@@ -6,7 +6,7 @@
 #endif
 
 #include "pch.h"
-#include <atomic>
+#include <functional>
 
 #include "AgisPointers.h"
 #include "AgisRouter.h"
@@ -19,6 +19,7 @@ struct Position;
 
 AGIS_API typedef std::unique_ptr<Portfolio> PortfolioPtr;
 AGIS_API typedef std::unique_ptr<Position> PositionPtr;
+AGIS_API typedef std::reference_wrapper<const PositionPtr> PositionRef;
 
 
 struct Position
@@ -41,12 +42,16 @@ struct Position
     long long position_open_time;
     long long position_close_time = 0;
 
+    /// <summary>
+    /// Bars held including the bar it was placed on. I.e. if placed on close on Jan 1st,
+    /// bars_held will equal 1 on close of Jan 1st bar.
+    /// </summary>
     size_t bars_held = 0;
 
     Position(OrderPtr const& order);
 
     Trade* __get_trade(size_t strategy_index);
-    std::vector<OrderPtr> __evaluate(double market_price, bool on_close);
+    void __evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close);
 
     void close(OrderPtr const& order, std::vector<TradePtr>& trade_history);
     void adjust(OrderPtr const& order, std::vector<TradePtr>& trade_history);
@@ -97,8 +102,19 @@ public:
     /// <returns></returns>
     bool position_exists(size_t asset_index) { return positions.contains(asset_index); }
 
+    /// <summary>
+    /// Get a position by asset index if it exists in the portfolio
+    /// </summary>
+    /// <param name="asset_index">unique asset index to search for</param>
+    /// <returns></returns>
+    AGIS_API std::optional<PositionRef> get_position(size_t asset_index) const;
+    
     double get_cash() const { return this->cash; }
     double get_nlv() const { return this->nlv; }
+
+    AGIS_API std::vector<PositionPtr> const& get_position_history() { return this->position_history; }
+    AGIS_API std::vector<TradePtr> const& get_trade_history() { return this->trade_history; }
+
 
 
 private:

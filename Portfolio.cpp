@@ -40,14 +40,13 @@ Trade* Position::__get_trade(size_t strategy_index)
     return nullptr;
 }
 
-std::vector<OrderPtr> Position::__evaluate(double market_price, bool on_close)
+void Position::__evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close)
 {
     this->last_price = market_price;
     this->unrealized_pl = this->units * (market_price - this->average_price);
     this->nlv = gmp_mult(market_price, this->units);
     if (on_close) { this->bars_held++; }
 
-    std::vector<OrderPtr> orders;
     for (auto& trade_pair : this->trades) 
     {
         auto& trade = trade_pair.second;
@@ -61,10 +60,12 @@ std::vector<OrderPtr> Position::__evaluate(double market_price, bool on_close)
         if (trade_exit->exit())
         {
             auto order = trade->generate_trade_inverse();
+            // set the state to Cheat to allow for the order to be filled and then processed by
+            // the portfolio in a single call to order router
+            order->__set_state(OrderState::CHEAT);
             orders.push_back(std::move(order));
         }
     }
-    return orders;
 }
 
 void Position::close(OrderPtr const& order, std::vector<TradePtr>& trade_history)
@@ -79,6 +80,7 @@ void Position::close(OrderPtr const& order, std::vector<TradePtr>& trade_history
     for (auto& element : trades) {
         // Retrieve the unique pointer
         auto trade = std::move(element.second);
+        trade->close(order);
 
         // Add the unique pointer to the vector
         trade_history.push_back(std::move(trade));
@@ -202,6 +204,7 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
 {
     this->nlv = this->cash;
     this->unrealized_pl = 0;
+    ThreadSafeVector<OrderPtr> orders;
     for (auto it = this->positions.begin(); it != positions.end(); ++it)
     {
         // attempt to get the current market price of the underlying asset of the position
@@ -214,18 +217,29 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
         
         // evaluate the indivual positions and allow for any orders that are generated
         // as a result of the new valuation
-        auto orders = position->__evaluate(market_price, on_close);
-        if (orders.size())
-        {
-            for (int i = 0; i < orders.size(); i++) {
-                OrderPtr order = std::move(orders.back());
-                orders.pop_back();
-                router.place_order(std::move(order));
-;            }
-        }
-
+        position->__evaluate(orders, market_price, on_close);
         gmp_add_assign(this->nlv, position->nlv);
         this->unrealized_pl += position->unrealized_pl;
+    }
+    if (orders.size())
+    {
+        for (int i = 0; i < orders.size(); i++) {
+            std::optional<OrderPtr> order = orders.pop_back();
+            router.place_order(std::move(order.value()));
+        }
+    }
+
+}
+
+std::optional<PositionRef> Portfolio::get_position(size_t asset_index) const
+{
+    if (this->positions.contains(asset_index))
+    {
+        return std::cref(this->positions.at(asset_index));
+    }
+    else
+    {
+        return std::nullopt;
     }
 }
 
@@ -251,6 +265,8 @@ void Portfolio::close_position(OrderPtr const& order)
     position->close(order, this->trade_history);
 
     // remove from portfolio and remember
-    auto closed_position = std::move(this->positions.at(asset_id));
-    this->position_history.push_back(std::move(position));
+    PositionPtr closed_position = std::move(this->positions.at(asset_id));
+    this->unrealized_pl -= closed_position->unrealized_pl;
+    this->position_history.push_back(std::move(closed_position));
+    this->positions.erase(asset_id);
 }

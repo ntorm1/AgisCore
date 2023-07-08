@@ -7,7 +7,8 @@
 
 #include "pch.h"
 
-#include "Order.h"
+class Order;
+typedef std::unique_ptr<Order> OrderPtr;
 
 struct Trade;
 class TradeExit;
@@ -53,21 +54,26 @@ private:
 
 class TradeExit {
 public:
-    TradeExit(TradePtr const& trade_) : trade(trade_) {}
+    TradeExit() : trade(nullptr) {}
+
+    void build(Trade const* trade_) { this->trade = trade_; }
 
     AGIS_API virtual bool exit() = 0;
 
 protected:
-    TradePtr const& trade;
+    Trade const* trade;
 };
 
 class ExitBars : public TradeExit {
 public:
-    ExitBars(TradePtr const& trade_, size_t bars_) : TradeExit(trade_) {
+    ExitBars(size_t bars_) : TradeExit() {
         this->bars = bars_;
     }
 
-    bool AGIS_API exit() override { return this->bars == this->trade->bars_held; }
+    bool AGIS_API exit() override {
+        auto res = this->bars == this->trade->bars_held; 
+        return res;
+    }
 
 private:
     size_t bars;

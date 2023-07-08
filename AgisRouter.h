@@ -46,6 +46,7 @@ public:
     }
 
     void __process() {
+        if (this->channel.unsafe_size() == 0) { return; }
         tbb::parallel_for_each(
             this->channel.unsafe_begin(),
             this->channel.unsafe_end(),

@@ -36,11 +36,13 @@ public:
 protected:
 	void AGIS_API place_market_order(
 		size_t asset_index,
-		double units
+		double units,
+		std::optional<TradeExitPtr> exit = std::nullopt
 	);
 	void AGIS_API place_market_order(
 		std::string asset_id,
-		double units
+		double units,
+		std::optional<TradeExitPtr> exit = std::nullopt
 	);
 
 private:

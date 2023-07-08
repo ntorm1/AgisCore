@@ -6,9 +6,11 @@
 #endif
 #include "pch.h"
 #include <string>
+#include "Trade.h"
 #include <atomic>
 
 class Order;
+
 AGIS_API typedef std::unique_ptr<Order> OrderPtr;
 
 using namespace std;
@@ -34,6 +36,7 @@ enum class AGIS_API OrderState
     FILLED,   /// order has been filled by the exchange
     CANCELED, /// order has been canceled by a strategy
     REJECTED, /// order was rejected by the checker 
+    CHEAT,    /// allows orders we know will fill to be filled and processed in single router call
 };
 
 /// <summary>
@@ -87,9 +90,15 @@ protected:
     long long order_fill_time;      /// time hte order was filled
     long long order_cancel_time;    /// time the order was canceled
 
-    size_t asset_index;           /// unique index of the asset
-    size_t strategy_index;           /// unique id of the strategy that placed the order
-    size_t portfolio_index;
+    size_t asset_index;             /// unique index of the asset
+    size_t strategy_index;          /// unique id of the strategy that placed the order
+    size_t portfolio_index;         /// unique id of the portflio the order was placed to
+
+    /// <summary>
+    /// An option trade exit to be given to the trade created by this order
+    /// </summary>
+    /// <returns></returns>
+    std::optional<TradeExitPtr> exit = std::nullopt;
 
 public:
     typedef std::shared_ptr<Order> order_sp_t;
@@ -98,7 +107,8 @@ public:
         size_t asset_index_,
         double units_,
         size_t strategy_index_,
-        size_t portfolio_index_
+        size_t portfolio_index_,
+        std::optional<TradeExitPtr> exit = std::nullopt
     );
 
     [[nodiscard]] size_t get_order_id() const { return this->order_id; }
@@ -108,6 +118,7 @@ public:
     [[nodiscard]] size_t get_portfolio_index() const { return this->portfolio_index; }
     [[nodiscard]] OrderType get_order_type() const { return this->order_type; }
     [[nodiscard]] OrderState get_order_state() const { return this->order_state; }
+    [[nodiscard]] std::optional<TradeExitPtr> move_exit() { return std::move(this->exit); }
 
     void set_create_time(long long t) { this->order_create_time = t; }
 
@@ -119,6 +130,7 @@ public:
     inline bool is_filled() const { return this->order_state == OrderState::FILLED; }
     
     void set_order_create_time(long long t) { this->order_create_time = t; }
+    void __set_state(OrderState state) { this->order_state = state; }
 
     virtual void fill(double market_price, long long fill_time);
     virtual void cancel(long long cancel_time);
@@ -133,7 +145,8 @@ public:
     MarketOrder(size_t asset_index_,
         double units_,
         size_t strategy_index_,
-        size_t portfolio_index_
+        size_t portfolio_index_,
+        std::optional<TradeExitPtr> exit = std::nullopt
     );
 };
 

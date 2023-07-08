@@ -1,5 +1,6 @@
 #include "pch.h" 
 #include "Order.h"
+#include "Trade.h"
 #include <mutex>
 
 std::atomic<size_t> Order::order_counter(0);
@@ -8,7 +9,8 @@ Order::Order(OrderType order_type_,
     size_t asset_index_,
     double units_,
     size_t strategy_index_,
-    size_t portfolio_index_
+    size_t portfolio_index_,
+    std::optional<TradeExitPtr> exit_
     )
 {   
     this->order_state = OrderState::PENDING;
@@ -19,8 +21,11 @@ Order::Order(OrderType order_type_,
     this->portfolio_index = portfolio_index_;
 
     this->avg_price = 0.0;
+    this->order_create_time = 0;
     this->order_cancel_time = 0;
     this->order_fill_time = 0;
+
+    this->exit = std::move(exit_);
 
     this->order_id = order_counter++;
 }
@@ -48,7 +53,14 @@ MarketOrder::MarketOrder(
     size_t asset_index_, 
     double units_, 
     size_t strategy_index_, 
-    size_t portfolio_index_) : 
-    Order(OrderType::MARKET_ORDER, asset_index_, units_, strategy_index_, portfolio_index_)
+    size_t portfolio_index_,
+    std::optional<TradeExitPtr> exit_) :
+    Order(
+        OrderType::MARKET_ORDER, 
+        asset_index_, 
+        units_, 
+        strategy_index_, 
+        portfolio_index_,
+        std::move(exit_))
 {
 }

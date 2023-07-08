@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Trade.h"
+#include "Order.h"
 
 std::atomic<size_t> Trade::trade_counter(0);
 
@@ -18,9 +19,13 @@ Trade::Trade(OrderPtr const& filled_order)
     this->close_price = 0;
     this->last_price = filled_order->get_average_price();
 
+    this->exit = filled_order->move_exit();
+    if (this->exit.has_value()) { this->exit.value()->build(this); }
+
     // set the times
     this->trade_close_time = 0;
     this->trade_open_time = filled_order->get_fill_time();
+    this->bars_held = 0;
     this->trade_id = trade_counter++;
 }
 

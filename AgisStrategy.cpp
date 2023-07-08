@@ -15,20 +15,26 @@ void AgisStrategy::__build(
 
 void AgisStrategy::place_market_order(
 	size_t asset_index_,
-	double units_)
+	double units_,
+	std::optional<TradeExitPtr> exit)
 {
 	this->router->place_order(std::make_unique<MarketOrder>(
 		asset_index_,
 		units_,
 		this->strategy_index,
-		this->get_portfolio_index()
+		this->get_portfolio_index(),
+		std::move(exit)
 	));
 }
 
-void AgisStrategy::place_market_order(std::string asset_id, double units)
+void AgisStrategy::place_market_order(
+	std::string asset_id, 
+	double units,
+	std::optional<TradeExitPtr> exit
+	)
 {
 	auto asset_index = this->exchange_map->get_asset_index(asset_id);
-	return this->place_market_order(asset_index, units);
+	return this->place_market_order(asset_index, units, std::move(exit));
 }
 
 

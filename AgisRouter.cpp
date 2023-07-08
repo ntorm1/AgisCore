@@ -14,6 +14,12 @@ void AgisRouter::processOrder(OrderPtr order) {
     case OrderState::FILLED:
         this->portfolios->__on_order_fill(order);
         break;
+    case OrderState::CHEAT:
+        this->exchanges.__process_order(true, order);
+        if (order->get_order_state() != OrderState::FILLED) { break; }
+        this->portfolios->__on_order_fill(order);
+        break;
+
     default:
         break;
     }

@@ -34,6 +34,7 @@ void Hydra::__step()
 
     // evaluate the portfolios on close
     this->portfolios.__evaluate(this->router, this->exchanges, true);
+    this->router.__process();
 }
 
 //============================================================================

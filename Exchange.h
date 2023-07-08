@@ -71,6 +71,7 @@ public:
 
 	void __place_order(std::unique_ptr<Order> order);
 	void __process_orders(AgisRouter& router, bool on_close);
+	void __process_order(bool on_close, OrderPtr& order);
 	void __process_market_order(std::unique_ptr<Order>& order, bool on_close);
 
 	void reset();
@@ -150,7 +151,7 @@ public:
 	/// <returns>shared pointer to asset if it is found</returns>
 	AGIS_API std::optional<std::shared_ptr<Asset> const> get_asset(std::string const& asset_id) const;
 	
-	AGIS_API size_t get_asset_index(std::string const& id) { return this->asset_map.at(id); }
+	AGIS_API size_t get_asset_index(std::string const& id) const { return this->asset_map.at(id); }
 	
 	/// <summary>
 	/// Get a shared pointer to an existing exchange
@@ -181,6 +182,8 @@ public:
 
 	void __place_order(std::unique_ptr<Order> order);
 	void __process_orders(AgisRouter& router, bool on_close);
+	void __process_order(bool on_close, OrderPtr& order);
+
 
 private:
 	std::mutex _mutex;
