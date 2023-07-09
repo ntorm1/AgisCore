@@ -78,7 +78,9 @@ public:
     AGIS_API std::vector<std::string> __get_dt_index_str() const;
 
     void __set_index(size_t index_) { this->asset_index = index_; }
-    size_t __get_index() const { return this->asset_index; }
+    void __set_exchange_offset(size_t offset) { this->exchange_offset = offset; }
+    size_t __get_index(bool offset = true) const { return offset ? this->asset_index : this->asset_index - this->exchange_offset; }
+
 
     AGIS_API void __set_alignment(bool is_aligned_) { this->__is_aligned = is_aligned_; }
     bool __is_aligned = false;
@@ -95,8 +97,10 @@ public:
 private:
     bool is_loaded = false;
     std::string asset_id;
+
     size_t asset_index;
-   
+    size_t exchange_offset;
+
     std::string exchange_id;
     std::string source;
     std::string dt_fmt;

@@ -101,7 +101,7 @@ void Exchange::reset()
 	this->current_index = 0;
 }
 
-void Exchange::build()
+void Exchange::build(size_t exchange_offset)
 {
 	if (this->is_built)
 	{
@@ -135,13 +135,17 @@ void Exchange::build()
 		{
 			asset->__set_alignment(false);
 		}
+
+		//set the asset's exchange offset so indexing into the exchange's asset vector works
+		asset->__set_exchange_offset(exchange_offset);
+
 		this->candles += asset->get_rows();
 	}
 
 	this->is_built = true;
 }
 
-bool Exchange::step()
+bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 {
 	// if the current index is the last then return false, all assets listed on this exchange
 	// are done streaming their data
@@ -152,7 +156,6 @@ bool Exchange::step()
 
 	// set exchange time to compare to assets
 	this->exchange_time = this->dt_index[this->current_index];
-	auto expired_asset_count = this->expired_assets.size();
 	 
 	// Define a lambda function that processes each asset
 	auto process_asset = [&](auto& asset) {
@@ -167,7 +170,9 @@ bool Exchange::step()
 			asset->__step();
 			// remove, alligned assets will never expire?
 			if (asset->__is_last_view()) {
-				this->expired_assets.push_back(asset->__get_index());
+				auto index = asset->__get_index(true);
+				expired_assets.push_back(index);
+				this->assets[index] = nullptr;
 				asset->__is_expired = true;
 			}
 			return;
@@ -175,7 +180,9 @@ bool Exchange::step()
 
 		// test to see if this is the last row of data for the asset
 		if (asset->__is_last_view()) {
-			this->expired_assets.push_back(asset->__get_index());
+			auto index = asset->__get_index(true);
+			expired_assets.push_back(index);
+			this->assets[index] = nullptr;
 			asset->__is_expired = true;
 			return;
 		}
@@ -198,19 +205,6 @@ bool Exchange::step()
 		this->assets.begin(),
 		this->assets.end(),
 		process_asset);
-
-	// For assets that have expired, update the main exchange map
-	if (expired_asset_count < this->expired_assets.size())
-	{
-		LOCK_GUARD
-		for (size_t i = expired_asset_count; i < this->expired_assets.size(); i++)
-		{
-			auto asset_index = this->expired_assets[i];
-			exchanges->__set_asset(asset_index, nullptr);
-		}
-		UNLOCK_GUARD
-
-	}
 
 	// move to next datetime and return true showing the market contains at least one
 	// asset that is not done streaming
@@ -501,7 +495,9 @@ void ExchangeMap::__reset()
 
 void ExchangeMap::__set_asset(size_t asset_index, std::shared_ptr<Asset> asset)
 {
+	LOCK_GUARD
 	this->assets[asset_index] = asset;
+	UNLOCK_GUARD
 }
 
 void ExchangeMap::__process_orders(AgisRouter& router, bool on_close)
@@ -533,9 +529,11 @@ void ExchangeMap::__process_order(bool on_close, OrderPtr& order)
 
 AGIS_API void ExchangeMap::build()
 {
+	size_t exchange_offset = 0;
 	for (auto& exchange_pair : this->exchanges)
 	{
-		exchange_pair.second->build();
+		exchange_pair.second->build(exchange_offset);
+		exchange_offset += exchange_pair.second->get_assets().size();
 	}
 
 	// build the combined datetime index from all the exchanges
@@ -554,6 +552,10 @@ AGIS_API void ExchangeMap::build()
 	this->dt_index = get<0>(datetime_index_);
 	this->dt_index_size = get<1>(datetime_index_);
 	this->is_built = true;
+
+	// empty vector to contain expired assets
+	this->assets_expired.resize(this->assets.size());
+	std::fill(assets_expired.begin(), assets_expired.end(), nullptr);
 }
 
 AGIS_API bool ExchangeMap::step()
@@ -563,9 +565,10 @@ AGIS_API bool ExchangeMap::step()
 		return false;
 	}
 
+	ThreadSafeVector<size_t> expired_assets;
 	// Define a lambda function that processes each asset
 	auto process_exchange = [&](auto& exchange_pair) {
-		exchange_pair.second->step();
+		exchange_pair.second->step(expired_assets);
 	};
 
 	std::for_each(
@@ -573,6 +576,14 @@ AGIS_API bool ExchangeMap::step()
 		this->exchanges.begin(),
 		this->exchanges.end(),
 		process_exchange);
+
+	// remove and expired assets;
+	for (auto asset_index : expired_assets)
+	{
+		std::shared_ptr<Asset> expired_asset = this->assets[asset_index];
+		this->assets_expired[asset_index] = expired_asset;
+		this->__set_asset(asset_index, nullptr);
+	}
 
 	this->current_index++;
 	return true;

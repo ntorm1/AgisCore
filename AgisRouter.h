@@ -47,6 +47,7 @@ public:
 
     void __reset() {
         this->channel.clear();
+        this->order_history.clear();
     }
 
     void __process() {

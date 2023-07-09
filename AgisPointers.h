@@ -169,6 +169,30 @@ public:
         }
         return std::nullopt;
     }
+    // Iterator types
+    using iterator = typename std::vector<T>::iterator;
+    using const_iterator = typename std::vector<T>::const_iterator;
+
+    // Begin and end functions
+    iterator begin() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return vector_.begin();
+    }
+
+    iterator end() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return vector_.end();
+    }
+
+    const_iterator begin() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return vector_.begin();
+    }
+
+    const_iterator end() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return vector_.end();
+    }
 
 private:
     std::vector<T> vector_;

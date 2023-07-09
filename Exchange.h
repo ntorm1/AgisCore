@@ -75,8 +75,8 @@ public:
 	void __process_market_order(std::unique_ptr<Order>& order, bool on_close);
 
 	void reset();
-	void build();
-	bool step();
+	void build(size_t exchange_offset);
+	bool step(ThreadSafeVector<size_t>& expired_assets);
 
 private:
 	std::mutex _mutex;
@@ -88,7 +88,6 @@ private:
 	std::vector<std::unique_ptr<Order>> orders;
 	std::vector<std::unique_ptr<Order>> filled_orders;
 	std::vector<std::shared_ptr<Asset>> assets;
-	std::vector<size_t> expired_assets;
 	ExchangeMap* exchanges;
 
 	long long* dt_index = nullptr;
@@ -190,6 +189,7 @@ private:
 	std::unordered_map<std::string, ExchangePtr> exchanges;
 	std::unordered_map<std::string, size_t> asset_map;
 	std::vector<std::shared_ptr<Asset>> assets;
+	std::vector<std::shared_ptr<Asset>> assets_expired;
 
 
 	long long* dt_index = nullptr;
