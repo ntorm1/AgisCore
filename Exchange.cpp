@@ -551,6 +551,7 @@ void ExchangeMap::__reset()
 	{
 		exchange.second->reset();
 	}
+	this->expired_asset_index.clear();
 }
 
 

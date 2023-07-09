@@ -8,6 +8,7 @@
 void AgisStrategy::__reset()
 {
 	this->order_history.clear();
+	this->reset();
 }
 
 //============================================================================
@@ -96,7 +97,7 @@ void AgisStrategyMap::__next()
 	auto strategy_next = [&](auto& strategy) {
 		strategy.second->next();
 	};
-
+	
 	tbb::parallel_for_each(
 		this->strategies.begin(),
 		this->strategies.end(),

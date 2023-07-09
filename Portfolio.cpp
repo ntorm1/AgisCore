@@ -144,6 +144,17 @@ void Position::adjust(OrderPtr const& order, std::vector<TradePtr>& trade_histor
 }
 
 
+//============================================================================
+OrderPtr Position::generate_position_inverse()
+{   
+    return std::make_unique<MarketOrder>(
+        this->asset_id,
+        -1 * this->units,
+        DEFAULT_STRAT_ID,
+        this->portfolio_id
+    );
+}
+
 
 //============================================================================
 void PortfolioMap::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close)
@@ -182,6 +193,15 @@ void PortfolioMap::__remember_order(OrderRef order)
 {
     auto& portfolio = this->portfolios.at(order.get()->get_portfolio_index());
     portfolio->__remember_order(std::move(order));
+}
+
+void PortfolioMap::__on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids)
+{
+    for (auto& portfolio_pair : this->portfolios)
+    {
+        auto& portfolio = portfolio_pair.second;
+        portfolio->__on_assets_expired(router, ids);
+    }
 }
 
 
@@ -329,6 +349,19 @@ void Portfolio::__remember_order(OrderRef order)
     auto& strategy = this->strategies.at(order.get()->get_strategy_index());
     strategy.get()->__remember_order(order);
     UNLOCK_GUARD
+}
+
+void Portfolio::__on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids)
+{
+    for (auto& id : ids)
+    {
+        auto position = this->get_position(id);
+        if (!position.has_value()) { continue; }
+
+        auto order = position.value().get()->generate_position_inverse();
+        order->__set_state(OrderState::CHEAT);
+        router.place_order(std::move(order));
+    }
 }
 
 

@@ -1,4 +1,5 @@
 #pragma once
+
 #ifdef AGISCORE_EXPORTS
 #define AGIS_API __declspec(dllexport)
 #else
@@ -7,6 +8,8 @@
 
 #include "pch.h"
 #include <functional>
+#include <limits>
+
 
 #include "AgisPointers.h"
 #include "AgisRouter.h"
@@ -56,10 +59,21 @@ struct Position
     Position(OrderPtr const& order);
 
     std::optional<TradeRef> __get_trade(size_t strategy_index) const;
+
+    /// <summary>
+    /// Evaluate a position at the current market price and allow for the placement of orders as result
+    /// of the new valuation 
+    /// </summary>
+    /// <param name="orders">Reference to thread save vector of new orders to place</param>
+    /// <param name="market_price">Current market price of the underlying asset</param>
+    /// <param name="on_close">are we on close</param>
     void __evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close);
 
     void close(OrderPtr const& order, std::vector<TradePtr>& trade_history);
     void adjust(OrderPtr const& order, std::vector<TradePtr>& trade_history);
+
+
+    OrderPtr generate_position_inverse();
 
 private:
     static std::atomic<size_t> position_counter;
@@ -124,8 +138,7 @@ public:
 
     void __reset();
     void __remember_order(OrderRef order);
-
-
+    void __on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids);
 
 private:
 	/// <summary>
@@ -195,7 +208,7 @@ public:
 
 	void __on_order_fill(OrderPtr const& order);
     void __remember_order(OrderRef order);
-    void __on_assets_expired(ThreadSafeVector<size_t> const& ids);
+    void __on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids);
 
     void __register_portfolio(PortfolioPtr portfolio);
     void __register_strategy(AgisStrategyRef strategy);

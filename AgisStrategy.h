@@ -27,6 +27,11 @@ public:
 	virtual void next() = 0;
 
 	/// <summary>
+	/// Pure virtual function to be called on reset of Hydra instance
+	/// </summary>
+	virtual void reset() = 0;
+
+	/// <summary>
 	/// Clear existing containers of all historical information
 	/// </summary>
 	AGIS_API virtual void __reset();
