@@ -7,6 +7,7 @@
 #include "AgisRouter.h"
 
 
+//============================================================================
 Exchange::Exchange(
 		std::string exchange_id_, 
 		std::string source_dir_,
@@ -21,6 +22,8 @@ Exchange::Exchange(
 	this->dt_format = dt_format_;
 }
 
+
+//============================================================================
 Exchange::~Exchange()
 {
 	if (this->is_built)
@@ -29,6 +32,8 @@ Exchange::~Exchange()
 	}
 }
 
+
+//============================================================================
 json Exchange::to_json() const
 {
 	return json{ 
@@ -39,6 +44,8 @@ json Exchange::to_json() const
 	};
 }
 
+
+//============================================================================
 std::vector<std::string> Exchange::get_asset_ids() const
 {
 	std::vector<std::string> keys;
@@ -51,11 +58,15 @@ std::vector<std::string> Exchange::get_asset_ids() const
 	return keys;
 }
 
+
+//============================================================================
 StridedPointer<long long> const Exchange::__get_dt_index() const
 {
 	return StridedPointer(this->dt_index, this->dt_index_size, 1);
 }
 
+
+//============================================================================
 AGIS_API bool Exchange::asset_exists(std::string asset_id)
 {
 	for (const auto& asset : this->assets)
@@ -68,6 +79,8 @@ AGIS_API bool Exchange::asset_exists(std::string asset_id)
 	return false;
 }
 
+
+//============================================================================
 void Exchange::__goto(long long datetime)
 {
 	// goto date is beyond the datetime index
@@ -96,11 +109,15 @@ void Exchange::__goto(long long datetime)
 	}
 }
 
+
+//============================================================================
 void Exchange::reset()
 {
 	this->current_index = 0;
 }
 
+
+//============================================================================
 void Exchange::build(size_t exchange_offset)
 {
 	if (this->is_built)
@@ -145,6 +162,8 @@ void Exchange::build(size_t exchange_offset)
 	this->is_built = true;
 }
 
+
+//============================================================================
 bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 {
 	// if the current index is the last then return false, all assets listed on this exchange
@@ -212,6 +231,8 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 	return true;
 }
 
+
+//============================================================================
 NexusStatusCode Exchange::restore()
 {
 	if (!is_folder(this->source_dir))
@@ -234,6 +255,8 @@ NexusStatusCode Exchange::restore()
 }
 
 
+
+//============================================================================
 void Exchange::__place_order(std::unique_ptr<Order> order)
 {
 	LOCK_GUARD;
@@ -242,6 +265,8 @@ void Exchange::__place_order(std::unique_ptr<Order> order)
 	UNLOCK_GUARD
 }
 
+
+//============================================================================
 void Exchange::__process_orders(AgisRouter& router, bool on_close)
 {
 	LOCK_GUARD
@@ -274,6 +299,8 @@ void Exchange::__process_orders(AgisRouter& router, bool on_close)
 	UNLOCK_GUARD
 }
 
+
+//============================================================================
 void Exchange::__process_order(bool on_close, OrderPtr& order) {
 	// make sure it is a valid order
 	switch (order->get_order_type())
@@ -292,6 +319,8 @@ void Exchange::__process_order(bool on_close, OrderPtr& order) {
 	}
 }
 
+
+//============================================================================
 void Exchange::__process_market_order(std::unique_ptr<Order>& order, bool on_close)
 {
 	auto market_price = this->__get_market_price(order->get_asset_index(), on_close);
@@ -299,6 +328,8 @@ void Exchange::__process_market_order(std::unique_ptr<Order>& order, bool on_clo
 	order->fill(market_price, this->exchange_time);
 }
 
+
+//============================================================================
 AGIS_API double Exchange::__get_market_price(size_t index, bool on_close) const
 {
 	auto const& asset = this->assets[index];
@@ -307,10 +338,14 @@ AGIS_API double Exchange::__get_market_price(size_t index, bool on_close) const
 	return asset->__get_market_price(on_close);
 }
 
+
+//============================================================================
 ExchangeMap::ExchangeMap()
 {
 }
 
+
+//============================================================================
 ExchangeMap::~ExchangeMap()
 {
 	if (this->is_built)
@@ -320,6 +355,8 @@ ExchangeMap::~ExchangeMap()
 }
 
 
+
+//============================================================================
 json ExchangeMap::to_json() const {
 	json j;
 	for (const auto& pair : this->exchanges) {
@@ -329,6 +366,7 @@ json ExchangeMap::to_json() const {
 }
 
 
+//============================================================================
 NexusStatusCode ExchangeMap::new_exchange(
 	std::string exchange_id_,
 	std::string source_dir_,
@@ -376,11 +414,15 @@ NexusStatusCode ExchangeMap::new_exchange(
 	return NexusStatusCode::Ok;
 }
 
+
+//============================================================================
 std::vector<std::string> ExchangeMap::get_asset_ids(std::string const& exchange_id_) const
 {
 	return this->exchanges.at(exchange_id_)->get_asset_ids();
 }
  
+
+//============================================================================
 std::optional<std::shared_ptr<Asset> const> ExchangeMap::get_asset(std::string const&  asset_id) const
 {
 #ifndef AGIS_SLOW
@@ -393,11 +435,15 @@ std::optional<std::shared_ptr<Asset> const> ExchangeMap::get_asset(std::string c
 	return this->assets[index];
 }
 
+
+//============================================================================
 AGIS_API ExchangePtr const ExchangeMap::get_exchange(std::string exchange_id_)
 {
 	return this->exchanges.at(exchange_id_);
 }
 
+
+//============================================================================
 bool ExchangeMap::asset_exists(std::string const&  asset_id) const
 {
 	if (this->asset_map.count(asset_id))
@@ -407,6 +453,8 @@ bool ExchangeMap::asset_exists(std::string const&  asset_id) const
 	return false;
 }
 
+
+//============================================================================
 AGIS_API long long ExchangeMap::get_datetime()
 {
 	if (this->current_index == 0)
@@ -418,6 +466,8 @@ AGIS_API long long ExchangeMap::get_datetime()
 	return this->dt_index[this->current_index - 1];
 }
 
+
+//============================================================================
 NexusStatusCode ExchangeMap::remove_exchange(std::string const& exchange_id_)
 {
 	if (!this->exchanges.count(exchange_id_))
@@ -428,11 +478,15 @@ NexusStatusCode ExchangeMap::remove_exchange(std::string const& exchange_id_)
 	return NexusStatusCode::Ok;
 }
 
+
+//============================================================================
 StridedPointer<long long> const ExchangeMap::__get_dt_index() const
 {
 	return StridedPointer(this->dt_index, this->dt_index_size, 1);
 }
 
+
+//============================================================================
 AGIS_API double ExchangeMap::__get_market_price(std::string& asset_id, bool on_close) const
 {
 	auto index = this->asset_map.at(asset_id);
@@ -442,6 +496,8 @@ AGIS_API double ExchangeMap::__get_market_price(std::string& asset_id, bool on_c
 	return asset->__get_market_price(on_close);
 }
 
+
+//============================================================================
 AGIS_API double ExchangeMap::__get_market_price(size_t asset_index, bool on_close) const
 {
 	auto const& asset = this->assets[asset_index];
@@ -450,6 +506,8 @@ AGIS_API double ExchangeMap::__get_market_price(size_t asset_index, bool on_clos
 	return asset->__get_market_price(on_close);
 }
 
+
+//============================================================================
 void ExchangeMap::__goto(long long datetime)
 {
 	for (auto& exchange_pair : this->exchanges)
@@ -475,6 +533,8 @@ void ExchangeMap::__goto(long long datetime)
 	this->step();
 }
 
+
+//============================================================================
 void ExchangeMap::__reset()
 {
 	this->current_index = 0;
@@ -493,6 +553,8 @@ void ExchangeMap::__reset()
 	}
 }
 
+
+//============================================================================
 void ExchangeMap::__set_asset(size_t asset_index, std::shared_ptr<Asset> asset)
 {
 	LOCK_GUARD
@@ -500,6 +562,8 @@ void ExchangeMap::__set_asset(size_t asset_index, std::shared_ptr<Asset> asset)
 	UNLOCK_GUARD
 }
 
+
+//============================================================================
 void ExchangeMap::__process_orders(AgisRouter& router, bool on_close)
 {
 	auto exchange_process = [&](auto& exchange) {
@@ -513,6 +577,8 @@ void ExchangeMap::__process_orders(AgisRouter& router, bool on_close)
 	);
 }
 
+
+//============================================================================
 void ExchangeMap::__place_order(std::unique_ptr<Order> order)
 {
 	auto& asset = this->assets[order->get_asset_index()];
@@ -520,6 +586,8 @@ void ExchangeMap::__place_order(std::unique_ptr<Order> order)
 	exchange->__place_order(std::move(order));
 ;}
 
+
+//============================================================================
 void ExchangeMap::__process_order(bool on_close, OrderPtr& order)
 {
 	auto& asset = this->assets[order->get_asset_index()];
@@ -527,6 +595,8 @@ void ExchangeMap::__process_order(bool on_close, OrderPtr& order)
 	exchange->__process_order(on_close, order);
 }
 
+
+//============================================================================
 AGIS_API void ExchangeMap::build()
 {
 	size_t exchange_offset = 0;
@@ -558,6 +628,8 @@ AGIS_API void ExchangeMap::build()
 	std::fill(assets_expired.begin(), assets_expired.end(), nullptr);
 }
 
+
+//============================================================================
 AGIS_API bool ExchangeMap::step()
 {
 	if (this->current_index == this->dt_index_size)
@@ -589,11 +661,15 @@ AGIS_API bool ExchangeMap::step()
 	return true;
 }
 
+
+//============================================================================
 void ExchangeMap::__clear()
 {
 	this->exchanges.clear();
 }
 
+
+//============================================================================
 void ExchangeMap::restore(json const& j)
 {
 	json exchanges = j["exchanges"];

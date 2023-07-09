@@ -12,6 +12,8 @@
 class Order;
 
 AGIS_API typedef std::unique_ptr<Order> OrderPtr;
+AGIS_API typedef std::reference_wrapper<const OrderPtr> OrderRef;
+
 
 using namespace std;
 

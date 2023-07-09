@@ -15,7 +15,12 @@
 #include "Trade.h"
 
 class Portfolio;
+class AgisStrategy;
 struct Position;
+
+AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
+AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
+
 
 AGIS_API typedef std::unique_ptr<Portfolio> PortfolioPtr;
 AGIS_API typedef std::unique_ptr<Position> PositionPtr;
@@ -50,7 +55,7 @@ struct Position
 
     Position(OrderPtr const& order);
 
-    Trade* __get_trade(size_t strategy_index);
+    std::optional<TradeRef> __get_trade(size_t strategy_index) const;
     void __evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close);
 
     void close(OrderPtr const& order, std::vector<TradePtr>& trade_history);
@@ -108,6 +113,8 @@ public:
     /// <param name="asset_index">unique asset index to search for</param>
     /// <returns></returns>
     AGIS_API std::optional<PositionRef> get_position(size_t asset_index) const;
+
+    AGIS_API void register_strategy(AgisStrategyRef strategy);
     
     double get_cash() const { return this->cash; }
     double get_nlv() const { return this->nlv; }
@@ -116,6 +123,8 @@ public:
     AGIS_API std::vector<TradePtr> const& get_trade_history() { return this->trade_history; }
 
     void __reset();
+    void __remember_order(OrderRef order);
+
 
 
 private:
@@ -162,6 +171,11 @@ private:
     /// </summary>
     std::unordered_map<size_t, PositionPtr> positions;
 
+    /// <summary>
+    /// Map between strategy index and ref to AgisStrategy
+    /// </summary>
+    std::unordered_map<size_t, AgisStrategyRef> strategies;
+
 
     std::vector<PositionPtr> position_history;
     std::vector<TradePtr> trade_history;
@@ -178,9 +192,15 @@ public:
     void __evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close);
     void __clear() { this->portfolios.clear(); }
     void __reset();
+
 	void __on_order_fill(OrderPtr const& order);
+    void __remember_order(OrderRef order);
+
     void __register_portfolio(PortfolioPtr portfolio);
+    void __register_strategy(AgisStrategyRef strategy);
+
     PortfolioPtr const& __get_portfolio(std::string const& id);
+    PortfolioPtr const& __get_portfolio(size_t index) { return this->portfolios.at(index); };
 
 private:
 	std::unordered_map<size_t, PortfolioPtr> portfolios;

@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "Portfolio.h"
+#include "AgisStrategy.h"
 
 std::atomic<size_t> Position::position_counter(0);
 std::atomic<size_t> Portfolio::portfolio_counter(0);
@@ -33,16 +34,17 @@ Position::Position(OrderPtr const& filled_order_)
 
 
 //============================================================================
-Trade* Position::__get_trade(size_t strategy_index)
+std::optional<TradeRef> Position::__get_trade(size_t strategy_index) const
 {
-    auto it = this->trades.find(strategy_index);
-    if (it != trades.end())
+    if (this->trades.contains(strategy_index))
     {
-        return it->second.get();
+        return std::cref(this->trades.at(strategy_index));
     }
-    return nullptr;
+    else
+    {
+        return std::nullopt;
+    }
 }
-
 
 //============================================================================
 void Position::__evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close)
@@ -118,23 +120,25 @@ void Position::adjust(OrderPtr const& order, std::vector<TradePtr>& trade_histor
 
     //test to see if strategy already has a trade
     auto strategy_id = order->get_strategy_index();
-    auto trad_opt = this->__get_trade(strategy_id);
-    if (!trad_opt)
+    auto trade_opt = this->__get_trade(strategy_id);
+    if (!trade_opt)
     {
         auto trade = std::make_unique<Trade>(order);
         this->trades.insert({ strategy_id,std::move(trade) });
     }
     else
     {
-        if (abs(trad_opt->units + units_) < 1e-10)
+        auto& trade_ptr = trade_opt->get();
+        if (abs(trade_ptr->units + units_) < 1e-10)
         {
-            trad_opt->close(order);
+            trade_ptr->close(order);
             auto extracted_trade = std::move(this->trades.at(strategy_id));
+            this->trades.erase(strategy_id);
             trade_history.push_back(std::move(extracted_trade));
         }
         else
         {
-            trad_opt->adjust(order);
+            trade_ptr->adjust(order);
         }
     }
 }
@@ -174,12 +178,25 @@ void PortfolioMap::__on_order_fill(OrderPtr const& order)
     portfolio->__on_order_fill(order);
 }
 
+void PortfolioMap::__remember_order(OrderRef order)
+{
+    auto& portfolio = this->portfolios.at(order.get()->get_portfolio_index());
+}
+
 
 //============================================================================
 void PortfolioMap::__register_portfolio(PortfolioPtr portfolio)
 {
     this->portfolio_map.emplace(portfolio->__get_portfolio_id(), portfolio->__get_index());
     this->portfolios.emplace(portfolio->__get_index(), std::move(portfolio));
+}
+
+
+//============================================================================
+void PortfolioMap::__register_strategy(AgisStrategyRef strategy)
+{
+    auto& portfolio = this->portfolios.at(strategy.get()->get_portfolio_index());
+    portfolio->register_strategy(std::move(strategy));
 }
 
 
@@ -280,6 +297,16 @@ std::optional<PositionRef> Portfolio::get_position(size_t asset_index) const
 
 
 //============================================================================
+AGIS_API void Portfolio::register_strategy(AgisStrategyRef strategy)
+{
+    this->strategies.emplace(
+        strategy.get()->get_strategy_index(),
+        std::move(strategy)
+    );
+}
+
+
+//============================================================================
 void Portfolio::__reset()
 {
     this->nlv = this->starting_cash;
@@ -291,6 +318,16 @@ void Portfolio::__reset()
     this->trade_history.clear();
     this->nlv_history.clear();
     this->cash_history.clear();
+}
+
+
+//============================================================================
+void Portfolio::__remember_order(OrderRef order)
+{
+    LOCK_GUARD
+    auto& strategy = this->strategies.at(order.get()->get_strategy_index());
+    strategy.get()->__remember_order(std::move(order));
+    UNLOCK_GUARD
 }
 
 

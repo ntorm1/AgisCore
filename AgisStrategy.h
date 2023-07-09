@@ -7,6 +7,10 @@
 
 static std::atomic<size_t> strategy_counter(0);
 
+class AgisStrategy;
+AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
+AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
+
 class AgisStrategy
 {
 public:
@@ -22,12 +26,23 @@ public:
 	virtual void next() = 0;
 
 	/// <summary>
+	/// Clear existing containers of all historical information
+	/// </summary>
+	AGIS_API virtual void __reset();
+
+	/// <summary>
 	/// Build the strategy, called once registered to a hydra instance
 	/// </summary>
 	/// <param name="router_"></param>
 	/// <param name="portfolo_map"></param>
 	/// <param name="exchange_map"></param>
 	void __build(AgisRouter* router_, ExchangeMap* exchange_map);
+
+	/// <summary>
+	/// Remember a historical order that the strategy placed
+	/// </summary>
+	/// <param name="order"></param>
+	void __remember_order(OrderRef order) { this->order_history.push_back(std::move(order)); }
 
 
 	size_t get_strategy_index() { return this->strategy_index; }
@@ -40,10 +55,19 @@ protected:
 		std::optional<TradeExitPtr> exit = std::nullopt
 	);
 	void AGIS_API place_market_order(
-		std::string asset_id,
+		std::string const& asset_id,
 		double units,
 		std::optional<TradeExitPtr> exit = std::nullopt
 	);
+
+	/// <summary>
+	/// Get strategies current open position in a given asset
+	/// </summary>
+	/// <param name="asset_index">unique id of the asset to search for</param>
+	/// <returns></returns>
+	AGIS_API std::optional<TradeRef> get_trade(size_t asset_index);
+	AGIS_API std::optional<TradeRef> get_trade(std::string const& asset_id);
+
 
 private:
 	
@@ -63,6 +87,11 @@ private:
 	/// </summary>
 	ExchangeMap* exchange_map = nullptr;
 
+	/// <summary>
+	/// All historical orders placed by the strategy
+	/// </summary>
+	std::vector<OrderRef> order_history;
+
 	size_t strategy_index;
 };
 
@@ -73,13 +102,14 @@ class AgisStrategyMap
 public:
 	AgisStrategyMap() = default;
 
-	void register_strategy(std::unique_ptr<AgisStrategy> strategy);
+	void register_strategy(AgisStrategyPtr strategy);
 	
 	void __next();
+	void __reset();
 
 
 private:
 	std::unordered_map<std::string, size_t> strategy_id_map;
-	std::unordered_map<size_t, std::unique_ptr<AgisStrategy>> strategies;
+	std::unordered_map<size_t, AgisStrategyPtr> strategies;
 
 };

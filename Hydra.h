@@ -53,13 +53,49 @@ public:
 	AGIS_API Hydra(int logging_ = 0);
 	AGIS_API ~Hydra() = default;
 
+	/// <summary>
+	/// Restore hydra instance from a json object
+	/// </summary>
+	/// <param name="j">Json object describin a Hydra instance</param>
+	/// <returns></returns>
 	AGIS_API void restore(json const& j);
+
+	/// <summary>
+	/// Remove everything from the instance
+	/// </summary>
+	/// <returns></returns>
 	AGIS_API void clear();
+
+	/// <summary>
+	/// Build the hydra instance using the currently loaded objects
+	/// </summary>
+	/// <returns></returns>
 	AGIS_API void build();
+	
+	/// <summary>
+	/// Reset the hydra instance to it's original state before any steps forward in time
+	/// </summary>
+	/// <returns></returns>
 	AGIS_API void reset();
+
+	/// <summary>
+	/// Save the current state of Hydra instance to json
+	/// </summary>
+	/// <param name="j"></param>
+	/// <returns></returns>
 	AGIS_API void save_state(json& j);
 
+	/// <summary>
+	/// Step Hydra instance one step forward in time
+	/// </summary>
+	/// <returns></returns>
 	AGIS_API void __step();
+
+	/// <summary>
+	/// Run a complete Hydra simulation
+	/// </summary>
+	/// <returns></returns>
+	AGIS_API void __run();
 
 
 	/// <summary>

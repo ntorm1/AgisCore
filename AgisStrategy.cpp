@@ -4,6 +4,13 @@
 
 #include "AgisStrategy.h"
 
+
+void AgisStrategy::__reset()
+{
+	this->order_history.clear();
+}
+
+//============================================================================
 void AgisStrategy::__build(
 	AgisRouter* router_,
 	ExchangeMap* exchange_map
@@ -13,6 +20,27 @@ void AgisStrategy::__build(
 	this->exchange_map = exchange_map;
 }
 
+
+//============================================================================
+std::optional<TradeRef> AgisStrategy::get_trade(size_t asset_index)
+{
+	auto position = this->portfolio->get_position(asset_index);
+	if (!position.has_value()) { return std::nullopt; }
+	return position->get()->__get_trade(this->strategy_index);
+}
+
+
+//============================================================================
+std::optional<TradeRef> AgisStrategy::get_trade(std::string const& asset_id)
+{
+	auto asset_index = this->exchange_map->get_asset_index(asset_id);
+	auto position = this->portfolio->get_position(asset_index);
+	if (!position.has_value()) { return std::nullopt; }
+	return position->get()->__get_trade(this->strategy_index);
+}
+
+
+//============================================================================
 void AgisStrategy::place_market_order(
 	size_t asset_index_,
 	double units_,
@@ -27,18 +55,22 @@ void AgisStrategy::place_market_order(
 	));
 }
 
+
+//============================================================================
 void AgisStrategy::place_market_order(
-	std::string asset_id, 
+	std::string const & asset_id, 
 	double units,
 	std::optional<TradeExitPtr> exit
 	)
 {
 	auto asset_index = this->exchange_map->get_asset_index(asset_id);
-	return this->place_market_order(asset_index, units, std::move(exit));
+	this->place_market_order(asset_index, units, std::move(exit));
 }
 
 
-void AgisStrategyMap::register_strategy(std::unique_ptr<AgisStrategy> strategy)
+
+//============================================================================
+void AgisStrategyMap::register_strategy(AgisStrategyPtr strategy)
 {
 	this->strategies.emplace(
 		strategy->get_strategy_index(),
@@ -46,6 +78,8 @@ void AgisStrategyMap::register_strategy(std::unique_ptr<AgisStrategy> strategy)
 	);
 }
 
+
+//============================================================================
 void AgisStrategyMap::__next()
 {
 	// Define a lambda function that calls next for each strategy
@@ -57,6 +91,20 @@ void AgisStrategyMap::__next()
 		this->strategies.begin(),
 		this->strategies.end(),
 		strategy_next
+	);
+}
+
+//============================================================================
+void AgisStrategyMap::__reset()
+{
+	auto strategy_reset = [&](auto& strategy) {
+		strategy.second->__reset();
+	};
+
+	tbb::parallel_for_each(
+		this->strategies.begin(),
+		this->strategies.end(),
+		strategy_reset
 	);
 }
 

@@ -10,12 +10,13 @@
 class Order;
 typedef std::unique_ptr<Order> OrderPtr;
 
+
 struct Trade;
 class TradeExit;
 
 AGIS_API typedef std::unique_ptr<Trade> TradePtr;
 AGIS_API typedef std::unique_ptr<TradeExit> TradeExitPtr;
-
+AGIS_API typedef std::reference_wrapper<const TradePtr> TradeRef;
 
 
 struct AGIS_API Trade {
@@ -64,6 +65,7 @@ protected:
     Trade const* trade;
 };
 
+
 class ExitBars : public TradeExit {
 public:
     ExitBars(size_t bars_) : TradeExit() {
@@ -77,5 +79,25 @@ public:
 
 private:
     size_t bars;
+
+};
+
+
+class ExitBand : public TradeExit {
+public:
+    ExitBand(double ub_, double lb_) : TradeExit() {
+        this->ub = ub_;
+        this->lb = lb_;
+    }
+
+    bool exit() override {
+        if (this->trade->last_price <= lb) { return true; }
+        if (this->trade->last_price >= ub) { return true; }
+        return false;
+    }
+
+private:
+    double lb;
+    double ub;
 
 };

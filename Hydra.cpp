@@ -4,9 +4,10 @@
 #include "Hydra.h"
 #include "Exchange.h"
 
-#define NUM_THREADS 2
+constexpr auto NUM_THREADS = 2;
 
 
+//============================================================================
 Hydra::Hydra(int logging_):
     router(
         this->exchanges,
@@ -15,6 +16,8 @@ Hydra::Hydra(int logging_):
     this->logging = logging_;
 }
 
+
+//============================================================================
 void Hydra::__step()
 {
     // step assets and exchanges forward in time
@@ -35,6 +38,17 @@ void Hydra::__step()
     // evaluate the portfolios on close
     this->portfolios.__evaluate(this->router, this->exchanges, true);
     this->router.__process();
+}
+
+
+//============================================================================
+AGIS_API void Hydra::__run()
+{
+    size_t step_count = this->exchanges.__get_dt_index().size();
+    for (size_t i = 0; i < step_count; i++)
+    {
+        this->__step();
+    }
 }
 
 
@@ -60,7 +74,14 @@ AGIS_API void Hydra::new_portfolio(std::string id, double cash)
 //============================================================================
 AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
 {
+    // build the strategy instance
     strategy->__build(&this->router, &this->exchanges);
+
+    // register the strategy to the portfolio
+    auto strat_ref = std::ref(strategy);
+    this->portfolios.__register_strategy(std::move(strat_ref));
+
+    // register the strategy to the strategy map
     this->strategies.register_strategy(std::move(strategy));
 }
 
@@ -120,6 +141,7 @@ AGIS_API void Hydra::reset()
     this->exchanges.__reset();
     this->portfolios.__reset();
     this->router.__reset();
+    this->strategies.__reset();
 }
 
 

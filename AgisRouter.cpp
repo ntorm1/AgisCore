@@ -24,6 +24,8 @@ void AgisRouter::processOrder(OrderPtr order) {
         break;
     }
 
+    this->portfolios->__remember_order(std::ref(order));
+
     LOCK_GUARD
         this->order_history.push_back(std::move(order));
     UNLOCK_GUARD
