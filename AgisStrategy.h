@@ -70,8 +70,6 @@ protected:
 
 
 private:
-	
-
 	/// <summary>
 	/// Pointer to the Agis order router
 	/// </summary>

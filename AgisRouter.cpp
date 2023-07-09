@@ -1,7 +1,28 @@
 #include "pch.h"
 
+#include <tbb/concurrent_queue.h>
+#include <tbb/parallel_for_each.h>
+
 #include "AgisRouter.h"
 #include "Portfolio.h"
+
+
+
+
+struct AgisRouterPrivate
+{
+    tbb::concurrent_queue<OrderPtr> channel;
+};
+
+
+AgisRouter::AgisRouter(ExchangeMap& exchanges_, PortfolioMap* portfolios_) :
+    exchanges(exchanges_),
+    portfolios(portfolios_),
+    p(new AgisRouterPrivate)
+{}
+
+
+AgisRouter::~AgisRouter() { delete p; }
 
 
 void AgisRouter::processOrder(OrderPtr order) {
@@ -29,4 +50,25 @@ void AgisRouter::processOrder(OrderPtr order) {
     LOCK_GUARD
         this->order_history.push_back(std::move(order));
     UNLOCK_GUARD
+}
+
+void AgisRouter::__process() {
+    if (this->p->channel.unsafe_size() == 0) { return; }
+    tbb::parallel_for_each(
+        this->p->channel.unsafe_begin(),
+        this->p->channel.unsafe_end(),
+        [this](OrderPtr& order) {
+            processOrder(std::move(order));
+        }
+    );
+}
+
+
+void AgisRouter::place_order(OrderPtr order) {
+    p->channel.push(std::move(order));
+}
+
+void AgisRouter::__reset() {
+    this->p->channel.clear();
+    this->order_history.clear();
 }

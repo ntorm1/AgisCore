@@ -1,7 +1,5 @@
 #pragma once
 
-#include <tbb/concurrent_queue.h>
-#include <tbb/parallel_for_each.h>
 #include <memory>
 #include <thread>
 #include <mutex>
@@ -11,14 +9,11 @@
 #include "Exchange.h"
 
 class PortfolioMap;
-
+struct AgisRouterPrivate;
 
 class AgisRouter {
 private:
-    tbb::concurrent_queue<OrderPtr> channel;
-
-    std::vector<std::thread> listenerThreads_;
-    std::atomic<bool> stopListening_;
+    AgisRouterPrivate* p = nullptr;
     std::mutex _mutex;
     
     /// <summary>
@@ -36,30 +31,14 @@ private:
     void processOrder(OrderPtr order);
 
 public:
-    AgisRouter(ExchangeMap& exchanges_, PortfolioMap* portfolios_) :
-        exchanges(exchanges_),
-        portfolios(portfolios_)
-    {}
+    AgisRouter(ExchangeMap& exchanges_, PortfolioMap* portfolios_);
+    ~AgisRouter();
 
-    void place_order(OrderPtr order) {
-        channel.push(std::move(order));
-    }
+    void place_order(OrderPtr order);
 
-    void __reset() {
-        this->channel.clear();
-        this->order_history.clear();
-    }
+    void __reset();
 
-    void __process() {
-        if (this->channel.unsafe_size() == 0) { return; }
-        tbb::parallel_for_each(
-            this->channel.unsafe_begin(),
-            this->channel.unsafe_end(),
-            [this](OrderPtr& order) {
-                processOrder(std::move(order));
-            }
-        );
-    }
+    void __process();
 
 
     std::vector<OrderPtr> const& get_order_history() { return this->order_history; }
