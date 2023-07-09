@@ -637,10 +637,10 @@ AGIS_API bool ExchangeMap::step()
 		return false;
 	}
 
-	ThreadSafeVector<size_t> expired_assets;
+	expired_asset_index.clear();
 	// Define a lambda function that processes each asset
 	auto process_exchange = [&](auto& exchange_pair) {
-		exchange_pair.second->step(expired_assets);
+		exchange_pair.second->step(expired_asset_index);
 	};
 
 	std::for_each(
@@ -650,7 +650,7 @@ AGIS_API bool ExchangeMap::step()
 		process_exchange);
 
 	// remove and expired assets;
-	for (auto asset_index : expired_assets)
+	for (auto asset_index : expired_asset_index)
 	{
 		std::shared_ptr<Asset> expired_asset = this->assets[asset_index];
 		this->assets_expired[asset_index] = expired_asset;

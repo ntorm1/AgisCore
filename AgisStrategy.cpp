@@ -72,10 +72,20 @@ void AgisStrategy::place_market_order(
 //============================================================================
 void AgisStrategyMap::register_strategy(AgisStrategyPtr strategy)
 {
+	this->strategy_id_map.emplace(
+		strategy->get_strategy_id(),
+		strategy->get_strategy_index()
+	);
 	this->strategies.emplace(
 		strategy->get_strategy_index(),
 		std::move(strategy)
 	);
+}
+
+const AgisStrategyRef AgisStrategyMap::get_strategy(std::string strategy_id)
+{
+	auto strategy_index = this->strategy_id_map.at(strategy_id);
+	return std::ref(this->strategies.at(strategy_index));
 }
 
 

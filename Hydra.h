@@ -148,6 +148,14 @@ public:
 	/// <returns></returns>
 	AGIS_API PortfolioPtr const& get_portfolio(std::string const& portfolio_id);
 
+	/// <summary>
+	/// Get const ref to a AgisStrategy registered to the hydra instance
+	/// </summary>
+	/// <param name="strategy_id">unique id of the strategy</param>
+	/// <returns></returns>
+	AGIS_API const AgisStrategyRef get_strategy(std::string strategy_id);
+
+	
 	AGIS_API std::vector<OrderPtr> const& get_order_history() { return this->router.get_order_history(); }
 
 	/// <summary>

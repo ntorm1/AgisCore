@@ -15,7 +15,8 @@ class AgisStrategy
 {
 public:
 	
-	AgisStrategy(PortfolioPtr const& portfolio_): portfolio(portfolio_) {
+	AgisStrategy(std::string id, PortfolioPtr const& portfolio_): portfolio(portfolio_) {
+		this->strategy_id = id;
 		this->strategy_index = strategy_counter++;
 		this->router = nullptr;
 	}
@@ -42,10 +43,16 @@ public:
 	/// Remember a historical order that the strategy placed
 	/// </summary>
 	/// <param name="order"></param>
-	void __remember_order(OrderRef order) { this->order_history.push_back(std::move(order)); }
+	void __remember_order(OrderRef order) { this->order_history.push_back(order); }
 
-
+	/// <summary>
+	/// Get all orders that have been  placed by the strategy
+	/// </summary>
+	/// <returns></returns>
+	std::vector<OrderRef> const& get_order_history() const { return this->order_history; }
+	
 	size_t get_strategy_index() { return this->strategy_index; }
+	std::string get_strategy_id() { return this->strategy_id; }
 	size_t get_portfolio_index() { return this->portfolio->__get_index(); }
 
 protected:
@@ -91,6 +98,7 @@ private:
 	std::vector<OrderRef> order_history;
 
 	size_t strategy_index;
+	std::string strategy_id;
 };
 
 
@@ -101,6 +109,7 @@ public:
 	AgisStrategyMap() = default;
 
 	void register_strategy(AgisStrategyPtr strategy);
+	const AgisStrategyRef get_strategy(std::string strategy_id);
 	
 	void __next();
 	void __reset();

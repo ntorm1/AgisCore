@@ -159,6 +159,12 @@ public:
         std::lock_guard<std::mutex> lock(mutex_);
         return vector_.size();
     }
+
+    void clear()
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        vector_.clear();
+    }
     
     std::optional<T> pop_back() {
         std::lock_guard<std::mutex> lock(mutex_);

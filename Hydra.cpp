@@ -22,10 +22,8 @@ void Hydra::__step()
 {
     // step assets and exchanges forward in time
     this->exchanges.step();
-    
-    // process orders on the open exchange and route to their portfolios on fill
-    this->exchanges.__process_orders(this->router, false);
-    this->router.__process();
+
+    //auto& expired_index_list = this->exchanges.__get_expired_index_list();
     
     // process strategy logic at end of each time step
     this->strategies.__next();
@@ -77,12 +75,15 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
     // build the strategy instance
     strategy->__build(&this->router, &this->exchanges);
 
-    // register the strategy to the portfolio
-    auto strat_ref = std::ref(strategy);
-    this->portfolios.__register_strategy(std::move(strat_ref));
-
     // register the strategy to the strategy map
+    std::string id = strategy->get_strategy_id();
     this->strategies.register_strategy(std::move(strategy));
+
+    // register the strategy to the portfolio
+    auto strat_ref = std::ref(
+        this->strategies.get_strategy(id)
+    );
+    this->portfolios.__register_strategy(strat_ref);
 }
 
 
@@ -90,6 +91,13 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
 AGIS_API PortfolioPtr const& Hydra::get_portfolio(std::string const& portfolio_id)
 {
     return this->portfolios.__get_portfolio(portfolio_id);
+}
+
+
+//============================================================================
+AGIS_API const AgisStrategyRef Hydra::get_strategy(std::string strategy_id)
+{
+    return this->strategies.get_strategy(strategy_id);
 }
 
 //============================================================================

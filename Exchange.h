@@ -184,12 +184,15 @@ public:
 	void __process_order(bool on_close, OrderPtr& order);
 
 
+	ThreadSafeVector<size_t> const& __get_expired_index_list() const { return this->expired_asset_index; }
+
 private:
 	std::mutex _mutex;
 	std::unordered_map<std::string, ExchangePtr> exchanges;
 	std::unordered_map<std::string, size_t> asset_map;
 	std::vector<std::shared_ptr<Asset>> assets;
 	std::vector<std::shared_ptr<Asset>> assets_expired;
+	ThreadSafeVector<size_t> expired_asset_index;
 
 
 	long long* dt_index = nullptr;

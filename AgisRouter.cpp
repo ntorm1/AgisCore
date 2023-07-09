@@ -45,11 +45,14 @@ void AgisRouter::processOrder(OrderPtr order) {
         break;
     }
 
-    this->portfolios->__remember_order(std::ref(order));
+    
 
     LOCK_GUARD
-        this->order_history.push_back(std::move(order));
+    this->order_history.push_back(std::move(order));
+    auto order_ref = std::ref(this->order_history.back());
+    this->portfolios->__remember_order(std::move(order_ref));
     UNLOCK_GUARD
+    
 }
 
 void AgisRouter::__process() {

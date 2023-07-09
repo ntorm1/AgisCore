@@ -195,6 +195,7 @@ public:
 
 	void __on_order_fill(OrderPtr const& order);
     void __remember_order(OrderRef order);
+    void __on_assets_expired(ThreadSafeVector<size_t> const& ids);
 
     void __register_portfolio(PortfolioPtr portfolio);
     void __register_strategy(AgisStrategyRef strategy);

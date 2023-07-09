@@ -181,6 +181,7 @@ void PortfolioMap::__on_order_fill(OrderPtr const& order)
 void PortfolioMap::__remember_order(OrderRef order)
 {
     auto& portfolio = this->portfolios.at(order.get()->get_portfolio_index());
+    portfolio->__remember_order(std::move(order));
 }
 
 
@@ -301,7 +302,7 @@ AGIS_API void Portfolio::register_strategy(AgisStrategyRef strategy)
 {
     this->strategies.emplace(
         strategy.get()->get_strategy_index(),
-        std::move(strategy)
+        strategy
     );
 }
 
@@ -326,7 +327,7 @@ void Portfolio::__remember_order(OrderRef order)
 {
     LOCK_GUARD
     auto& strategy = this->strategies.at(order.get()->get_strategy_index());
-    strategy.get()->__remember_order(std::move(order));
+    strategy.get()->__remember_order(order);
     UNLOCK_GUARD
 }
 
