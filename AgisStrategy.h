@@ -119,6 +119,8 @@ public:
 	void __next();
 	void __reset();
 
+	bool __strategy_exists(std::string const& id) { return this->strategy_id_map.contains(id); }
+
 
 private:
 	std::unordered_map<std::string, size_t> strategy_id_map;

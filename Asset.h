@@ -57,6 +57,7 @@ public:
     );
 
     AGIS_API std::string get_asset_id() const { return this->asset_id; }
+    AGIS_API size_t get_asset_index() const { return this->asset_index; }
     AGIS_API size_t const get_size() const { return this->rows - this->warmup; }
     AGIS_API size_t const get_rows() const { return this->rows; }
     AGIS_API size_t const get_cols() const { return this->columns; }
@@ -64,7 +65,7 @@ public:
     AGIS_API std::string const& get_exchange_id() { return this->exchange_id; }
     AGIS_API std::vector<std::string> get_column_names() const;
     AGIS_API std::unordered_map<std::string, size_t> const& get_headers() { return this->headers; };
-
+    AGIS_API double get_asset_feature(std::string const& col, int index) const noexcept;
 
     AGIS_API double __get(std::string col, size_t row) const;
     AGIS_API long long __get_dt(size_t row) const { return *(this->dt_index + row); };
@@ -76,6 +77,9 @@ public:
     AGIS_API StridedPointer<double> const __get_column(std::string const& column_name) const;
     AGIS_API StridedPointer<long long> const __get_dt_index() const;
     AGIS_API std::vector<std::string> __get_dt_index_str() const;
+
+    bool __contains_column(std::string const& col) { return this->headers.contains(col); }
+    bool __valid_row(int n)const { return n <= (this->current_index - 1); }
 
     void __set_index(size_t index_) { this->asset_index = index_; }
     void __set_exchange_offset(size_t offset) { this->exchange_offset = offset; }

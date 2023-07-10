@@ -23,6 +23,19 @@ class AgisRouter;
 
 AGIS_API typedef std::unordered_map<std::string, std::shared_ptr<Exchange>> Exchanges;
 AGIS_API typedef std::shared_ptr<Exchange> ExchangePtr;
+AGIS_API typedef std::vector<std::pair<size_t, double>> ExchangeView;
+
+/// <summary>
+/// Type of exchange query to make, used when access a column for every asset on the exchange
+/// </summary>
+enum ExchangeQueryType
+{
+	Default,	/// return all assets in view
+	NLargest,	/// return the N largest
+	NSmallest,	/// return the N smallest
+	NExtreme	/// return the N/2 smallest and largest
+};
+
 
 class  Exchange
 {
@@ -61,7 +74,19 @@ public:
 	/// <returns>Does the id already exists</returns>
 	AGIS_API bool asset_exists(std::string asset_id);
 	
+	/// <summary>
+	/// Get all assets currently registered to the exchange
+	/// </summary>
+	/// <returns></returns>
 	std::vector<std::shared_ptr<Asset>> const& get_assets() const { return this->assets; }
+
+	AGIS_API ExchangeView get_exchange_view(
+		std::string const& col,
+		int row,
+		ExchangeQueryType query_type,
+		int N = -1,
+		bool panic = true
+	);
 
 
 	AGIS_API StridedPointer<long long> const __get_dt_index() const;

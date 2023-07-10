@@ -64,6 +64,10 @@ NexusStatusCode Hydra::new_exchange(
 //============================================================================
 AGIS_API void Hydra::new_portfolio(std::string id, double cash)
 {
+    if (this->strategies.__strategy_exists(id))
+    {
+        throw std::runtime_error("portfolio already exists");
+    }
     auto portfolio = std::make_unique<Portfolio>(id, cash);
     this->portfolios.__register_portfolio(std::move(portfolio));
 }
@@ -72,6 +76,11 @@ AGIS_API void Hydra::new_portfolio(std::string id, double cash)
 //============================================================================
 AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
 {
+    if (this->strategies.__strategy_exists(strategy->get_strategy_id()))
+    {
+        throw std::runtime_error("strategy already exsits");
+    }
+
     // build the strategy instance
     strategy->__build(&this->router, &this->exchanges);
 

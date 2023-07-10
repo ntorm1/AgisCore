@@ -215,6 +215,7 @@ public:
 
     PortfolioPtr const& __get_portfolio(std::string const& id);
     PortfolioPtr const& __get_portfolio(size_t index) { return this->portfolios.at(index); };
+    bool __portfolio_exists(std::string const& id) { return this->portfolio_map.contains(id); }
 
 private:
 	std::unordered_map<size_t, PortfolioPtr> portfolios;

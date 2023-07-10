@@ -58,6 +58,81 @@ std::vector<std::string> Exchange::get_asset_ids() const
 	return keys;
 }
 
+bool compareBySecondValueAsc(const std::pair<size_t, double>& a, const std::pair<size_t, double>& b) {
+	return a.second < b.second;  // Compare in ascending order
+}
+
+bool compareBySecondValueDesc(const std::pair<size_t, double>& a, const std::pair<size_t, double>& b) {
+	return a.second > b.second;  // Compare in descending order
+}
+
+
+AGIS_API ExchangeView Exchange::get_exchange_view(
+	std::string const& col,
+	int row,
+	ExchangeQueryType query_type,
+	int N,
+	bool panic
+)
+{
+	ExchangeView view;
+
+	// row index must be negative 
+	if (row < 0) { throw std::runtime_error("invalid row param"); }
+
+	// if no N is passed default to all assets
+	auto number_assets = (N == -1) ? this->assets.size() : static_cast<size_t>(N);
+
+	for (auto& asset : this->assets)
+	{
+		if (!asset)
+		{
+			continue;
+		}
+		if (!asset->__contains_column(col))
+		{
+			if (panic) { throw std::runtime_error("missing column in view"); }
+			continue;
+		}
+		if (!asset->__valid_row(row))
+		{
+			if (panic) { throw std::runtime_error("row out of bounds"); }
+			continue;
+		}
+		auto val = asset->get_asset_feature(col, row);
+		view.push_back(std::make_pair(asset->get_asset_index(), val));
+	}
+	switch (query_type) {
+		case(ExchangeQueryType::Default):
+				return view;
+		case(ExchangeQueryType::NSmallest):
+			std::partial_sort(
+				view.begin(),
+				view.begin() + N,
+				view.end(),
+				compareBySecondValueAsc);
+			view.erase(view.begin() + N, view.end());
+			return view;
+		case(ExchangeQueryType::NLargest):
+			std::partial_sort(
+				view.begin(),
+				view.begin() + N,
+				view.end(),
+				compareBySecondValueDesc);
+			view.erase(view.begin() + N, view.end());
+			return view;
+		case(ExchangeQueryType::NExtreme): {
+			auto n = N / 2;	
+			std::partial_sort(view.begin(), view.begin() + n, view.end(), compareBySecondValueDesc);
+			std::partial_sort(view.begin() + n, view.begin() +  N, view.end(), compareBySecondValueAsc);
+			view.erase(view.begin() + n, view.end() - n);
+			return view;
+		}
+	}
+
+	std::sort(view.begin(), view.end(),
+		[](const auto& a, const auto& b) { return a.second < b.second; });
+}
 
 //============================================================================
 StridedPointer<long long> const Exchange::__get_dt_index() const

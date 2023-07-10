@@ -16,11 +16,14 @@
 #include <optional>
 #include <mutex>
 #include <atomic>
+#include <variant>
 #include <unordered_map>
 
 #include "utils_gmp.h"
 
 typedef unsigned int uint;
+
+
 
 
 constexpr auto DEFAULT_STRAT_ID = 0;
