@@ -115,7 +115,6 @@ private:
     size_t close_index;
     long long* dt_index;
     double* data;
-    double* row;
 
     std::unordered_map<std::string, size_t> headers;
 

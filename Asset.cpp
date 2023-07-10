@@ -80,8 +80,17 @@ NexusStatusCode Asset::load_csv()
         return NexusStatusCode::InvalidIO;
     }
 
-    // Parse headers
+    this->rows = 0;
     std::string line;
+    while (std::getline(file, line)) {
+        this->rows++;
+    }
+    this->rows--;
+    file.clear();                 // Clear any error flags
+    file.seekg(0, std::ios::beg);  // Move the file pointer back to the start
+
+
+    // Parse headers
     if (std::getline(file, line)) {
         std::stringstream ss(line);
         std::string columnName;
@@ -105,8 +114,10 @@ NexusStatusCode Asset::load_csv()
 
     // Load in the actual data
     unsigned int capacity = 1000;
-    this->data = new double[capacity];
+    this->data = new double[this->rows*this->columns];
     this->dt_index = new long long[capacity];
+
+    size_t row_counter = 0;
     while (std::getline(file, line))
     {
         std::stringstream ss(line);
@@ -115,43 +126,17 @@ NexusStatusCode Asset::load_csv()
         std::string dateStr, columnValue;
         std::getline(ss, dateStr, ',');
 
-        
-        if ((this->rows + 1) * this->columns >= capacity)
-        {
-            capacity *= 2;
-            double* newArray = static_cast<double*>(realloc(this->data, capacity * sizeof(double)));
-            long long* newDtArray = static_cast<long long*>(realloc(this->dt_index, capacity * sizeof(long long)));
-            if (!newArray || !newDtArray) {
-                return NexusStatusCode::InvalidMemoryOp;
-            }
-            this->data = newArray;
-            this->dt_index = newDtArray;
-        }
-
-        this->dt_index[this->rows] = str_to_epoch(dateStr, this->dt_fmt);
+        this->dt_index[row_counter] = str_to_epoch(dateStr, this->dt_fmt);
 
         int col_idx = 0;
         while (std::getline(ss, columnValue, ','))
         {
             double value = std::stod(columnValue);
-            this->data[this->rows*this->columns + col_idx] = value;
+            this->data[row_counter + col_idx * this->rows] = value;
             col_idx++;
         }
-        this->rows++;
+        row_counter++;
     }
-
-    double* newArray = static_cast<double*>(realloc(
-        this->data,
-        this->rows*this->columns * sizeof(double)));
-    long long* newDtArray = static_cast<long long*>(realloc(
-        this->dt_index,
-        this->rows * this->columns * sizeof(long long)));
-    if (!newArray || !newDtArray) {
-        return NexusStatusCode::InvalidMemoryOp;
-    }
-    this->data = newArray;
-    this->dt_index = newDtArray;
-    this->row = this->data;
     this->is_loaded = true;
     return NexusStatusCode::Ok;
 }
@@ -160,7 +145,7 @@ NexusStatusCode Asset::load_csv()
 StridedPointer<double> const Asset::__get_column(std::string const& column_name) const
 {
     auto col_offset = this->headers.at(column_name);
-    return StridedPointer(this->data + col_offset, this->rows, this->columns);
+    return StridedPointer(this->data + (col_offset*this->rows), this->rows, 1);
 }
 
 StridedPointer<long long> const Asset::__get_dt_index() const
@@ -181,7 +166,6 @@ AGIS_API std::vector<std::string> Asset::__get_dt_index_str() const
 
 void Asset::__step()
 {
-    this->row += this->columns;
     this->current_index++;
 }
 
@@ -191,7 +175,6 @@ void Asset::__goto(long long datetime)
     if (datetime >= this->dt_index[this->rows - 1])
     {
         this->current_index = this->rows - 1;
-        this->row = this->data + ((this->rows - 1) * this->columns);
     }
     // search for datetime in the index
     for (int i = this->current_index; i < this->rows; i++)
@@ -208,7 +191,6 @@ void Asset::__reset()
 {
     // move datetime index and data pointer back to start
     this->current_index = this->warmup;
-    this->row = &this->data[this->warmup * this->columns];
     this->__is_expired = false;
     if(!__is_aligned) this->__is_streaming = false;
 }
@@ -217,11 +199,13 @@ AGIS_API double Asset::__get_market_price(bool on_close) const
 {
     if (on_close)
     {
-        return *(this->row  - this->columns + this->close_index);
+        size_t offset = (this->rows * this->close_index) + this->current_index - 1;
+        return *(this->data  + offset);
     }
     else
     {
-        return *(this->row -this->columns + this->open_index);
+        size_t offset = (this->rows * this->open_index) + this->current_index - 1;
+        return *(this->data + offset);
     }
 }
 
@@ -241,9 +225,8 @@ AGIS_API std::vector<std::string> Asset::get_column_names() const
 
 double Asset::__get(std::string col, size_t row) const
 {
-    auto offset = this->columns * row;
-    auto col_idx = this->headers.at(col);
-    return *(this->data + offset + col_idx);
+    auto col_offset = this->headers.at(col) * this->rows;
+    return *(this->data + row + col_offset);
 }
 
 Frequency string_to_freq(const std::string& str)

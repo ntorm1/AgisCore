@@ -179,7 +179,7 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 	// Define a lambda function that processes each asset
 	auto process_asset = [&](auto& asset) {
 		// if asset is expired skip
-		if (asset->__is_expired)
+		if (!asset || asset->__is_expired)
 		{
 			return;
 		}
@@ -187,13 +187,6 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 		// if asset is alligned to exchange just step forward in time, clean up if needed 
 		if (asset->__is_aligned) {
 			asset->__step();
-			// remove, alligned assets will never expire?
-			if (asset->__is_last_view()) {
-				auto index = asset->__get_index(true);
-				expired_assets.push_back(index);
-				this->assets[index] = nullptr;
-				asset->__is_expired = true;
-			}
 			return;
 		}
 
@@ -201,8 +194,8 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 		if (asset->__is_last_view()) {
 			auto index = asset->__get_index(true);
 			expired_assets.push_back(index);
-			this->assets[index] = nullptr;
 			asset->__is_expired = true;
+			this->assets[index] = nullptr;
 			return;
 		}
 

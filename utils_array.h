@@ -39,6 +39,17 @@ inline optional<T> unsorted_vector_remove(vector<T>& vec, Func func, I id) {
     vec.pop_back();
     return order;
 }
+
+template <typename T>
+void row_major_to_col_major(const T* rowMajorData, T* columnMajorData, int numRows, int numCols) {
+    for (int i = 0; i < numRows; ++i) {
+        for (int j = 0; j < numCols; ++j) {
+            columnMajorData[i + j * numRows] = rowMajorData[i * numCols + j];
+        }
+    }
+}
+
+
 template <typename T>
 std::unique_ptr<T> unsorted_unique_ptr_remove(std::vector<std::unique_ptr<T>>& vec, size_t index) {
     // Move the unique pointer to a local variable
