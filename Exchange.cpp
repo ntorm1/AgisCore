@@ -67,6 +67,7 @@ bool compareBySecondValueDesc(const std::pair<size_t, double>& a, const std::pai
 }
 
 
+//============================================================================
 AGIS_API ExchangeView Exchange::get_exchange_view(
 	std::string const& col,
 	int row,
@@ -85,18 +86,11 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 
 	for (auto& asset : this->assets)
 	{
-		if (!asset)
-		{
-			continue;
-		}
-		if (!asset->__contains_column(col))
-		{
-			if (panic) { throw std::runtime_error("missing column in view"); }
-			continue;
-		}
-		if (!asset->__valid_row(row))
-		{
-			if (panic) { throw std::runtime_error("row out of bounds"); }
+		if (!asset) continue;
+		if (!asset->__is_streaming 
+			|| !asset->__contains_column(col)
+			|| !asset->__valid_row(row)){
+			if (panic) { throw std::runtime_error("invalid asset found"); }
 			continue;
 		}
 		auto val = asset->get_asset_feature(col, row);
@@ -129,9 +123,6 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 			return view;
 		}
 	}
-
-	std::sort(view.begin(), view.end(),
-		[](const auto& a, const auto& b) { return a.second < b.second; });
 }
 
 //============================================================================

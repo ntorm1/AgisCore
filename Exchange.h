@@ -85,7 +85,7 @@ public:
 		int row,
 		ExchangeQueryType query_type,
 		int N = -1,
-		bool panic = true
+		bool panic = false
 	);
 
 

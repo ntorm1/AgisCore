@@ -226,7 +226,8 @@ AGIS_API std::vector<std::string> Asset::get_column_names() const
 AGIS_API double Asset::get_asset_feature(std::string const& col, int index) const noexcept
 {
     size_t col_offset = this->headers.at(col) * this->rows;
-    return *(this->data + current_index + index + col_offset);
+    size_t row_offset = this->current_index + index - 1;
+    return *(this->data + row_offset + col_offset);
 }
 
 double Asset::__get(std::string col, size_t row) const
