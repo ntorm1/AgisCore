@@ -24,7 +24,7 @@ struct Position;
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
 AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
 
-
+AGIS_API typedef std::vector<std::pair<size_t, double>> Allocation;
 AGIS_API typedef std::unique_ptr<Portfolio> PortfolioPtr;
 AGIS_API typedef std::unique_ptr<Position> PositionPtr;
 AGIS_API typedef std::reference_wrapper<const PositionPtr> PositionRef;
@@ -32,11 +32,9 @@ AGIS_API typedef std::reference_wrapper<const PositionPtr> PositionRef;
 
 struct Position
 {
-    
     size_t position_id;
     size_t asset_id;
     size_t portfolio_id;
-
 
     double close_price = 0;
     double average_price;

@@ -96,6 +96,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 		auto val = asset->get_asset_feature(col, row);
 		view.push_back(std::make_pair(asset->get_asset_index(), val));
 	}
+	if (view.size() == 1) { return view; }
 	switch (query_type) {
 		case(ExchangeQueryType::Default):
 				return view;
