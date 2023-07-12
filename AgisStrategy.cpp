@@ -8,6 +8,8 @@
 void AgisStrategy::__reset()
 {
 	this->order_history.clear();
+	this->cash_history.clear();
+	this->nlv_history.clear();
 	this->reset();
 }
 
@@ -21,6 +23,15 @@ void AgisStrategy::__build(
 	this->exchange_map = exchange_map;
 	this->cash = this->portfolio_allocation * this->portfolio->get_cash();
 	this->nlv = this->cash;
+}
+
+void AgisStrategy::__evaluate(bool on_close)
+{
+	if (on_close)
+	{
+		this->nlv_history.push_back(this->nlv);
+		this->cash_history.push_back(this->cash);
+	}
 }
 
 

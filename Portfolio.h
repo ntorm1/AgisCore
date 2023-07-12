@@ -24,7 +24,7 @@ struct Position;
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
 AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
 
-AGIS_API typedef std::vector<std::pair<size_t, double>> Allocation;
+AGIS_API typedef std::vector<std::pair<size_t, double>> StrategyAllocation;
 AGIS_API typedef std::unique_ptr<Portfolio> PortfolioPtr;
 AGIS_API typedef std::unique_ptr<Position> PositionPtr;
 AGIS_API typedef std::reference_wrapper<const PositionPtr> PositionRef;
@@ -126,6 +126,11 @@ public:
     /// <returns></returns>
     AGIS_API std::optional<PositionRef> get_position(size_t asset_index) const;
 
+    /// <summary>
+    /// Register a new stratey to the portfolio instance
+    /// </summary>
+    /// <param name="strategy">A reference to an unique pointer to a AgisStrategy instance</param>
+    /// <returns></returns>
     AGIS_API void register_strategy(AgisStrategyRef strategy);
     
     double get_cash() const { return this->cash; }

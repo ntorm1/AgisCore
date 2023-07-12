@@ -58,14 +58,11 @@ void Position::__evaluate(ThreadSafeVector<OrderPtr>& orders, double market_pric
     for (auto& trade_pair : this->trades) 
     {
         auto& trade = trade_pair.second;
-        trade->last_price = market_price;
-        trade->unrealized_pl = trade->units * (market_price - trade->average_price);
-        if (on_close) { trade->bars_held++; }
+        trade->evaluate(market_price, on_close);
 
         // test trade exit
         if (!trade->exit.has_value()) { continue; }
-        auto& trade_exit = trade->exit.value();
-        if (trade_exit->exit())
+        if (trade->exit.value()->exit())
         {
             auto order = trade->generate_trade_inverse();
             // set the state to Cheat to allow for the order to be filled and then processed by
@@ -304,6 +301,13 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
     }
     this->nlv_history.push_back(this->nlv);
     this->cash_history.push_back(this->nlv);
+
+    // log strategy levels
+    for (const auto& strat : this->strategies)
+    {
+        strat.second.get()->__evaluate(on_close);
+    }
+
 }
 
 

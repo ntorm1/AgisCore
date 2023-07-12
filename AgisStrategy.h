@@ -57,13 +57,37 @@ public:
 	void __remember_order(OrderRef order) { this->order_history.push_back(order); }
 
 	/// <summary>
+	/// Evaluate the portfolio at the current levels
+	/// </summary>
+	/// <param name="on_close">On the close of a time period</param>
+	void __evaluate(bool on_close);
+
+	/// <summary>
 	/// Get all orders that have been  placed by the strategy
 	/// </summary>
 	/// <returns></returns>
 	std::vector<OrderRef> const& get_order_history() const { return this->order_history; }
 	
+	void nlv_adjust(double nlv_adjustment) { gmp_add_assign(this->nlv, nlv_adjustment); };
+	void cash_adjust(double cash_adjustment) { gmp_add_assign(this->cash, cash_adjustment); };
+	void unrealized_adjust(double unrealized_adjustment) { this->unrealized_pl += unrealized_adjustment; };
+	
+	/// <summary>
+	/// Get the unique strategy index of a strategy instance
+	/// </summary>
+	/// <returns> unique strategy index of a strategy instance </returns>
 	size_t get_strategy_index() { return this->strategy_index; }
+
+	/// <summary>
+	/// Get the unique strategy id of a strategy instance
+	/// </summary>
+	/// <returns> unique strategy id of a strategy instance</returns>
 	std::string get_strategy_id() { return this->strategy_id; }
+
+	/// <summary>
+	/// Get the id of the portfolio the strategy is registered to 
+	/// </summary>
+	/// <returns>Unique if of the portfolio the strategy is registered to</returns>
 	size_t get_portfolio_index() { return this->portfolio->__get_index(); }
 
 protected:
@@ -116,6 +140,9 @@ private:
 
 	size_t strategy_index;
 	std::string strategy_id;
+
+	std::vector<double> nlv_history;
+	std::vector<double> cash_history;
 };
 
 

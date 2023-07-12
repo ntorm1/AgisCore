@@ -28,6 +28,7 @@ struct AGIS_API Trade {
     double average_price;
     double close_price;
     double last_price;
+    double nlv;
 
     double unrealized_pl;
     double realized_pl;
@@ -50,6 +51,7 @@ struct AGIS_API Trade {
     void increase(OrderPtr const& filled_order);
     void reduce(OrderPtr const& filled_order);
     void adjust(OrderPtr const& filled_order);
+    void evaluate(double market_price, bool on_close);
 
     OrderPtr generate_trade_inverse();
 

@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Trade.h"
 #include "Order.h"
+#include "AgisStrategy.h"
 
 std::atomic<size_t> Trade::trade_counter(0);
 
@@ -15,6 +16,7 @@ Trade::Trade(AgisStrategyRef strategy_, OrderPtr const& filled_order):
     // set the trade member variables
     this->units = filled_order->get_units();
     this->average_price = filled_order->get_average_price();
+    this->nlv = gmp_mult(this->units, this->average_price);
     this->unrealized_pl = 0;
     this->realized_pl = 0;
     this->close_price = 0;
@@ -39,6 +41,7 @@ void Trade::close(OrderPtr const& filled_order)
     this->unrealized_pl = 0;
 }
 
+
 void Trade::increase(OrderPtr const& filled_order)
 {
     auto units_ = filled_order->get_units();
@@ -47,12 +50,14 @@ void Trade::increase(OrderPtr const& filled_order)
     this->average_price = ((abs(this->units) * this->average_price) + (abs(units_) * p)) / new_units;
     this->units += units_;
 }
+
 void Trade::reduce(OrderPtr const& filled_order)
 {
     auto units_ = filled_order->get_units();
     this->realized_pl += abs(units_) * (filled_order->get_average_price() - this->average_price);
     this->units += units_;
 }
+
 
 void Trade::adjust(OrderPtr const& filled_order)
 {
@@ -67,6 +72,25 @@ void Trade::adjust(OrderPtr const& filled_order)
         this->reduce(filled_order);
     }
 }
+
+
+void Trade::evaluate(double market_price, bool on_close)
+{
+    // adjust the source strategy nlv and unrealized pl
+    auto nlv_new = gmp_mult(this->units, market_price);
+    auto unrealized_pl_new = gmp_mult( this->units, (market_price - this->average_price));
+    
+    auto& strat = this->strategy.get();
+    strat->nlv_adjust(gmp_sub(nlv_new, this->nlv));
+    strat->unrealized_adjust(gmp_sub(unrealized_pl_new, this->unrealized_pl));
+
+    this->nlv = nlv_new;
+    this->unrealized_pl = unrealized_pl_new;
+    this->last_price = market_price;
+
+    if (on_close) { this->bars_held++; }
+}
+
 
 OrderPtr Trade::generate_trade_inverse() {
     return std::make_unique<MarketOrder>(
