@@ -19,6 +19,8 @@ void AgisStrategy::__build(
 {
 	this->router = router_;
 	this->exchange_map = exchange_map;
+	this->cash = this->portfolio_allocation * this->portfolio->get_cash();
+	this->nlv = this->cash;
 }
 
 

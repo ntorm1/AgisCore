@@ -54,7 +54,7 @@ struct Position
     /// </summary>
     size_t bars_held = 0;
 
-    Position(OrderPtr const& order);
+    Position(AgisStrategyRef strategy, OrderPtr const& order);
 
     std::optional<TradeRef> __get_trade(size_t strategy_index) const;
 
@@ -68,7 +68,7 @@ struct Position
     void __evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close);
 
     void close(OrderPtr const& order, std::vector<TradePtr>& trade_history);
-    void adjust(OrderPtr const& order, std::vector<TradePtr>& trade_history);
+    void adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vector<TradePtr>& trade_history);
 
 
     OrderPtr generate_position_inverse();

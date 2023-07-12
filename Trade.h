@@ -10,6 +10,10 @@
 class Order;
 typedef std::unique_ptr<Order> OrderPtr;
 
+class AgisStrategy;
+typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
+typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
+
 
 struct Trade;
 class TradeExit;
@@ -36,10 +40,11 @@ struct AGIS_API Trade {
     size_t asset_id;
     size_t strategy_id;
     size_t portfolio_id;
+    AgisStrategyRef strategy;
 
     std::optional<TradeExitPtr> exit = std::nullopt;
 
-    Trade(OrderPtr const& order);
+    Trade(AgisStrategyRef strategy, OrderPtr const& order);
 
     void close(OrderPtr const& filled_order);
     void increase(OrderPtr const& filled_order);

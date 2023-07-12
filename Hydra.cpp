@@ -64,7 +64,7 @@ NexusStatusCode Hydra::new_exchange(
 //============================================================================
 AGIS_API void Hydra::new_portfolio(std::string id, double cash)
 {
-    if (this->strategies.__strategy_exists(id))
+    if (this->portfolios.__portfolio_exists(id))
     {
         throw std::runtime_error("portfolio already exists");
     }

@@ -10,7 +10,7 @@ std::atomic<size_t> Portfolio::portfolio_counter(0);
 
 
 //============================================================================
-Position::Position(OrderPtr const& filled_order_)
+Position::Position(AgisStrategyRef strategy, OrderPtr const& filled_order_)
 {
     //populate common position values
     this->asset_id = filled_order_->get_asset_index();
@@ -25,6 +25,7 @@ Position::Position(OrderPtr const& filled_order_)
 
     // insert the new trade
     auto trade = std::make_unique<Trade>(
+        strategy,
         filled_order_
     );
     this->trades.insert({trade->strategy_id,std::move(trade)});
@@ -98,7 +99,7 @@ void Position::close(OrderPtr const& order, std::vector<TradePtr>& trade_history
 
 
 //============================================================================
-void Position::adjust(OrderPtr const& order, std::vector<TradePtr>& trade_history)
+void Position::adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vector<TradePtr>& trade_history)
 {
     auto units_ = order->get_units();
     auto fill_price = order->get_average_price();
@@ -123,7 +124,10 @@ void Position::adjust(OrderPtr const& order, std::vector<TradePtr>& trade_histor
     auto trade_opt = this->__get_trade(strategy_id);
     if (!trade_opt)
     {
-        auto trade = std::make_unique<Trade>(order);
+        auto trade = std::make_unique<Trade>(
+            strategy,
+            order
+        );
         this->trades.insert({ strategy_id,std::move(trade) });
     }
     else
@@ -368,9 +372,10 @@ void Portfolio::__on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t>
 //============================================================================
 void Portfolio::open_position(OrderPtr const& order)
 {
+    auto& strategy = this->strategies.at(order->get_strategy_index());
     this->positions.emplace(
         order->get_asset_index(), 
-        std::make_unique<Position>(order)
+        std::make_unique<Position>(strategy, order)
     );
 }
 
@@ -379,7 +384,8 @@ void Portfolio::open_position(OrderPtr const& order)
 void Portfolio::modify_position(OrderPtr const& order)
 {
     auto& position = this->__get_position(order->get_asset_index());
-    position->adjust(order, trade_history);
+    auto& strategy = this->strategies.at(order->get_strategy_index());
+    position->adjust(strategy, order, trade_history);
 }
 
 

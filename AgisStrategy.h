@@ -15,10 +15,16 @@ class AgisStrategy
 {
 public:
 	
-	AgisStrategy(std::string id, PortfolioPtr const& portfolio_): portfolio(portfolio_) {
+	AgisStrategy(
+		std::string id, 
+		PortfolioPtr const& portfolio_,
+		double portfolio_allocation
+	): portfolio(portfolio_) 
+	{
 		this->strategy_id = id;
 		this->strategy_index = strategy_counter++;
 		this->router = nullptr;
+		this->portfolio_allocation = portfolio_allocation;
 	}
 
 	/// <summary>
@@ -101,6 +107,12 @@ private:
 	/// All historical orders placed by the strategy
 	/// </summary>
 	std::vector<OrderRef> order_history;
+
+	double unrealized_pl = 0;
+	double realized_pl = 0;
+	double nlv = 0;
+	double cash = 0;
+	double portfolio_allocation = 0;
 
 	size_t strategy_index;
 	std::string strategy_id;
