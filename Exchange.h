@@ -129,7 +129,7 @@ public:
 	AGIS_API ExchangeMap();
 	AGIS_API ~ExchangeMap();
 
-	AGIS_API void build();
+	AGIS_API void __build();
 	AGIS_API bool step();
 	AGIS_API void __clear();
 
@@ -182,7 +182,7 @@ public:
 	/// </summary>
 	/// <param name="exchange_id">Unique id of the exchange to get</param>
 	/// <returns></returns>
-	AGIS_API ExchangePtr const get_exchange(std::string exchange_id);
+	AGIS_API ExchangePtr const get_exchange(const std::string& exchange_id) const;
 	
 	/// <summary>
 	/// Does a asset with this id exist already

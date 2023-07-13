@@ -65,6 +65,7 @@ public:
     TradeExit() : trade(nullptr) {}
 
     void build(Trade const* trade_) { this->trade = trade_; }
+    virtual std::unique_ptr<TradeExit> clone() const = 0;
 
     AGIS_API virtual bool exit() = 0;
 
@@ -77,6 +78,10 @@ class ExitBars : public TradeExit {
 public:
     ExitBars(size_t bars_) : TradeExit() {
         this->bars = bars_;
+    }
+
+    std::unique_ptr<TradeExit> clone() const override {
+        return std::make_unique<ExitBars>(*this);
     }
 
     bool AGIS_API exit() override {
@@ -95,6 +100,10 @@ public:
     ExitBand(double ub_, double lb_) : TradeExit() {
         this->ub = ub_;
         this->lb = lb_;
+    }
+
+    std::unique_ptr<TradeExit> clone() const override {
+        return std::make_unique<ExitBand>(*this);
     }
 
     bool exit() override {

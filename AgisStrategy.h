@@ -11,6 +11,8 @@ class AgisStrategy;
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
 AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
 
+AGIS_API typedef std::vector<std::pair<size_t, double>> Allocation;
+
 class AgisStrategy
 {
 public:
@@ -36,6 +38,11 @@ public:
 	/// Pure virtual function to be called on reset of Hydra instance
 	/// </summary>
 	virtual void reset() = 0;
+
+	/// <summary>
+	/// Pure virtual function to be called after the portfolio and exchangemap have beend built
+	/// </summary>
+	virtual void build() = 0;
 
 	/// <summary>
 	/// Clear existing containers of all historical information
@@ -103,12 +110,39 @@ protected:
 	);
 
 	/// <summary>
-	/// Get strategies current open position in a given asset
+	/// Get current open position in a given asset by asset index
 	/// </summary>
-	/// <param name="asset_index">unique id of the asset to search for</param>
+	/// <param name="asset_index">unique index of the asset to search for</param>
 	/// <returns></returns>
 	AGIS_API std::optional<TradeRef> get_trade(size_t asset_index);
+
+	/// <summary>
+	/// Get a trade by asset id
+	/// </summary>
+	/// <param name="asset_id">unique id of the asset to search for</param>
+	/// <returns></returns>
 	AGIS_API std::optional<TradeRef> get_trade(std::string const& asset_id);
+
+	/// <summary>
+	/// Get an exchange ptr by unique id 
+	/// </summary>
+	/// <param name="id">unique id of the exchange to get</param>
+	/// <returns></returns>
+	AGIS_API ExchangePtr const get_exchange(std::string const& id) const;
+
+	/// <summary>
+	/// Set the portfolio of a strategy by an allocation of <asset index, allocation amount>
+	/// </summary>
+	/// <param name="allocation">The allocations of the strategy portfolio</param>
+	/// <param name="epsilon">Minimum % difference in size need to trigger a reallocation</param>
+	/// <param name="clear_missing">Clear existing positions that are not in the allocation</param>
+	/// <returns></returns>
+	AGIS_API void strategy_allocate(
+		Allocation const& allocation,
+		double epsilon,
+		bool clear_missing = true,
+		std::optional<TradeExitPtr> exit = std::nullopt
+	);
 
 
 private:
@@ -125,7 +159,7 @@ private:
 	/// <summary>
 	/// Pointer to the main exchange map object
 	/// </summary>
-	ExchangeMap* exchange_map = nullptr;
+	ExchangeMap const* exchange_map = nullptr;
 
 	/// <summary>
 	/// All historical orders placed by the strategy
@@ -146,7 +180,6 @@ private:
 };
 
 
-
 class AgisStrategyMap
 {
 public:
@@ -157,6 +190,7 @@ public:
 	
 	void __next();
 	void __reset();
+	void __build();
 
 	bool __strategy_exists(std::string const& id) { return this->strategy_id_map.contains(id); }
 
@@ -166,3 +200,6 @@ private:
 	std::unordered_map<size_t, AgisStrategyPtr> strategies;
 
 };
+
+
+AGIS_API void agis_realloc(Allocation& allocation, double c);

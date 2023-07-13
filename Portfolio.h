@@ -24,7 +24,6 @@ struct Position;
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
 AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
 
-AGIS_API typedef std::vector<std::pair<size_t, double>> StrategyAllocation;
 AGIS_API typedef std::unique_ptr<Portfolio> PortfolioPtr;
 AGIS_API typedef std::unique_ptr<Position> PositionPtr;
 AGIS_API typedef std::reference_wrapper<const PositionPtr> PositionRef;
@@ -110,14 +109,14 @@ public:
     /// Get the unique id of the portfolio
     /// </summary>
     /// <returns></returns>
-    std::string __get_portfolio_id()const { return this->portfolio_id; }
+    std::string const& __get_portfolio_id()const { return this->portfolio_id; }
 
     /// <summary>
     /// Does a position exist in the portfolio with a given asset index
     /// </summary>
     /// <param name="asset_index">unique asset index to search for</param>
     /// <returns></returns>
-    bool position_exists(size_t asset_index) { return positions.contains(asset_index); }
+    AGIS_API bool position_exists(size_t asset_index) { return positions.contains(asset_index); }
 
     /// <summary>
     /// Get a position by asset index if it exists in the portfolio
@@ -126,12 +125,15 @@ public:
     /// <returns></returns>
     AGIS_API std::optional<PositionRef> get_position(size_t asset_index) const;
 
+    AGIS_API std::vector<size_t> get_strategy_positions(size_t strategy_index) const;
+
     /// <summary>
     /// Register a new stratey to the portfolio instance
     /// </summary>
     /// <param name="strategy">A reference to an unique pointer to a AgisStrategy instance</param>
     /// <returns></returns>
     AGIS_API void register_strategy(AgisStrategyRef strategy);
+
     
     double get_cash() const { return this->cash; }
     double get_nlv() const { return this->nlv; }

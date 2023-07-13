@@ -497,7 +497,7 @@ std::optional<std::shared_ptr<Asset> const> ExchangeMap::get_asset(std::string c
 
 
 //============================================================================
-AGIS_API ExchangePtr const ExchangeMap::get_exchange(std::string exchange_id_)
+AGIS_API ExchangePtr const ExchangeMap::get_exchange(std::string const & exchange_id_) const 
 {
 	return this->exchanges.at(exchange_id_);
 }
@@ -658,7 +658,7 @@ void ExchangeMap::__process_order(bool on_close, OrderPtr& order)
 
 
 //============================================================================
-AGIS_API void ExchangeMap::build()
+AGIS_API void ExchangeMap::__build()
 {
 	size_t exchange_offset = 0;
 	for (auto& exchange_pair : this->exchanges)

@@ -62,7 +62,7 @@ NexusStatusCode Hydra::new_exchange(
 
 
 //============================================================================
-AGIS_API void Hydra::new_portfolio(std::string id, double cash)
+AGIS_API PortfolioPtr const& Hydra::new_portfolio(std::string id, double cash)
 {
     if (this->portfolios.__portfolio_exists(id))
     {
@@ -70,6 +70,8 @@ AGIS_API void Hydra::new_portfolio(std::string id, double cash)
     }
     auto portfolio = std::make_unique<Portfolio>(id, cash);
     this->portfolios.__register_portfolio(std::move(portfolio));
+
+    return this->get_portfolio(id);
 }
 
 
@@ -148,7 +150,8 @@ void Hydra::clear()
 //============================================================================
 AGIS_API void Hydra::build()
 {
-    this->exchanges.build();
+    this->exchanges.__build();
+    this->strategies.__build();
 }
 
 

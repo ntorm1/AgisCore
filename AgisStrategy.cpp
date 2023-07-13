@@ -3,7 +3,7 @@
 #include <tbb/parallel_for_each.h>
 
 #include "AgisStrategy.h"
-
+#include "Exchange.h"
 
 void AgisStrategy::__reset()
 {
@@ -51,6 +51,81 @@ std::optional<TradeRef> AgisStrategy::get_trade(std::string const& asset_id)
 	auto position = this->portfolio->get_position(asset_index);
 	if (!position.has_value()) { return std::nullopt; }
 	return position->get()->__get_trade(this->strategy_index);
+}
+
+
+//============================================================================
+AGIS_API ExchangePtr const AgisStrategy::get_exchange(std::string const& id) const
+{
+	return this->exchange_map->get_exchange(id);
+}
+
+
+//============================================================================
+AGIS_API void AgisStrategy::strategy_allocate(
+	Allocation const& allocation, 
+	double epsilon,
+	bool clear_missing,
+	std::optional<TradeExitPtr> exit)
+{
+	auto position_ids = this->portfolio->get_strategy_positions(this->strategy_index);
+
+	// if clear_missing, clear and trades with asset index not in the allocation
+	if (clear_missing)
+	{
+		std::vector<size_t> results;
+		for (const auto& element : position_ids) {
+			auto it = std::find_if(allocation.begin(), allocation.end(),
+				[&element](const auto& pair) { return pair.first == element; });
+			if (it == allocation.end()) {
+				results.push_back(element);
+			}
+			else {
+				continue;
+			}
+		}
+		for (auto asset_id : results)
+		{
+			auto trade_opt = this->get_trade(asset_id);
+			auto units = trade_opt.value().get()->units;
+			this->place_market_order(
+				asset_id,
+				-1 * units
+			);
+		}
+	}
+	// generate orders based on the allocation passed
+	for (auto& alloc : allocation)
+	{
+		size_t asset_index = alloc.first;
+		double size = alloc.second;
+		auto trade_opt = this->get_trade(asset_index);
+
+		// if trade already exists, reflect those units on the allocation size
+		if (trade_opt.has_value())
+		{
+			double exsisting_units = trade_opt.value().get()->units;
+			gmp_sub_assign(size, exsisting_units);
+
+			double offset = abs((exsisting_units - size) / exsisting_units);
+			if (offset < epsilon) { continue; }
+		}
+
+		if (abs(size) < 1e-10) { continue; }
+
+		if (exit.has_value())
+		{
+			auto x_ptr = exit.value()->clone();
+			this->place_market_order(asset_index, size, std::move(x_ptr));
+		}
+		else
+		{
+			this->place_market_order(
+				asset_index,
+				size
+			);
+		}
+	}
 }
 
 
@@ -132,3 +207,17 @@ void AgisStrategyMap::__reset()
 	);
 }
 
+void AgisStrategyMap::__build()
+{
+	for (auto& strategy : this->strategies)
+	{
+		strategy.second->build();
+	}
+}
+
+AGIS_API void agis_realloc(Allocation& allocation, double c)
+{
+	for (auto& pair : allocation) {
+		pair.second = c;
+	}
+}

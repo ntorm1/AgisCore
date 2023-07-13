@@ -324,6 +324,18 @@ std::optional<PositionRef> Portfolio::get_position(size_t asset_index) const
     }
 }
 
+AGIS_API std::vector<size_t> Portfolio::get_strategy_positions(size_t strategy_index) const
+{
+    std::vector<size_t> v;
+    for (const auto& position : this->positions)
+    {
+        if (position.second->__get_trade(strategy_index).has_value()) {
+            v.push_back(position.first);
+        }
+    }
+    return v;
+}
+
 
 //============================================================================
 AGIS_API void Portfolio::register_strategy(AgisStrategyRef strategy)
