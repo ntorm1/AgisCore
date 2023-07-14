@@ -5,6 +5,8 @@
 #include "AgisStrategy.h"
 #include "Exchange.h"
 
+
+//============================================================================
 void AgisStrategy::__reset()
 {
 	this->order_history.clear();
@@ -66,7 +68,8 @@ AGIS_API void AgisStrategy::strategy_allocate(
 	Allocation const& allocation, 
 	double epsilon,
 	bool clear_missing,
-	std::optional<TradeExitPtr> exit)
+	std::optional<TradeExitPtr> exit,
+	AllocType alloc_type)
 {
 	auto position_ids = this->portfolio->get_strategy_positions(this->strategy_index);
 
@@ -100,6 +103,22 @@ AGIS_API void AgisStrategy::strategy_allocate(
 		size_t asset_index = alloc.first;
 		double size = alloc.second;
 		auto trade_opt = this->get_trade(asset_index);
+
+		switch (alloc_type)
+		{
+			case AllocType::UNITS:
+				break;
+			case AllocType::DOLLARS: {
+				auto market_price = this->exchange_map->__get_market_price(asset_index, true);
+				size /= market_price;
+				break; 
+			}
+			case AllocType::PCT: {
+				auto market_price = this->exchange_map->__get_market_price(asset_index, true);
+				size = (size * this->nlv) / market_price;
+				break;
+			}
+		}
 
 		// if trade already exists, reflect those units on the allocation size
 		if (trade_opt.has_value())
@@ -207,6 +226,8 @@ void AgisStrategyMap::__reset()
 	);
 }
 
+
+//============================================================================
 void AgisStrategyMap::__build()
 {
 	for (auto& strategy : this->strategies)
@@ -215,6 +236,8 @@ void AgisStrategyMap::__build()
 	}
 }
 
+
+//============================================================================
 AGIS_API void agis_realloc(Allocation& allocation, double c)
 {
 	for (auto& pair : allocation) {

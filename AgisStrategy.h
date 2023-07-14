@@ -13,6 +13,13 @@ AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
 
 AGIS_API typedef std::vector<std::pair<size_t, double>> Allocation;
 
+enum class AGIS_API AllocType
+{
+	UNITS,		// set strategy portfolio to have N units
+	DOLLARS,	// set strategy portfolio to have $N worth of units
+	PCT			// set strategy portfolio to have %N worth of units (% of nlv)
+};
+
 class AgisStrategy
 {
 public:
@@ -63,6 +70,8 @@ public:
 	/// <param name="order"></param>
 	void __remember_order(OrderRef order) { this->order_history.push_back(order); }
 
+	void __remember_trade(SharedTradePtr trade) { this->trade_history.push_back(trade); }
+
 	/// <summary>
 	/// Evaluate the portfolio at the current levels
 	/// </summary>
@@ -73,8 +82,10 @@ public:
 	/// Get all orders that have been  placed by the strategy
 	/// </summary>
 	/// <returns></returns>
-	std::vector<OrderRef> const& get_order_history() const { return this->order_history; }
+	AGIS_API std::vector<OrderRef> const& get_order_history() const { return this->order_history; }
 	
+	AGIS_API std::vector<SharedTradePtr> const& get_trade_history() const { return this->trade_history; }
+
 	void nlv_adjust(double nlv_adjustment) { gmp_add_assign(this->nlv, nlv_adjustment); };
 	void cash_adjust(double cash_adjustment) { gmp_add_assign(this->cash, cash_adjustment); };
 	void unrealized_adjust(double unrealized_adjustment) { this->unrealized_pl += unrealized_adjustment; };
@@ -131,17 +142,20 @@ protected:
 	AGIS_API ExchangePtr const get_exchange(std::string const& id) const;
 
 	/// <summary>
-	/// Set the portfolio of a strategy by an allocation of <asset index, allocation amount>
+	/// Allocate a strategie's portfolio give a vector of pairs of <asset index, allocation>
 	/// </summary>
-	/// <param name="allocation">The allocations of the strategy portfolio</param>
-	/// <param name="epsilon">Minimum % difference in size need to trigger a reallocation</param>
-	/// <param name="clear_missing">Clear existing positions that are not in the allocation</param>
+	/// <param name="allocation">A vector of pairs representing the allocaitons</param>
+	/// <param name="epsilon">Minimum % difference in units needed to trigger new order</param>
+	/// <param name="clear_missing">Clear existing positions not in the allocation</param>
+	/// <param name="exit">Optional trade exit pointer</param>
+	/// <param name="alloc_type">Type of allocation represented</param>
 	/// <returns></returns>
 	AGIS_API void strategy_allocate(
 		Allocation const& allocation,
 		double epsilon,
 		bool clear_missing = true,
-		std::optional<TradeExitPtr> exit = std::nullopt
+		std::optional<TradeExitPtr> exit = std::nullopt,
+		AllocType alloc_type = AllocType::UNITS
 	);
 
 
@@ -177,6 +191,7 @@ private:
 
 	std::vector<double> nlv_history;
 	std::vector<double> cash_history;
+	std::vector<SharedTradePtr> trade_history;
 };
 
 

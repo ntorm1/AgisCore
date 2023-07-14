@@ -75,7 +75,7 @@ void Position::__evaluate(ThreadSafeVector<OrderPtr>& orders, double market_pric
 
 
 //============================================================================
-void Position::close(OrderPtr const& order, std::vector<TradePtr>& trade_history)
+void Position::close(OrderPtr const& order, std::vector<SharedTradePtr>& trade_history)
 {
     // close the position
     auto price = order->get_average_price();
@@ -90,13 +90,14 @@ void Position::close(OrderPtr const& order, std::vector<TradePtr>& trade_history
         trade->close(order);
 
         // Add the unique pointer to the vector
-        trade_history.push_back(std::move(trade));
+        SharedTradePtr ptr = std::move(trade);
+        trade_history.push_back(ptr);
     }
 }
 
 
 //============================================================================
-void Position::adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vector<TradePtr>& trade_history)
+void Position::adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vector<SharedTradePtr>& trade_history)
 {
     auto units_ = order->get_units();
     auto fill_price = order->get_average_price();
@@ -135,7 +136,8 @@ void Position::adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vect
             trade_ptr->close(order);
             auto extracted_trade = std::move(this->trades.at(strategy_id));
             this->trades.erase(strategy_id);
-            trade_history.push_back(std::move(extracted_trade));
+            SharedTradePtr ptr = std::move(extracted_trade);
+            trade_history.push_back(ptr);
         }
         else
         {
@@ -324,6 +326,14 @@ std::optional<PositionRef> Portfolio::get_position(size_t asset_index) const
     }
 }
 
+AGIS_API std::optional<TradeRef> Portfolio::get_trade(size_t asset_index, std::string const& strategy_id)
+{
+    auto index = this->strategy_ids.at(strategy_id);
+    auto position = this->get_position(asset_index);
+    if (!position.has_value()) { return std::nullopt; }
+    return position.value().get()->__get_trade(index);
+}
+
 AGIS_API std::vector<size_t> Portfolio::get_strategy_positions(size_t strategy_index) const
 {
     std::vector<size_t> v;
@@ -343,6 +353,10 @@ AGIS_API void Portfolio::register_strategy(AgisStrategyRef strategy)
     this->strategies.emplace(
         strategy.get()->get_strategy_index(),
         strategy
+    );
+    this->strategy_ids.emplace(
+        strategy.get()->get_strategy_id(),
+        strategy.get()->get_strategy_index()
     );
 }
 
@@ -395,13 +409,27 @@ void Portfolio::open_position(OrderPtr const& order)
     );
 }
 
+//============================================================================
+void Portfolio::__on_trade_closed(size_t start_index)
+{
+    if (start_index == this->trade_history.size()) { return; }
+    for (auto i = start_index; i < this->trade_history.size(); i++)
+    {
+        SharedTradePtr trade = this->trade_history[i];
+        auto& strategy = this->strategies.at(trade->strategy_id);
+        strategy.get()->__remember_trade(trade);
+    }
+}
+
 
 //============================================================================
 void Portfolio::modify_position(OrderPtr const& order)
 {
     auto& position = this->__get_position(order->get_asset_index());
     auto& strategy = this->strategies.at(order->get_strategy_index());
-    position->adjust(strategy, order, trade_history);
+    auto idx = this->trade_history.size();
+    position->adjust(strategy, order, this->trade_history);
+    this->__on_trade_closed(idx);
 }
 
 
@@ -411,7 +439,9 @@ void Portfolio::close_position(OrderPtr const& order)
     // close the position obj
     auto asset_id = order->get_asset_index();
     auto& position = this->__get_position(asset_id);
+    auto idx = this->trade_history.size();
     position->close(order, this->trade_history);
+    this->__on_trade_closed(idx);
 
     // remove from portfolio and remember
     PositionPtr closed_position = std::move(this->positions.at(asset_id));

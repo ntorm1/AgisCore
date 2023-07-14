@@ -66,8 +66,8 @@ struct Position
     /// <param name="on_close">are we on close</param>
     void __evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close);
 
-    void close(OrderPtr const& order, std::vector<TradePtr>& trade_history);
-    void adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vector<TradePtr>& trade_history);
+    void close(OrderPtr const& order, std::vector<std::shared_ptr<Trade>>& trade_history);
+    void adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vector<SharedTradePtr>& trade_history);
 
 
     OrderPtr generate_position_inverse();
@@ -125,6 +125,14 @@ public:
     /// <returns></returns>
     AGIS_API std::optional<PositionRef> get_position(size_t asset_index) const;
 
+    /// <summary>
+    /// Get a trade by asset index and portfolio id if it exists
+    /// </summary>
+    /// <param name="asset_index">unique index of the asset</param>
+    /// <param name="strategy_id">unique id of the strategy</param>
+    /// <returns></returns>
+    AGIS_API std::optional<TradeRef> get_trade(size_t asset_index, std::string const& strategy_id);
+
     AGIS_API std::vector<size_t> get_strategy_positions(size_t strategy_index) const;
 
     /// <summary>
@@ -139,7 +147,7 @@ public:
     double get_nlv() const { return this->nlv; }
 
     AGIS_API std::vector<PositionPtr> const& get_position_history() { return this->position_history; }
-    AGIS_API std::vector<TradePtr> const& get_trade_history() { return this->trade_history; }
+    AGIS_API std::vector<SharedTradePtr> const& get_trade_history() { return this->trade_history; }
 
     void __reset();
     void __remember_order(OrderRef order);
@@ -178,6 +186,12 @@ private:
     /// <returns>Reference to an open position with the underlying asset</returns>
     PositionPtr& __get_position(size_t asset_index) { return positions.at(asset_index); }
 
+    /// <summary>
+    /// When new trades are pushed to trade history, update their respective strategy
+    /// </summary>
+    /// <param name="start_index">index of first trade to copy</param>
+    void __on_trade_closed(size_t start_index);
+
 
     double cash;
     double starting_cash;
@@ -193,10 +207,11 @@ private:
     /// Map between strategy index and ref to AgisStrategy
     /// </summary>
     std::unordered_map<size_t, AgisStrategyRef> strategies;
+    std::unordered_map < std::string, size_t> strategy_ids;
 
 
     std::vector<PositionPtr> position_history;
-    std::vector<TradePtr> trade_history;
+    std::vector<SharedTradePtr> trade_history;
     std::vector<double> nlv_history;
     std::vector<double> cash_history;
 
