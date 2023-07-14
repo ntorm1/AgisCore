@@ -56,6 +56,8 @@ struct Position
     Position(AgisStrategyRef strategy, OrderPtr const& order);
 
     std::optional<TradeRef> __get_trade(size_t strategy_index) const;
+    size_t __get_trade_count() const { return this->trades.size(); }
+    size_t __trade_exits(size_t strategy_index) const { return this->trades.contains(strategy_index); }
 
     /// <summary>
     /// Evaluate a position at the current market price and allow for the placement of orders as result
@@ -68,6 +70,11 @@ struct Position
 
     void close(OrderPtr const& order, std::vector<std::shared_ptr<Trade>>& trade_history);
     void adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vector<SharedTradePtr>& trade_history);
+
+    [[nodiscard]] double get_nlv() const { return this->nlv; }
+    [[nodiscard]] double get_unrealized_pl() const { return this->unrealized_pl; }
+    [[nodiscard]] double get_realized_pl() const { return this->realized_pl; }
+    [[nodiscard]] double get_units() const { return this->units; }
 
 
     OrderPtr generate_position_inverse();
@@ -145,6 +152,7 @@ public:
     
     double get_cash() const { return this->cash; }
     double get_nlv() const { return this->nlv; }
+    double get_unrealized_pl() const { return this->unrealized_pl; }
 
     AGIS_API std::vector<PositionPtr> const& get_position_history() { return this->position_history; }
     AGIS_API std::vector<SharedTradePtr> const& get_trade_history() { return this->trade_history; }

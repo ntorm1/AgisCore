@@ -260,6 +260,10 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
         {
             this->modify_position(order);
         }
+        else if (!position->__trade_exits(order->get_strategy_index()))
+        {
+            this->modify_position(order);
+        }
         else
         {
             this->close_position(order);

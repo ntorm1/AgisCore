@@ -130,6 +130,7 @@ AGIS_API void AgisStrategy::strategy_allocate(
 			if (offset < epsilon) { continue; }
 		}
 
+		// minimum required units in order to place an order
 		if (abs(size) < 1e-10) { continue; }
 
 		if (exit.has_value())
