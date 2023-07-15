@@ -48,14 +48,16 @@ void Trade::increase(OrderPtr const& filled_order)
     auto p = filled_order->get_average_price();
     double new_units = abs(this->units) + abs(units_);
     this->average_price = ((abs(this->units) * this->average_price) + (abs(units_) * p)) / new_units;
-    this->units += units_;
+    gmp_add_assign(this->units, units_);
 }
 
 void Trade::reduce(OrderPtr const& filled_order)
 {
     auto units_ = filled_order->get_units();
-    this->realized_pl += -1 * units_ * (filled_order->get_average_price() - this->average_price);
-    this->units += units_;
+    auto adjustment = -1 * gmp_mult(units_,(gmp_sub(filled_order->get_average_price(),this->average_price)));
+    gmp_add_assign(this->realized_pl, adjustment);
+    gmp_sub_assign(this->unrealized_pl, adjustment);
+    gmp_add_assign(this->units, units_);
 }
 
 
@@ -78,7 +80,7 @@ void Trade::evaluate(double market_price, bool on_close)
 {
     // adjust the source strategy nlv and unrealized pl
     auto nlv_new = gmp_mult(this->units, market_price);
-    auto unrealized_pl_new = gmp_mult( this->units, (market_price - this->average_price));
+    auto unrealized_pl_new = gmp_mult(this->units,gmp_sub(market_price,this->average_price));
     
     auto& strat = this->strategy.get();
     strat->nlv_adjust(gmp_sub(nlv_new, this->nlv));

@@ -66,6 +66,29 @@ inline double gmp_mult(double x, double y)
 #endif
 }
 
+inline double gmp_div(double x, double y)
+{
+#ifdef AGIS_HIGH_PRECISION
+    mpf_t mpf_x, mpf_y, mpf_res;
+    mpf_init2(mpf_res, bits);
+    mpf_init2(mpf_x, bits);
+    mpf_init2(mpf_y, bits);
+    mpf_set_d(mpf_x, x);
+    mpf_set_d(mpf_y, y);
+    mpf_div(mpf_res, mpf_x, mpf_y);
+
+    auto res_double = mpf_get_d(mpf_res);
+
+    mpf_clear(mpf_x);
+    mpf_clear(mpf_y);
+    mpf_clear(mpf_res);
+
+    return res_double;
+#else
+    return x * y;
+#endif
+}
+
 inline double gmp_sub(double x, double y)
 {
 #ifdef AGIS_HIGH_PRECISION
