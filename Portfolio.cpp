@@ -51,7 +51,7 @@ std::optional<TradeRef> Position::__get_trade(size_t strategy_index) const
 void Position::__evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close)
 {
     this->last_price = market_price;
-    this->unrealized_pl = this->units * (market_price - this->average_price);
+    this->unrealized_pl = gmp_mult(this->units,gmp_sub(market_price,this->average_price));
     this->nlv = gmp_mult(market_price, this->units);
     if (on_close) { this->bars_held++; }
 
@@ -81,7 +81,7 @@ void Position::close(OrderPtr const& order, std::vector<SharedTradePtr>& trade_h
     auto price = order->get_average_price();
     this->close_price = price;
     this->position_close_time = order->get_fill_time();
-    this->realized_pl += this->units * (price - this->average_price);
+    gmp_add_assign(this->realized_pl, gmp_mult(this->units,gmp_sub(price,this->average_price)));
     this->unrealized_pl = 0;
 
     for (auto& element : trades) {
@@ -105,17 +105,25 @@ void Position::adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vect
     // increasing position
     if (units_ * this->units > 0)
     {
-        double new_units = abs(this->units) + abs(units_);
-        this->average_price = ((abs(this->units) * this->average_price) + (abs(units_) * fill_price)) / new_units;
+        double new_units = gmp_add(abs(this->units),abs(units_));
+        this->average_price = gmp_add(
+            gmp_mult(abs(this->units),this->average_price),
+            gmp_mult(abs(units_),fill_price)
+        );
+        gmp_div_assign(this->average_price, new_units);
+
     }
     // reducing position
     else
     {
-        this->realized_pl += abs(units_) * (fill_price - this->average_price);
+        gmp_add_assign(
+            this->realized_pl,
+            gmp_mult(abs(units_),gmp_sub(fill_price,this->average_price))
+        );
     }
 
     // adjust position units
-    this->units += units_;
+    gmp_add_assign(this->units,units_);
 
     //test to see if strategy already has a trade
     auto strategy_id = order->get_strategy_index();
@@ -134,7 +142,7 @@ void Position::adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vect
         if (abs(trade_ptr->units + units_) < 1e-10)
         {
             trade_ptr->close(order);
-            auto extracted_trade = std::move(this->trades.at(strategy_id));
+            TradePtr extracted_trade = std::move(this->trades.at(strategy_id));
             this->trades.erase(strategy_id);
             SharedTradePtr ptr = std::move(extracted_trade);
             trade_history.push_back(ptr);
@@ -299,7 +307,7 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
         // as a result of the new valuation
         position->__evaluate(orders, market_price, on_close);
         gmp_add_assign(this->nlv, position->nlv);
-        this->unrealized_pl += position->unrealized_pl;
+        gmp_add_assign(this->unrealized_pl, position->unrealized_pl);
     }
     if (orders.size())
     {
@@ -309,7 +317,7 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
         }
     }
     this->nlv_history.push_back(this->nlv);
-    this->cash_history.push_back(this->nlv);
+    this->cash_history.push_back(this->cash);
 
     // log strategy levels
     for (const auto& strat : this->strategies)
@@ -452,7 +460,7 @@ void Portfolio::close_position(OrderPtr const& order)
 
     // remove from portfolio and remember
     PositionPtr closed_position = std::move(this->positions.at(asset_id));
-    this->unrealized_pl -= closed_position->unrealized_pl;
+    gmp_sub_assign(this->unrealized_pl, closed_position->unrealized_pl);
     this->position_history.push_back(std::move(closed_position));
     this->positions.erase(asset_id);
 }
