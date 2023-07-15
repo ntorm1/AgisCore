@@ -65,13 +65,14 @@ AGIS_API ExchangePtr const AgisStrategy::get_exchange(std::string const& id) con
 
 //============================================================================
 AGIS_API void AgisStrategy::strategy_allocate(
-	Allocation const& allocation, 
+	ExchangeView const* exchange_view,
 	double epsilon,
 	bool clear_missing,
 	std::optional<TradeExitPtr> exit,
 	AllocType alloc_type)
 {
 	auto position_ids = this->portfolio->get_strategy_positions(this->strategy_index);
+	auto& allocation = exchange_view->view;
 
 	// if clear_missing, clear and trades with asset index not in the allocation
 	if (clear_missing)
@@ -239,9 +240,9 @@ void AgisStrategyMap::__build()
 
 
 //============================================================================
-AGIS_API void agis_realloc(Allocation& allocation, double c)
+AGIS_API void agis_realloc(ExchangeView* allocation, double c)
 {
-	for (auto& pair : allocation) {
+	for (auto& pair : allocation->view) {
 		pair.second = c;
 	}
 }

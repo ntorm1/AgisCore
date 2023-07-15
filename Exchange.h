@@ -19,11 +19,11 @@ using json = nlohmann::json;
 
 class Exchange;
 class ExchangeMap;
+struct ExchangeView;
 class AgisRouter;
 
 AGIS_API typedef std::unordered_map<std::string, std::shared_ptr<Exchange>> Exchanges;
 AGIS_API typedef std::shared_ptr<Exchange> ExchangePtr;
-AGIS_API typedef std::vector<std::pair<size_t, double>> ExchangeView;
 
 /// <summary>
 /// Type of exchange query to make, used when access a column for every asset on the exchange
@@ -35,6 +35,9 @@ enum ExchangeQueryType
 	NSmallest,	/// return the N smallest
 	NExtreme	/// return the N/2 smallest and largest
 };
+
+
+
 
 
 class  Exchange
@@ -96,6 +99,7 @@ public:
 	AGIS_API long long __get_market_time() { return this->dt_index[this->current_index]; }
 
 
+	size_t __get_exchange_index() const { return this->exchange_index; };
 	void __place_order(std::unique_ptr<Order> order);
 	void __process_orders(AgisRouter& router, bool on_close);
 	void __process_order(bool on_close, OrderPtr& order);
@@ -107,7 +111,10 @@ public:
 
 private:
 	std::mutex _mutex;
+	static std::atomic<size_t> exchange_counter;
+
 	std::string exchange_id;
+	size_t exchange_index;
 	std::string source_dir;
 	Frequency freq;
 	std::string dt_format;
@@ -236,3 +243,15 @@ private:
 };
 
 
+struct ExchangeView
+{
+	std::vector<std::pair<size_t, double>> view;
+	size_t exchange_index;
+
+	ExchangeView(size_t index, size_t count) {
+		this->exchange_index = index;
+		this->view.reserve(count);
+	}
+
+	size_t size() const { return this->view.size(); }
+};

@@ -6,6 +6,7 @@
 #include "Exchange.h"
 #include "AgisRouter.h"
 
+std::atomic<size_t> Exchange::exchange_counter(0);
 
 //============================================================================
 Exchange::Exchange(
@@ -20,6 +21,7 @@ Exchange::Exchange(
 	this->source_dir = source_dir_;
 	this->freq = freq_;
 	this->dt_format = dt_format_;
+	this->exchange_index = exchange_counter++;
 }
 
 
@@ -76,13 +78,15 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 	bool panic
 )
 {
-	ExchangeView view;
 
 	// row index must be negative 
 	if (row < 0) { throw std::runtime_error("invalid row param"); }
 
 	// if no N is passed default to all assets
 	auto number_assets = (N == -1) ? this->assets.size() : static_cast<size_t>(N);
+
+	ExchangeView exchange_view(this->exchange_index, number_assets);
+	auto& view = exchange_view.view;
 
 	for (auto& asset : this->assets)
 	{
@@ -96,10 +100,10 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 		auto val = asset->get_asset_feature(col, row);
 		view.push_back(std::make_pair(asset->get_asset_index(), val));
 	}
-	if (view.size() == 1) { return view; }
+	if (view.size() == 1) { return exchange_view; }
 	switch (query_type) {
 		case(ExchangeQueryType::Default):
-				return view;
+				return exchange_view;
 		case(ExchangeQueryType::NSmallest):
 			std::partial_sort(
 				view.begin(),
@@ -107,7 +111,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 				view.end(),
 				compareBySecondValueAsc);
 			view.erase(view.begin() + N, view.end());
-			return view;
+			return exchange_view;
 		case(ExchangeQueryType::NLargest):
 			std::partial_sort(
 				view.begin(),
@@ -115,13 +119,13 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 				view.end(),
 				compareBySecondValueDesc);
 			view.erase(view.begin() + N, view.end());
-			return view;
+			return exchange_view;
 		case(ExchangeQueryType::NExtreme): {
 			auto n = N / 2;	
 			std::partial_sort(view.begin(), view.begin() + n, view.end(), compareBySecondValueDesc);
 			std::partial_sort(view.begin() + n, view.begin() +  N, view.end(), compareBySecondValueAsc);
 			view.erase(view.begin() + n, view.end() - n);
-			return view;
+			return exchange_view;
 		}
 	}
 }

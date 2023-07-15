@@ -11,7 +11,7 @@ class AgisStrategy;
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
 AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
 
-AGIS_API typedef std::vector<std::pair<size_t, double>> Allocation;
+struct ExchangeView;
 
 enum class AGIS_API AllocType
 {
@@ -157,7 +157,7 @@ protected:
 	/// <param name="alloc_type">Type of allocation represented</param>
 	/// <returns></returns>
 	AGIS_API void strategy_allocate(
-		Allocation const& allocation,
+		ExchangeView const* allocation,
 		double epsilon,
 		bool clear_missing = true,
 		std::optional<TradeExitPtr> exit = std::nullopt,
@@ -223,4 +223,4 @@ private:
 };
 
 
-AGIS_API void agis_realloc(Allocation& allocation, double c);
+AGIS_API void agis_realloc(ExchangeView* allocation, double c);
