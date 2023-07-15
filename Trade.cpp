@@ -16,7 +16,7 @@ Trade::Trade(AgisStrategyRef strategy_, OrderPtr const& filled_order):
     // set the trade member variables
     this->units = filled_order->get_units();
     this->average_price = filled_order->get_average_price();
-    this->nlv = gmp_mult(this->units, this->average_price);
+    this->nlv = this->units * this->average_price;
     this->unrealized_pl = 0;
     this->realized_pl = 0;
     this->close_price = 0;
@@ -37,10 +37,7 @@ void Trade::close(OrderPtr const& filled_order)
 {
     this->close_price = filled_order->get_average_price();
     this->trade_close_time = filled_order->get_fill_time();
-    gmp_add_assign(
-        this->realized_pl,
-        gmp_mult(this->units,gmp_sub(this->close_price,this->average_price))
-    );
+    this->realized_pl +=(this->units * (this->close_price - this->average_price));
     this->unrealized_pl = 0;
 }
 
@@ -49,18 +46,18 @@ void Trade::increase(OrderPtr const& filled_order)
 {
     auto units_ = filled_order->get_units();
     auto p = filled_order->get_average_price();
-    double new_units = gmp_add(abs(this->units),abs(units_));
+    double new_units = (abs(this->units) + abs(units_));
     this->average_price = ((abs(this->units) * this->average_price) + (abs(units_) * p)) / new_units;
-    gmp_add_assign(this->units, units_);
+    this->units += units_;
 }
 
 void Trade::reduce(OrderPtr const& filled_order)
 {
     auto units_ = filled_order->get_units();
-    auto adjustment = -1 * gmp_mult(units_,(gmp_sub(filled_order->get_average_price(),this->average_price)));
-    gmp_add_assign(this->realized_pl, adjustment);
-    gmp_sub_assign(this->unrealized_pl, adjustment);
-    gmp_add_assign(this->units, units_);
+    auto adjustment = -1 * (units_*(filled_order->get_average_price()-this->average_price));
+    this->realized_pl += adjustment;
+    this->unrealized_pl -= adjustment;
+    this->units += units_;
 }
 
 
@@ -82,12 +79,12 @@ void Trade::adjust(OrderPtr const& filled_order)
 void Trade::evaluate(double market_price, bool on_close)
 {
     // adjust the source strategy nlv and unrealized pl
-    auto nlv_new = gmp_mult(this->units, market_price);
-    auto unrealized_pl_new = gmp_mult(this->units,gmp_sub(market_price,this->average_price));
+    auto nlv_new = this->units * market_price;
+    auto unrealized_pl_new = this->units*(market_price-this->average_price);
     
     auto& strat = this->strategy.get();
-    strat->nlv_adjust(gmp_sub(nlv_new, this->nlv));
-    strat->unrealized_adjust(gmp_sub(unrealized_pl_new, this->unrealized_pl));
+    strat->nlv_adjust(nlv_new - this->nlv);
+    strat->unrealized_adjust(unrealized_pl_new - this->unrealized_pl);
 
     this->nlv = nlv_new;
     this->unrealized_pl = unrealized_pl_new;
