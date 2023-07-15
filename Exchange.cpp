@@ -60,14 +60,6 @@ std::vector<std::string> Exchange::get_asset_ids() const
 	return keys;
 }
 
-bool compareBySecondValueAsc(const std::pair<size_t, double>& a, const std::pair<size_t, double>& b) {
-	return a.second < b.second;  // Compare in ascending order
-}
-
-bool compareBySecondValueDesc(const std::pair<size_t, double>& a, const std::pair<size_t, double>& b) {
-	return a.second > b.second;  // Compare in descending order
-}
-
 
 //============================================================================
 AGIS_API ExchangeView Exchange::get_exchange_view(
@@ -78,11 +70,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 	bool panic
 )
 {
-
-	// row index must be negative 
 	if (row < 0) { throw std::runtime_error("invalid row param"); }
-
-	// if no N is passed default to all assets
 	auto number_assets = (N == -1) ? this->assets.size() : static_cast<size_t>(N);
 
 	ExchangeView exchange_view(this->exchange_index, number_assets);
@@ -101,33 +89,25 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 		view.push_back(std::make_pair(asset->get_asset_index(), val));
 	}
 	if (view.size() == 1) { return exchange_view; }
-	switch (query_type) {
-		case(ExchangeQueryType::Default):
-				return exchange_view;
-		case(ExchangeQueryType::NSmallest):
-			std::partial_sort(
-				view.begin(),
-				view.begin() + N,
-				view.end(),
-				compareBySecondValueAsc);
-			view.erase(view.begin() + N, view.end());
-			return exchange_view;
-		case(ExchangeQueryType::NLargest):
-			std::partial_sort(
-				view.begin(),
-				view.begin() + N,
-				view.end(),
-				compareBySecondValueDesc);
-			view.erase(view.begin() + N, view.end());
-			return exchange_view;
-		case(ExchangeQueryType::NExtreme): {
-			auto n = N / 2;	
-			std::partial_sort(view.begin(), view.begin() + n, view.end(), compareBySecondValueDesc);
-			std::partial_sort(view.begin() + n, view.begin() +  N, view.end(), compareBySecondValueAsc);
-			view.erase(view.begin() + n, view.end() - n);
-			return exchange_view;
-		}
+	exchange_view.sort(N, query_type);
+	return exchange_view;
+}
+
+AGIS_API ExchangeView Exchange::get_exchange_view(
+	const std::function<double(std::shared_ptr<Asset>const&)>& func,
+	ExchangeQueryType query_type, int N)
+{
+	auto number_assets = (N == -1) ? this->assets.size() : static_cast<size_t>(N);
+	ExchangeView exchange_view(this->exchange_index, number_assets);
+	auto& view = exchange_view.view;
+	for (auto& asset : this->assets)
+	{
+		double val;
+		try { val = func(asset); }
+		catch (const std::exception&e) {throw e; }
+		view.push_back(std::make_pair(asset->get_asset_index(), val));
 	}
+	return exchange_view;
 }
 
 //============================================================================
@@ -758,4 +738,44 @@ void ExchangeMap::restore(json const& j)
 		auto freq_ = string_to_freq(exchange_json["freq"]);
 		this->new_exchange(exchange_id_, source_dir_, freq_, dt_format_);
 		});
+}
+
+
+bool compareBySecondValueAsc(const std::pair<size_t, double>& a, const std::pair<size_t, double>& b) {
+	return a.second < b.second;  // Compare in ascending order
+}
+
+bool compareBySecondValueDesc(const std::pair<size_t, double>& a, const std::pair<size_t, double>& b) {
+	return a.second > b.second;  // Compare in descending order
+}
+
+void ExchangeView::sort(size_t N, ExchangeQueryType sort_type)
+{
+	switch (sort_type) {
+		case(ExchangeQueryType::Default):
+			return;
+		case(ExchangeQueryType::NSmallest):
+			std::partial_sort(
+				view.begin(),
+				view.begin() + N,
+				view.end(),
+				compareBySecondValueAsc);
+			view.erase(view.begin() + N, view.end());
+			return;
+		case(ExchangeQueryType::NLargest):
+			std::partial_sort(
+				view.begin(),
+				view.begin() + N,
+				view.end(),
+				compareBySecondValueDesc);
+			view.erase(view.begin() + N, view.end());
+			return;
+		case(ExchangeQueryType::NExtreme): {
+			auto n = N / 2;
+			std::partial_sort(view.begin(), view.begin() + n, view.end(), compareBySecondValueDesc);
+			std::partial_sort(view.begin() + n, view.begin() + N, view.end(), compareBySecondValueAsc);
+			view.erase(view.begin() + n, view.end() - n);
+			return;
+		}
+	}
 }

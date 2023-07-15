@@ -6,6 +6,7 @@
 #endif
 #include "pch.h" 
 #include <string>
+#include <utility>
 #include <unordered_map>
 
 #include "json.hpp"
@@ -83,12 +84,34 @@ public:
 	/// <returns></returns>
 	std::vector<std::shared_ptr<Asset>> const& get_assets() const { return this->assets; }
 
+	/// <summary>
+	/// Get a view into the exchange by getting a value for each asset visable on the exchange
+	/// </summary>
+	/// <param name="col">Name of the column to query</param>
+	/// <param name="row">Row index to query (0, current) (-1, previous)</param>
+	/// <param name="query_type">Type of sorting to do</param>
+	/// <param name="N">Number of assets to return, defaults -1 means all</param>
+	/// <param name="panic">Panic on an invalid asset request</param>
+	/// <returns></returns>
 	AGIS_API ExchangeView get_exchange_view(
 		std::string const& col,
-		int row,
-		ExchangeQueryType query_type,
+		int row = 0,
+		ExchangeQueryType query_type = ExchangeQueryType::Default,
 		int N = -1,
 		bool panic = false
+	);
+
+	/// <summary>
+	/// Get a view into the exchange by applying a function to each asset and getting a double output
+	/// </summary>
+	/// <param name="func">Function to apply to each asset</param>
+	/// <param name="query_type">Type of sorting to do</param>
+	/// <param name="N">Number of assets to return</param>
+	/// <returns></returns>
+	AGIS_API ExchangeView get_exchange_view(
+		const std::function<double(std::shared_ptr<Asset> const&)>& func,
+		ExchangeQueryType query_type = ExchangeQueryType::Default,
+		int N = -1
 	);
 
 
@@ -242,6 +265,19 @@ private:
 	bool is_built = false;
 };
 
+#define CHECK_INDEX_MATCH(lhs, rhs) \
+    do { \
+        if ((lhs).exchange_index != (rhs).exchange_index) { \
+            throw std::runtime_error("index mismatch"); \
+        } \
+    } while (false)
+
+#define CHECK_SIZE_MATCH(lhs, rhs) \
+    do { \
+        if ((lhs).size() != (rhs).size()) { \
+            throw std::runtime_error("size mismatch"); \
+        } \
+    } while (false)
 
 struct ExchangeView
 {
@@ -254,4 +290,80 @@ struct ExchangeView
 	}
 
 	size_t size() const { return this->view.size(); }
+	void sort(size_t N, ExchangeQueryType sort_type);
+
+	//============================================================================
+	ExchangeView operator+(const ExchangeView& other) const {
+		CHECK_INDEX_MATCH(*this, other);
+		CHECK_SIZE_MATCH(*this, other);
+		ExchangeView result(this->exchange_index, this->view.size());
+		for (size_t i = 0; i < other.size(); ++i) {
+			double sum = view[i].second + other.view[i].second;
+			result.view.emplace_back(view[i].first, sum);
+		}
+		return result;
+	}
+	ExchangeView operator-(const ExchangeView& other) const {
+		CHECK_INDEX_MATCH(*this, other);
+		CHECK_SIZE_MATCH(*this, other);
+		ExchangeView result(this->exchange_index, this->view.size());
+		for (size_t i = 0; i < other.size(); ++i) {
+			double sum = view[i].second - other.view[i].second;
+			result.view.emplace_back(view[i].first, sum);
+		}
+		return result;
+	}
+	ExchangeView operator*(const ExchangeView& other) const {
+		CHECK_INDEX_MATCH(*this, other);
+		CHECK_SIZE_MATCH(*this, other);
+		ExchangeView result(this->exchange_index, this->view.size());
+		for (size_t i = 0; i < other.size(); ++i) {
+			double sum = view[i].second * other.view[i].second;
+			result.view.emplace_back(view[i].first, sum);
+		}
+		return result;
+	}
+	ExchangeView operator/(const ExchangeView& other) const {
+		CHECK_INDEX_MATCH(*this, other);
+		CHECK_SIZE_MATCH(*this, other);
+		ExchangeView result(this->exchange_index, this->view.size());
+		for (size_t i = 0; i < other.size(); ++i) {
+			double sum = view[i].second / other.view[i].second;
+			result.view.emplace_back(view[i].first, sum);
+		}
+		return result;
+	}
+	//============================================================================
+	ExchangeView& operator+=(const ExchangeView& other) {
+		CHECK_INDEX_MATCH(*this, other);
+		CHECK_SIZE_MATCH(*this, other);
+		for (size_t i = 0; i < other.size(); ++i) {
+			view[i].second += other.view[i].second;
+		}
+		return *this;
+	}
+	ExchangeView& operator-=(const ExchangeView& other) {
+		CHECK_INDEX_MATCH(*this, other);
+		CHECK_SIZE_MATCH(*this, other);
+		for (size_t i = 0; i < other.size(); ++i) {
+			view[i].second -= other.view[i].second;
+		}
+		return *this;
+	}
+	ExchangeView& operator*=(const ExchangeView& other) {
+		CHECK_INDEX_MATCH(*this, other);
+		CHECK_SIZE_MATCH(*this, other);
+		for (size_t i = 0; i < other.size(); ++i) {
+			view[i].second *= other.view[i].second;
+		}
+		return *this;
+	}
+	ExchangeView& operator/=(const ExchangeView& other) {
+		CHECK_INDEX_MATCH(*this, other);
+		CHECK_SIZE_MATCH(*this, other);
+		for (size_t i = 0; i < other.size(); ++i) {
+			view[i].second /= other.view[i].second;
+		}
+		return *this;
+	}
 };
