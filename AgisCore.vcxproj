@@ -154,6 +154,7 @@
     <ClInclude Include="AgisPointers.h" />
     <ClInclude Include="AgisRouter.h" />
     <ClInclude Include="AgisStrategy.h" />
+    <ClInclude Include="AgisStrategyHelpers.h" />
     <ClInclude Include="Asset.h" />
     <ClInclude Include="Exchange.h" />
     <ClInclude Include="framework.h" />
@@ -170,6 +171,7 @@
   <ItemGroup>
     <ClCompile Include="AgisRouter.cpp" />
     <ClCompile Include="AgisStrategy.cpp" />
+    <ClCompile Include="AgisStrategyHelpers.cpp" />
     <ClCompile Include="Asset.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="Exchange.cpp" />

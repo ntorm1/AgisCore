@@ -1,4 +1,9 @@
 #pragma once
+#ifdef AGISCORE_EXPORTS
+#define AGIS_API __declspec(dllexport)
+#else
+#define AGIS_API __declspec(dllimport)
+#endif
 #include "pch.h"
 
 #include "AgisRouter.h"
@@ -221,6 +226,5 @@ private:
 	std::unordered_map<size_t, AgisStrategyPtr> strategies;
 
 };
-
 
 AGIS_API void agis_realloc(ExchangeView* allocation, double c);
