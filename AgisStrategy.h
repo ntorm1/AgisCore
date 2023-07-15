@@ -50,6 +50,12 @@ public:
 	/// Pure virtual function to be called after the portfolio and exchangemap have beend built
 	/// </summary>
 	virtual void build() = 0;
+	
+	/// <summary>
+	/// Pure virtual function to be called to subsrice to an exchange feed. next() will then be 
+	/// called on that exchange's step.
+	/// </summary>
+	//virtual void subscribe() = 0;
 
 	/// <summary>
 	/// Clear existing containers of all historical information

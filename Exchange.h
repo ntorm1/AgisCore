@@ -93,6 +93,8 @@ public:
 	AGIS_API size_t const __get_size() const { return this->dt_index_size; }
 	void __goto(long long datetime);
 	AGIS_API double __get_market_price(size_t asset_index, bool on_close) const;
+	AGIS_API long long __get_market_time() { return this->dt_index[this->current_index]; }
+
 
 	void __place_order(std::unique_ptr<Order> order);
 	void __process_orders(AgisRouter& router, bool on_close);

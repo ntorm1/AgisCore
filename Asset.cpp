@@ -11,6 +11,7 @@ Asset::Asset(
     Frequency freq_,
     std::string time_zone_)
 {
+    this->current_index = 0;
     this->asset_id = asset_id_;
     this->exchange_id = exchange_id_;
     this->warmup = warmup_;

@@ -698,14 +698,16 @@ AGIS_API bool ExchangeMap::step()
 		return false;
 	}
 
+	auto current_time = this->dt_index[this->current_index];
+
 	expired_asset_index.clear();
 	// Define a lambda function that processes each asset
 	auto process_exchange = [&](auto& exchange_pair) {
+		if (exchange_pair.second->__get_market_time() != current_time) { return; }
 		exchange_pair.second->step(expired_asset_index);
 	};
 
-	std::for_each(
-		std::execution::par,
+	tbb::parallel_for_each(
 		this->exchanges.begin(),
 		this->exchanges.end(),
 		process_exchange);

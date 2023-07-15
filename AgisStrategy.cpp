@@ -115,7 +115,7 @@ AGIS_API void AgisStrategy::strategy_allocate(
 			}
 			case AllocType::PCT: {
 				auto market_price = this->exchange_map->__get_market_price(asset_index, true);
-				size = (size * this->nlv) / market_price;
+				size = gmp_mult(size, this->nlv) / market_price;
 				break;
 			}
 		}

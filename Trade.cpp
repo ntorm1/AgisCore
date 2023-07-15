@@ -54,7 +54,7 @@ void Trade::increase(OrderPtr const& filled_order)
 void Trade::reduce(OrderPtr const& filled_order)
 {
     auto units_ = filled_order->get_units();
-    this->realized_pl += abs(units_) * (filled_order->get_average_price() - this->average_price);
+    this->realized_pl += -1 * units_ * (filled_order->get_average_price() - this->average_price);
     this->units += units_;
 }
 
