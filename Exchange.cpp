@@ -2,9 +2,12 @@
 #include <execution>
 #include <tbb/parallel_for_each.h>
 
+
+
 #include "utils_array.h"
 #include "Exchange.h"
 #include "AgisRouter.h"
+
 
 std::atomic<size_t> Exchange::exchange_counter(0);
 
@@ -277,10 +280,42 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 
 
 //============================================================================
+AGIS_API NexusStatusCode Exchange::restore_h5()
+{
+	H5::H5File file(this->source_dir, H5F_ACC_RDONLY);
+	int numObjects = file.getNumObjs();
+
+	// Read data from each dataset
+	for (int i = 0; i < numObjects; i++) {
+		// Get the name of the dataset at index i
+		std::string asset_id = file.getObjnameByIdx(i);
+		H5::DataSet dataset = file.openDataSet(asset_id + "/data");
+		H5::DataSpace dataspace = dataset.getSpace();
+		H5::DataSet datasetIndex = file.openDataSet(asset_id + "/datetime");
+		H5::DataSpace dataspaceIndex = datasetIndex.getSpace();
+
+		auto asset = std::make_shared<Asset>(asset_id, this->exchange_id);
+		this->assets.push_back(asset);
+		asset->load(
+			dataset,
+			dataspace,
+			datasetIndex,
+			dataspaceIndex
+		);
+	}
+	return NexusStatusCode::Ok;
+}
+
+
+//============================================================================
 NexusStatusCode Exchange::restore()
 {
 	if (!is_folder(this->source_dir))
 	{
+		std::filesystem::path path(this->source_dir);
+		if(path.extension() == ".h5") {
+			return restore_h5();
+		}
 		return NexusStatusCode::InvalidArgument;
 	}
 	auto asset_files = files_in_folder(this->source_dir);

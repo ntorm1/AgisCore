@@ -11,8 +11,7 @@
 #include <unordered_map>
 
 #include <arrow/api.h>
-#include <parquet/arrow/reader.h>
-#include <arrow/filesystem/localfs.h>
+#include <H5Cpp.h>
 
 #include "Utils.h"
 #include "AgisErrors.h"
@@ -62,6 +61,14 @@ public:
         std::string dt_fmt,
         std::optional<std::pair<long long, long long>> window = std::nullopt
     );
+
+    AGIS_API NexusStatusCode load(
+        H5::DataSet& dataset,
+        H5::DataSpace& dataspace,
+        H5::DataSet& datasetIndex,
+        H5::DataSpace& dataspaceIndex
+    );
+
 
     AGIS_API std::string get_asset_id() const { return this->asset_id; }
     AGIS_API size_t get_asset_index() const { return this->asset_index; }

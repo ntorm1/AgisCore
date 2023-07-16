@@ -6,7 +6,7 @@
 #include <arrow/io/file.h>
 #include <arrow/ipc/api.h>
 #include <parquet/arrow/reader.h>
-#include <parquet/arrow/writer.h>
+#include <arrow/filesystem/localfs.h>
 
 #include "Asset.h"
 
@@ -69,6 +69,58 @@ NexusStatusCode Asset::load(
         throw std::runtime_error("Not implemented");
     }
 
+}
+
+AGIS_API NexusStatusCode Asset::load(
+    H5::DataSet& dataset,
+    H5::DataSpace& dataspace,
+    H5::DataSet& datasetIndex,
+    H5::DataSpace& dataspaceIndex
+)
+{
+    // Get the number of attributes associated with the dataset
+    int numAttrs = dataset.getNumAttrs();
+    // Iterate through the attributes to find the column names
+    for (int i = 0; i < numAttrs; i++) {
+        // Get the attribute at index i
+        H5::Attribute attr = dataset.openAttribute(i);
+
+        // Check if the attribute is a string type
+        if (attr.getDataType().getClass() == H5T_STRING) {
+            // Read the attribute as a string
+            std::string attrValue;
+            attr.read(attr.getDataType(), attrValue);
+
+            // Store the attribute value as a column name
+            this->headers[attrValue] = static_cast<size_t>(i);
+        }
+    }
+    if (this->load_headers() != NexusStatusCode::Ok)
+    {
+        return NexusStatusCode::InvalidColumns;
+    }
+    // Get the number of rows and columns from the dataspace
+    int numDims = dataspace.getSimpleExtentNdims();
+    std::vector<hsize_t> dims(numDims);
+    dataspace.getSimpleExtentDims(dims.data(), nullptr);
+    this->rows = dims[0];
+    this->columns = dims[1];
+
+    // Allocate memory for the column-major array
+    this->data = new double[this->rows * this->columns];
+
+    // Read the dataset into the column-major array
+    hsize_t memDims[2] = { this->columns, this->rows }; // Swap rows and columns for column-major
+    H5::DataSpace memspace(2, memDims);
+    dataset.read(this->data, H5::PredType::NATIVE_DOUBLE, memspace, dataspace);
+
+    // Allocate memory for the array to hold the data
+    this->dt_index = new long long[this->rows];
+
+    // Read the 1D datetime index from the dataset
+    datasetIndex.read(this->dt_index, H5::PredType::NATIVE_INT64, dataspaceIndex);
+
+    return NexusStatusCode::Ok;
 }
 
 
@@ -176,11 +228,14 @@ NexusStatusCode Asset::load_csv()
 //============================================================================
 const arrow::Status Asset::load_parquet()
 {
+    arrow::SetCpuThreadPoolCapacity(1);
+    arrow::io::SetIOThreadPoolCapacity(1);
     arrow::MemoryPool* pool = arrow::default_memory_pool();
 
     // Bind our input file to source
     std::shared_ptr<arrow::io::ReadableFile> infile;
-    ARROW_ASSIGN_OR_RAISE(infile, arrow::io::ReadableFile::Open(this->source));
+    auto c = this->source.c_str();
+    ARROW_ASSIGN_OR_RAISE(infile, arrow::io::ReadableFile::Open(c));
 
     // build parquet reader
     std::unique_ptr<parquet::arrow::FileReader> reader;

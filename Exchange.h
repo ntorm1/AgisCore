@@ -57,6 +57,13 @@ public:
 	AGIS_API NexusStatusCode restore();
 
 	/// <summary>
+	/// Restore data from hdf5 file, assume each dataset is asset, dataset name is asset id
+	/// and that 1st column is nanosecond epoch index stored n int64
+	/// </summary>
+	/// <returns></returns>
+	AGIS_API NexusStatusCode restore_h5();
+
+	/// <summary>
 	/// Serialize the exchange to json format so it can be saved
 	/// </summary>
 	/// <returns>json object containing exchange's info</returns>
