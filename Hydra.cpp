@@ -25,8 +25,8 @@ void Hydra::__step()
     auto& expired_index_list = this->exchanges.__get_expired_index_list();
     
     // process strategy logic at end of each time step
-    this->strategies.__next();
-    this->router.__process();
+    bool step = this->strategies.__next();
+    if (step) { this->router.__process(); };
 
     // process orders on the exchange and route to their portfolios on fill
     this->exchanges.__process_orders(this->router, true);
@@ -37,6 +37,7 @@ void Hydra::__step()
     this->portfolios.__on_assets_expired(this->router, expired_index_list);
     this->router.__process();
 }
+
 
 
 //============================================================================

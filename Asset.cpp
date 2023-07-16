@@ -124,9 +124,20 @@ AGIS_API NexusStatusCode Asset::load(
     this->data = new double[this->rows * this->columns];
 
     // Read the dataset into the column-major array
-    hsize_t memDims[2] = { this->columns, this->rows }; // Swap rows and columns for column-major
-    H5::DataSpace memspace(2, memDims);
-    dataset.read(this->data, H5::PredType::NATIVE_DOUBLE, memspace, dataspace);
+    //hsize_t memDims[2] = { this->columns, this->rows }; // Swap rows and columns for column-major
+    //H5::DataSpace memspace(2, memDims);
+    dataset.read(this->data, H5::PredType::NATIVE_DOUBLE, dataspace);
+
+    // HDF5 stored in row major. Swap elements to get to col major. Maybe better way to do this
+    double* columnMajorData = (double*)malloc(rows * columns * sizeof(double));
+    // Copy elements from the row-major array to the column-major array
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < columns; ++j) {
+            columnMajorData[j * rows + i] = data[i * columns + j];
+        }
+    }
+    std::swap(this->data, columnMajorData);
+    delete columnMajorData;
 
     // Allocate memory for the array to hold the data
     this->dt_index = new long long[this->rows];

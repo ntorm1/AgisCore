@@ -131,6 +131,12 @@ public:
 	/// <returns>Unique if of the portfolio the strategy is registered to</returns>
 	size_t get_portfolio_index() { return this->portfolio->__get_index(); }
 
+	/// <summary>
+	/// Set the window in which a strategy can trade. Endpoints are included
+	/// </summary>
+	/// <param name="w"></param>
+	void set_trading_window(std::pair<long long, long long>& w) {this->trading_window = w;}
+
 protected:
 	void AGIS_API place_market_order(
 		size_t asset_index,
@@ -236,7 +242,7 @@ public:
 	void register_strategy(AgisStrategyPtr strategy);
 	const AgisStrategyRef get_strategy(std::string strategy_id);
 	
-	void __next();
+	bool __next();
 	void __reset();
 	void __build();
 

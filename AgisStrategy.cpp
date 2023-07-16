@@ -229,12 +229,15 @@ const AgisStrategyRef AgisStrategyMap::get_strategy(std::string strategy_id)
 
 
 //============================================================================
-void AgisStrategyMap::__next()
+bool AgisStrategyMap::__next()
 {
 	// Define a lambda function that calls next for each strategy
+	std::atomic<bool> flag(false);
+	
 	auto strategy_next = [&](auto& strategy) {
 		if (!strategy.second->__is_step()) { return; }
 		strategy.second->next();
+		flag.store(true, std::memory_order_relaxed);
 	};
 	
 	tbb::parallel_for_each(
@@ -242,6 +245,7 @@ void AgisStrategyMap::__next()
 		this->strategies.end(),
 		strategy_next
 	);
+	return flag.load(std::memory_order_relaxed);
 }
 
 //============================================================================

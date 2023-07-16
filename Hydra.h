@@ -98,6 +98,8 @@ public:
 	/// <returns></returns>
 	AGIS_API void __run();
 
+	AGIS_API void __run_to(long long datetime);
+
 
 	/// <summary>
 	/// Build a new exchange on the hydra instance
