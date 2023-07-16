@@ -135,6 +135,7 @@ public:
 	void reset();
 	void build(size_t exchange_offset);
 	bool step(ThreadSafeVector<size_t>& expired_assets);
+	bool __took_step = false;
 
 private:
 	std::mutex _mutex;
@@ -232,7 +233,7 @@ public:
 	/// <returns>Does a asset with this id exist already</returns>
 	AGIS_API bool asset_exists(std::string const& asset_id) const;
 
-	AGIS_API long long get_datetime();
+	AGIS_API long long get_datetime() const;
 
 	
 	AGIS_API double __get_market_price(size_t asset_index, bool on_close) const;

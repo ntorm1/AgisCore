@@ -14,7 +14,8 @@ namespace fs = std::filesystem;
 enum class FileType
 {
 	CSV,
-	PARQUET
+	PARQUET,
+	HDF5
 };
 
 AGIS_API bool str_ins_cmp(const std::string& s1, const std::string& s2);

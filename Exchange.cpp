@@ -534,7 +534,7 @@ bool ExchangeMap::asset_exists(std::string const&  asset_id) const
 
 
 //============================================================================
-AGIS_API long long ExchangeMap::get_datetime()
+AGIS_API long long ExchangeMap::get_datetime() const
 {
 	if (this->current_index == 0)
 	{
@@ -724,6 +724,7 @@ AGIS_API bool ExchangeMap::step()
 	auto process_exchange = [&](auto& exchange_pair) {
 		if (exchange_pair.second->__get_market_time() != current_time) { return; }
 		exchange_pair.second->step(expired_asset_index);
+		exchange_pair.second->__took_step = true;
 	};
 
 	tbb::parallel_for_each(

@@ -73,8 +73,9 @@ std::string join_paths(const std::string& parentPath, const std::string& childPa
 FileType file_type(const std::string& filePath) {
     fs::path path(filePath);
     std::string extension = path.extension().string();
-    if (extension == ".csv")    return FileType::CSV;
-    if (extension == ".parquet")return FileType::PARQUET;
+    if (extension == ".csv")        return FileType::CSV;
+    if (extension == ".parquet")    return FileType::PARQUET;
+    if (extension == ".h5")         return FileType::HDF5;
     throw std::runtime_error("not impl");
 }
 

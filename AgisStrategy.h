@@ -55,12 +55,18 @@ public:
 	/// Pure virtual function to be called after the portfolio and exchangemap have beend built
 	/// </summary>
 	virtual void build() = 0;
-	
+
 	/// <summary>
-	/// Pure virtual function to be called to subsrice to an exchange feed. next() will then be 
-	/// called on that exchange's step.
+	/// Pure virtual function to subsrice to exchange steps. Without this next() 
+	/// will never be called.
 	/// </summary>
-	//virtual void subscribe() = 0;
+	virtual void subscribe() = 0;
+
+	/// <summary>
+	/// Subscribe to an exchange, next() will be called when that exchange steps
+	/// </summary>
+	/// <param name="exchange_id">Unique id of the exchange</param>
+	AGIS_API void exchange_subscribe(std::string const& exchange_id);
 
 	/// <summary>
 	/// Clear existing containers of all historical information
@@ -74,6 +80,12 @@ public:
 	/// <param name="portfolo_map"></param>
 	/// <param name="exchange_map"></param>
 	void __build(AgisRouter* router_, ExchangeMap* exchange_map);
+
+	/// <summary>
+	/// Function called before step() to validate wether the strategy will make a step
+	/// forward in time.
+	/// </summary>
+	bool __is_step();
 
 	/// <summary>
 	/// Remember a historical order that the strategy placed
@@ -196,6 +208,16 @@ private:
 	double nlv = 0;
 	double cash = 0;
 	double portfolio_allocation = 0;
+
+	bool is_subsribed = false; 
+	std::string exchange_subsrciption;
+	/// <summary>
+	/// Pointer to the exchange's step boolean telling us wether or not the subscribed 
+	/// exchange stepped forward in time
+	/// </summary>
+	bool* __exchange_step;
+	std::optional<std::pair<long long, long long>> trading_window = std::nullopt;
+
 
 	size_t strategy_index;
 	std::string strategy_id;

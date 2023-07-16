@@ -6,6 +6,8 @@
 #include "Exchange.h"
 
 
+
+
 //============================================================================
 void AgisStrategy::__reset()
 {
@@ -25,8 +27,11 @@ void AgisStrategy::__build(
 	this->exchange_map = exchange_map;
 	this->cash = this->portfolio_allocation * this->portfolio->get_cash();
 	this->nlv = this->cash;
+	this->subscribe();
 }
 
+
+//============================================================================
 void AgisStrategy::__evaluate(bool on_close)
 {
 	if (on_close)
@@ -36,6 +41,30 @@ void AgisStrategy::__evaluate(bool on_close)
 	}
 }
 
+
+//============================================================================
+void AgisStrategy::exchange_subscribe(std::string const& exchange_id)
+{
+	auto exchange = this->exchange_map->get_exchange(exchange_id);
+
+	this->exchange_subsrciption = exchange_id;
+	this->is_subsribed = true;
+	this->__exchange_step = &exchange->__took_step;
+}
+
+
+//============================================================================
+bool AgisStrategy::__is_step()
+{
+	if (!(*this->__exchange_step)) { return false; }
+	if (this->trading_window.has_value())
+	{
+		auto window = this->trading_window.value();
+		auto current_time = this->exchange_map->get_datetime();
+		if (current_time < window.first || current_time > window.second) { return false; }
+	}
+	return true;
+}
 
 //============================================================================
 std::optional<TradeRef> AgisStrategy::get_trade(size_t asset_index)
@@ -204,6 +233,7 @@ void AgisStrategyMap::__next()
 {
 	// Define a lambda function that calls next for each strategy
 	auto strategy_next = [&](auto& strategy) {
+		if (!strategy.second->__is_step()) { return; }
 		strategy.second->next();
 	};
 	

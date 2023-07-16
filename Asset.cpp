@@ -65,10 +65,24 @@ NexusStatusCode Asset::load(
         }
         return NexusStatusCode::Ok;
     }
+    case FileType::HDF5: {
+        H5::H5File file(this->source, H5F_ACC_RDONLY);
+        int numObjects = file.getNumObjs();
+        std::string asset_id = file.getObjnameByIdx(0);
+        H5::DataSet dataset = file.openDataSet(asset_id + "/data");
+        H5::DataSpace dataspace = dataset.getSpace();
+        H5::DataSet datasetIndex = file.openDataSet(asset_id + "/datetime");
+        H5::DataSpace dataspaceIndex = datasetIndex.getSpace();
+        return this->load(
+            dataset,
+            dataspace,
+            datasetIndex,
+            dataspaceIndex
+        );
+    }
     default:
         throw std::runtime_error("Not implemented");
     }
-
 }
 
 AGIS_API NexusStatusCode Asset::load(
@@ -208,7 +222,6 @@ NexusStatusCode Asset::load_csv()
         auto datetime = str_to_epoch(dateStr, this->dt_fmt);
 
         // check to see if the datetime is in window
-        if (!this->__is_valid_time(datetime)) { continue; }
         this->dt_index[row_counter] = datetime;
 
         int col_idx = 0;
