@@ -5,7 +5,7 @@
 // Do not add files here that you will be updating frequently as this negates the performance advantage.
 #ifndef PCH_H
 #define PCH_H
-
+#define NOMINMAX 
 #pragma warning(disable:4146)
 #pragma warning(disable:4251)
 
@@ -22,8 +22,6 @@
 #include "utils_gmp.h"
 
 typedef unsigned int uint;
-
-
 
 
 constexpr auto DEFAULT_STRAT_ID = 0;

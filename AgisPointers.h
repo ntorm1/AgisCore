@@ -217,13 +217,12 @@ public:
     std::size_t columns() const { return this->_columns; }
 
     StridedPointer<T> const column(size_t column_index) const {
-        return StridedPointer<T>(this->_data + column_index, this->_rows, this->_columns);
+        return StridedPointer<T>(
+            this->_data + (column_index*this->_rows), 
+            this->_rows, 
+            1
+        );
     }
-    StridedPointer<T> const row(size_t row_index) const {
-        size_t offest = row_index * this->_columns;
-        return StridedPointer<T>(this->_data + offest, this->_columns, 1);
-    }
-
 
 private:
     T* _data;              // Pointer to the data

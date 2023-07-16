@@ -1,9 +1,17 @@
 #include "pch.h"
 #include <string>
 #include <fstream>
+#include <algorithm>
+
+#include <arrow/io/file.h>
+#include <arrow/ipc/api.h>
+#include <parquet/arrow/reader.h>
+#include <parquet/arrow/writer.h>
 
 #include "Asset.h"
 
+
+//============================================================================
 Asset::Asset(
     std::string asset_id_,
     std::string exchange_id_,
@@ -19,6 +27,8 @@ Asset::Asset(
     this->tz = time_zone_;
 }
 
+
+//============================================================================
 Asset::~Asset()
 {
     if (this->is_loaded)
@@ -28,9 +38,12 @@ Asset::~Asset()
     }
 }
 
+
+//============================================================================
 NexusStatusCode Asset::load(
     std::string source_,
-    std::string dt_fmt_)
+    std::string dt_fmt_,
+    std::optional<std::pair<long long, long long>> window_)
 {
     if (!is_file(source_))
     {
@@ -38,16 +51,28 @@ NexusStatusCode Asset::load(
     }
     this->source = source_;
     this->dt_fmt = dt_fmt_;
-    if (is_csv(source))
+    this->window = window_;
+
+    auto filetype = file_type(source);
+    switch (filetype)
     {
+    case FileType::CSV:
         return this->load_csv();
+    case FileType::PARQUET: {
+        auto res = this->load_parquet();
+        if (res.code() != arrow::StatusCode::OK) {
+            throw std::runtime_error("file load failed");
+        }
+        return NexusStatusCode::Ok;
     }
-    else
-    {
+    default:
         throw std::runtime_error("Not implemented");
     }
+
 }
 
+
+//============================================================================
 NexusStatusCode Asset::load_headers()
 {
     int success = 0;
@@ -74,6 +99,8 @@ NexusStatusCode Asset::load_headers()
     }
 }
 
+
+//============================================================================
 NexusStatusCode Asset::load_csv()
 {
     std::ifstream file(this->source);
@@ -109,14 +136,13 @@ NexusStatusCode Asset::load_csv()
     }
     if (this->load_headers() != NexusStatusCode::Ok)
     {
-        NexusStatusCode::InvalidColumns;
+        return NexusStatusCode::InvalidColumns;
     }
     this->columns = this->headers.size();
 
     // Load in the actual data
-    unsigned int capacity = 1000;
     this->data = new double[this->rows*this->columns];
-    this->dt_index = new long long[capacity];
+    this->dt_index = new long long[this->rows];
 
     size_t row_counter = 0;
     while (std::getline(file, line))
@@ -127,7 +153,11 @@ NexusStatusCode Asset::load_csv()
         std::string dateStr, columnValue;
         std::getline(ss, dateStr, ',');
 
-        this->dt_index[row_counter] = str_to_epoch(dateStr, this->dt_fmt);
+        auto datetime = str_to_epoch(dateStr, this->dt_fmt);
+
+        // check to see if the datetime is in window
+        if (!this->__is_valid_time(datetime)) { continue; }
+        this->dt_index[row_counter] = datetime;
 
         int col_idx = 0;
         while (std::getline(ss, columnValue, ','))
@@ -143,17 +173,104 @@ NexusStatusCode Asset::load_csv()
 }
 
 
+//============================================================================
+const arrow::Status Asset::load_parquet()
+{
+    arrow::MemoryPool* pool = arrow::default_memory_pool();
+
+    // Bind our input file to source
+    std::shared_ptr<arrow::io::ReadableFile> infile;
+    ARROW_ASSIGN_OR_RAISE(infile, arrow::io::ReadableFile::Open(this->source));
+
+    // build parquet reader
+    std::unique_ptr<parquet::arrow::FileReader> reader;
+    PARQUET_THROW_NOT_OK(parquet::arrow::OpenFile(infile, pool, &reader));
+
+    // Read entire file as a single Arrow table
+    std::shared_ptr<arrow::Table> table;
+    PARQUET_THROW_NOT_OK(reader->ReadTable(&table));
+
+    this->rows = table->num_rows();
+    this->columns = table->num_columns();
+
+    this->data = new double[this->rows * this->columns];
+    this->dt_index = new long long[this->rows];
+
+    // get datetime index
+    std::shared_ptr<arrow::Int64Array> index = std::static_pointer_cast<arrow::Int64Array>(table->column(0)->chunk(0));
+    const int64_t* raw_index = index->raw_values();
+    for (size_t i = 0; i < this->rows; i++) {
+        this->dt_index[i] = raw_index[i];
+    }
+
+    // load in the datetime index
+    std::shared_ptr<arrow::ChunkedArray> column = table->column(0);
+    int64_t index_loc = 0;
+    for (int chunk_index = 0; chunk_index < column->num_chunks(); chunk_index++) {
+        std::shared_ptr<arrow::Array> chunk = column->chunk(chunk_index);
+
+        // Check if the chunk is of type arrow::Int64Array (assuming the first column is of type int64)
+        if (chunk->type()->id() == arrow::Type::INT64) {
+            // Access the underlying data as a pointer to int64_t (long long)
+            std::shared_ptr<arrow::Int64Array> int64_column = std::static_pointer_cast<arrow::Int64Array>(chunk);
+            const int64_t* data_ptr = int64_column->raw_values();
+            for (int64_t i = index_loc; i < int64_column->length(); i++) {
+                this->dt_index[i] = raw_index[i];
+            }
+            index_loc += int64_column->length();
+        }
+    }
+    // Loop through each column
+    for (int col = 1; col < columns; col++) {
+        std::shared_ptr<arrow::ChunkedArray> column = table->column(col);
+        int64_t index_loc = this->rows * col;
+        // Loop through each chunk of the column
+        for (int chunk_index = 0; chunk_index < column->num_chunks(); chunk_index++) {
+            std::shared_ptr<arrow::Array> chunk = column->chunk(chunk_index);
+
+            // Check if the chunk is of type arrow::Int64Array (assuming the first column is of type int64)
+            std::shared_ptr<arrow::DoubleArray> double_column = std::static_pointer_cast<arrow::DoubleArray>(table->column(0)->chunk(0));
+
+            // Access the underlying data as a pointer to int64_t (long long)
+            const double* raw_data = double_column->raw_values();
+            for (int64_t i = 0; i < double_column->length(); i++) {
+                this->data[i + index_loc] = raw_data[i];
+            }
+        }
+    }
+
+    // Get the column names from the schema
+    std::shared_ptr<arrow::Schema> schema = table->schema();
+    std::vector<std::string> column_names = schema->field_names();
+    for (size_t i = 1; i < column_names.size(); i++) {
+        this->headers[column_names[i]] = i;
+    }
+
+    if (this->load_headers() != NexusStatusCode::Ok)
+    {
+        NexusStatusCode::InvalidColumns;
+    }
+
+    return arrow::Status::OK();
+}
+
+
+//============================================================================
 StridedPointer<double> const Asset::__get_column(std::string const& column_name) const
 {
     auto col_offset = this->headers.at(column_name);
     return StridedPointer(this->data + (col_offset*this->rows), this->rows, 1);
 }
 
+
+//============================================================================
 StridedPointer<long long> const Asset::__get_dt_index() const
 {
     return StridedPointer(this->dt_index,this->rows,1);
 }
 
+
+//============================================================================
 AGIS_API std::vector<std::string> Asset::__get_dt_index_str() const
 {
     auto dt_index = this->__get_dt_index();
@@ -165,11 +282,32 @@ AGIS_API std::vector<std::string> Asset::__get_dt_index_str() const
     return dt_index_str;
 }
 
+
+//============================================================================
 void Asset::__step()
 {
     this->current_index++;
 }
 
+
+//============================================================================
+bool Asset::__is_valid_time(long long& datetime)
+{
+    if (!this->window) { return true; }
+
+    std::pair<long long, long long > w = this->window.value();
+    auto seconds_since_midnight = datetime % (24 * 60 * 60);
+
+    // Extract the fractional part of the timestamp (nanoseconds)
+    long long fractional_part = datetime % 1000000000;
+    auto t = seconds_since_midnight * 1000000000LL + fractional_part;
+
+    if (t < w.first || t > w.second) { return false; }
+    return true;
+}
+
+
+//============================================================================
 void Asset::__goto(long long datetime)
 {
     //goto date is beyond the datetime index
@@ -188,6 +326,8 @@ void Asset::__goto(long long datetime)
     }
 }
 
+
+//============================================================================
 void Asset::__reset()
 {
     // move datetime index and data pointer back to start
@@ -196,6 +336,8 @@ void Asset::__reset()
     if(!__is_aligned) this->__is_streaming = false;
 }
 
+
+//============================================================================
 AGIS_API double Asset::__get_market_price(bool on_close) const
 {
     if (on_close)

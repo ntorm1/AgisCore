@@ -70,10 +70,12 @@ std::string join_paths(const std::string& parentPath, const std::string& childPa
     return fullPath.string();
 }
 
-bool is_csv(const std::string& filePath) {
+FileType file_type(const std::string& filePath) {
     fs::path path(filePath);
     std::string extension = path.extension().string();
-    return (extension == ".csv");
+    if (extension == ".csv")    return FileType::CSV;
+    if (extension == ".parquet")return FileType::PARQUET;
+    throw std::runtime_error("not impl");
 }
 
 std::vector<std::string> files_in_folder(const std::string& folderPath)

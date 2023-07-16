@@ -57,7 +57,7 @@ struct Position
 
     std::optional<TradeRef> __get_trade(size_t strategy_index) const;
     size_t __get_trade_count() const { return this->trades.size(); }
-    size_t __trade_exits(size_t strategy_index) const { return this->trades.contains(strategy_index); }
+    size_t __trade_exits(size_t strategy_index) const { return this->trades.count(strategy_index) > 0; }
 
     /// <summary>
     /// Evaluate a position at the current market price and allow for the placement of orders as result
@@ -123,7 +123,7 @@ public:
     /// </summary>
     /// <param name="asset_index">unique asset index to search for</param>
     /// <returns></returns>
-    AGIS_API bool position_exists(size_t asset_index) { return positions.contains(asset_index); }
+    AGIS_API bool position_exists(size_t asset_index) { return positions.count(asset_index) > 0; }
 
     /// <summary>
     /// Get a position by asset index if it exists in the portfolio
@@ -243,7 +243,7 @@ public:
 
     PortfolioPtr const& __get_portfolio(std::string const& id);
     PortfolioPtr const& __get_portfolio(size_t index) { return this->portfolios.at(index); };
-    bool __portfolio_exists(std::string const& id) { return this->portfolio_map.contains(id); }
+    bool __portfolio_exists(std::string const& id) { return this->portfolio_map.count(id) > 0; }
 
 private:
 	std::unordered_map<size_t, PortfolioPtr> portfolios;

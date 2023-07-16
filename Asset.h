@@ -10,6 +10,10 @@
 #include <filesystem>
 #include <unordered_map>
 
+#include <arrow/api.h>
+#include <parquet/arrow/reader.h>
+#include <arrow/filesystem/localfs.h>
+
 #include "Utils.h"
 #include "AgisErrors.h"
 #include "AgisPointers.h"
@@ -39,6 +43,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(Frequency, {
 
 class Asset;
 
+AGIS_API typedef std::shared_ptr<Asset> AssetPtr;
+
 class  Asset
 {
 public: 
@@ -53,7 +59,8 @@ public:
 
     AGIS_API NexusStatusCode load(
         std::string source,
-        std::string dt_fmt
+        std::string dt_fmt,
+        std::optional<std::pair<long long, long long>> window = std::nullopt
     );
 
     AGIS_API std::string get_asset_id() const { return this->asset_id; }
@@ -78,7 +85,7 @@ public:
     AGIS_API StridedPointer<long long> const __get_dt_index() const;
     AGIS_API std::vector<std::string> __get_dt_index_str() const;
 
-    bool __contains_column(std::string const& col) { return this->headers.contains(col); }
+    bool __contains_column(std::string const& col) { return this->headers.count(col) > 0; }
     bool __valid_row(int n)const { return n <= (this->current_index - 1); }
 
     void __set_index(size_t index_) { this->asset_index = index_; }
@@ -91,8 +98,10 @@ public:
     bool __is_streaming = false;
     bool __is_expired = false;
     void __step();
+    bool __is_valid_time(long long& datetime);
     long long __get_asset_time() const { return this->dt_index[this->current_index];}
     bool __is_last_view() const { return this->current_index - 1 == this->rows; }
+
 
     void __goto(long long datetime);
     void __reset();
@@ -119,11 +128,13 @@ private:
     size_t close_index;
     long long* dt_index;
     double* data;
+    std::optional<std::pair<long long, long long>> window;
 
     std::unordered_map<std::string, size_t> headers;
 
     NexusStatusCode load_headers();
     NexusStatusCode load_csv();
+    const arrow::Status load_parquet();
 
 };
 

@@ -38,9 +38,6 @@ enum ExchangeQueryType
 };
 
 
-
-
-
 class  Exchange
 {
 public:

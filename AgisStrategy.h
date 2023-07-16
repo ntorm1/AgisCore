@@ -218,7 +218,7 @@ public:
 	void __reset();
 	void __build();
 
-	bool __strategy_exists(std::string const& id) { return this->strategy_id_map.contains(id); }
+	bool __strategy_exists(std::string const& id) { return this->strategy_id_map.count(id) > 0; }
 
 
 private:
