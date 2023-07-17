@@ -63,6 +63,18 @@ public:
 	virtual void subscribe() = 0;
 
 	/// <summary>
+	/// Base serialization of the AgisStrategy class
+	/// </summary>
+	/// <param name="j"></param>
+	AGIS_API virtual void to_json(json& j);
+
+	/// <summary>
+	/// Base deserialization of the AgisStrategy class
+	/// </summary>
+	/// <param name="j"></param>
+	virtual void restore(json& j) {};
+
+	/// <summary>
 	/// Subscribe to an exchange, next() will be called when that exchange steps
 	/// </summary>
 	/// <param name="exchange_id">Unique id of the exchange</param>
@@ -248,11 +260,32 @@ public:
 
 	bool __strategy_exists(std::string const& id) { return this->strategy_id_map.count(id) > 0; }
 
-
 private:
 	std::unordered_map<std::string, size_t> strategy_id_map;
 	std::unordered_map<size_t, AgisStrategyPtr> strategies;
 
+};
+
+
+class AbstractAgisStrategy : public AgisStrategy {
+public:
+	AbstractAgisStrategy(
+		PortfolioPtr const& portfolio_,
+		std::string const& strategy_id,
+		double allocation
+		): AgisStrategy(strategy_id, portfolio_, allocation) {}
+
+	void next() override {}
+
+	void subscribe() override {}
+	
+	void reset() override {}
+
+	void build() override {}
+
+	void restore(json& j);
+
+	void to_json(json& j);
 };
 
 AGIS_API void agis_realloc(ExchangeView* allocation, double c);

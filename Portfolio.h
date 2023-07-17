@@ -141,6 +141,7 @@ public:
     AGIS_API std::optional<TradeRef> get_trade(size_t asset_index, std::string const& strategy_id);
 
     AGIS_API std::vector<size_t> get_strategy_positions(size_t strategy_index) const;
+    AGIS_API std::vector<std::string> get_strategy_ids() const;
 
     /// <summary>
     /// Register a new stratey to the portfolio instance
@@ -157,6 +158,9 @@ public:
     AGIS_API std::vector<PositionPtr> const& get_position_history() { return this->position_history; }
     AGIS_API std::vector<SharedTradePtr> const& get_trade_history() { return this->trade_history; }
 
+
+    json to_json() const;
+    void restore(json const& strategies);
     void __reset();
     void __remember_order(OrderRef order);
     void __on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids);
@@ -215,7 +219,7 @@ private:
     /// Map between strategy index and ref to AgisStrategy
     /// </summary>
     std::unordered_map<size_t, AgisStrategyRef> strategies;
-    std::unordered_map < std::string, size_t> strategy_ids;
+    std::unordered_map<std::string, size_t> strategy_ids;
 
 
     std::vector<PositionPtr> position_history;
@@ -244,6 +248,9 @@ public:
     PortfolioPtr const& __get_portfolio(std::string const& id);
     PortfolioPtr const& __get_portfolio(size_t index) { return this->portfolios.at(index); };
     bool __portfolio_exists(std::string const& id) { return this->portfolio_map.count(id) > 0; }
+
+    AGIS_API json to_json() const;
+    AGIS_API void restore(json const& j);
 
 private:
 	std::unordered_map<size_t, PortfolioPtr> portfolios;

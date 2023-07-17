@@ -43,6 +43,13 @@ void AgisStrategy::__evaluate(bool on_close)
 
 
 //============================================================================
+void AgisStrategy::to_json(json& j)
+{
+	j["strategy_id"] = this->strategy_id;
+	j["allocation"] = this->portfolio_allocation;
+}
+
+//============================================================================
 void AgisStrategy::exchange_subscribe(std::string const& exchange_id)
 {
 	auto exchange = this->exchange_map->get_exchange(exchange_id);
@@ -281,3 +288,14 @@ AGIS_API void agis_realloc(ExchangeView* allocation, double c)
 	}
 }
 
+
+//============================================================================
+void AbstractAgisStrategy::restore(json& j)
+{
+}
+
+//============================================================================
+void AbstractAgisStrategy::to_json(json& j)
+{
+	AgisStrategy::to_json(j);
+}

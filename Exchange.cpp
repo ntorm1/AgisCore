@@ -434,7 +434,6 @@ ExchangeMap::~ExchangeMap()
 }
 
 
-
 //============================================================================
 json ExchangeMap::to_json() const {
 	json j;

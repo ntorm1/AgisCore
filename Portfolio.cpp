@@ -238,6 +238,55 @@ PortfolioPtr const& PortfolioMap::__get_portfolio(std::string const& id)
 
 
 //============================================================================
+json Portfolio::to_json() const
+{
+    json strategies;
+    for (const auto& strategy : this->strategies)
+    {
+        json strat_json;
+        strategy.second.get()->to_json(strat_json);
+        strategies.push_back(strat_json);
+    }
+
+    auto j = json{
+        {"starting_cash", this->starting_cash},
+    };
+    j["strategies"] = strategies;
+    return j;
+}
+
+
+//============================================================================
+void PortfolioMap::restore(json const& j)
+{
+    json portfolios = j["portfolios"];
+
+    // Store the exchange items in a vector for processing
+    for (const auto& portfolio : portfolios.items())
+    {
+        std::string portfolio_id = portfolio.key();
+        json& j = portfolio.value();
+        double starting_cash = j["starting_cash"];
+        
+        // build new portfolio from the parsed settings
+        auto portfolio = std::make_unique<Portfolio>(portfolio_id, starting_cash);
+        this->__register_portfolio(std::move(portfolio));
+    }
+}
+
+
+//============================================================================
+AGIS_API json PortfolioMap::to_json() const
+{
+    json j;
+    for (const auto& pair : this->portfolios) {
+        j[pair.second->__get_portfolio_id()] = pair.second->to_json();
+    }
+    return j;
+}
+
+
+//============================================================================
 Portfolio::Portfolio(std::string portfolio_id_, double cash_)
 {
     this->portfolio_id = portfolio_id_;
@@ -338,6 +387,8 @@ std::optional<PositionRef> Portfolio::get_position(size_t asset_index) const
     }
 }
 
+
+//============================================================================
 AGIS_API std::optional<TradeRef> Portfolio::get_trade(size_t asset_index, std::string const& strategy_id)
 {
     auto index = this->strategy_ids.at(strategy_id);
@@ -346,6 +397,8 @@ AGIS_API std::optional<TradeRef> Portfolio::get_trade(size_t asset_index, std::s
     return position.value().get()->__get_trade(index);
 }
 
+
+//============================================================================
 AGIS_API std::vector<size_t> Portfolio::get_strategy_positions(size_t strategy_index) const
 {
     std::vector<size_t> v;
@@ -354,6 +407,18 @@ AGIS_API std::vector<size_t> Portfolio::get_strategy_positions(size_t strategy_i
         if (position.second->__get_trade(strategy_index).has_value()) {
             v.push_back(position.first);
         }
+    }
+    return v;
+}
+
+
+//============================================================================
+AGIS_API std::vector<std::string> Portfolio::get_strategy_ids() const
+{
+    std::vector<std::string> v;
+    for (auto pair : this->strategy_ids)
+    {
+        v.push_back(pair.first);
     }
     return v;
 }

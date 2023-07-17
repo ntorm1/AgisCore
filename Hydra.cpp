@@ -170,6 +170,7 @@ AGIS_API void Hydra::reset()
 void Hydra::save_state(json& j)
 {
     j["exchanges"] = this->exchanges.to_json();
+    j["portfolios"] = this->portfolios.to_json();
 }
 
 
@@ -177,4 +178,23 @@ void Hydra::save_state(json& j)
 void Hydra::restore(json const& j)
 {
     this->exchanges.restore(j);
+    this->portfolios.restore(j);
+
+
+    // build the abstract strategies stored in the json
+    json portfolios = j["portfolios"];
+    for (const auto& portfolio_json : portfolios.items())
+    {
+        std::string portfolio_id = portfolio_json.key();
+        json& j = portfolio_json.value();
+        json& strategies = j["strategies"];
+        auto& portfolio = this->get_portfolio(portfolio_id);
+        for (const auto& strategy_json : strategies)
+        {
+            std::string strategy_id = strategy_json["strategy_id"];
+            double allocation = strategy_json["allocation"];
+            auto strategy = std::make_unique<AbstractAgisStrategy>(portfolio, strategy_id, allocation);
+            this->register_strategy(std::move(strategy));
+        }
+    }
 }
