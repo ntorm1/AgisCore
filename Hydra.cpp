@@ -120,6 +120,17 @@ AGIS_API NexusStatusCode Hydra::remove_exchange(std::string exchange_id_)
 
 
 //============================================================================
+AGIS_API NexusStatusCode Hydra::remove_portfolio(std::string portfolio_id_)
+{
+    if (!this->portfolios.__portfolio_exists(portfolio_id_)) {
+        return NexusStatusCode::InvalidArgument;
+    }
+    this->portfolios.__remove_portfolio(portfolio_id_);
+    return NexusStatusCode::Ok;
+}
+
+
+//============================================================================
 std::vector<std::string> Hydra::get_asset_ids(std::string exchange_id_)
 {
     return this->exchanges.get_asset_ids(exchange_id_);
@@ -137,6 +148,20 @@ std::optional<std::shared_ptr<Asset> const> Hydra::get_asset(std::string const& 
 bool Hydra::asset_exists(std::string asset_id) const
 {
     return this->exchanges.asset_exists(asset_id);
+}
+
+
+//============================================================================
+AGIS_API bool Hydra::portfolio_exists(std::string const& portfolio_id) const
+{
+    return this->portfolios.__portfolio_exists(portfolio_id);
+}
+
+
+//============================================================================
+AGIS_API bool Hydra::strategy_exists(std::string const& strategy_id) const
+{
+    return this->strategies.__strategy_exists(strategy_id);
 }
 
 

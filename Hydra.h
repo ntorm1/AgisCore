@@ -167,6 +167,13 @@ public:
 	/// <param name="exchange_id_">Unique id of the exchange to remove</param>
 	/// <returns></returns>
 	AGIS_API NexusStatusCode remove_exchange(std::string exchange_id_);
+
+	/// <summary>
+	/// Remove portfolio from the hydra instance by exchange id
+	/// </summary>
+	/// <param name="portfolio_id_">Unique id of the portfolio to remove</param>
+	/// <returns></returns>
+	AGIS_API NexusStatusCode remove_portfolio(std::string portfolio_id_);
 	
 	/// <summary>
 	/// Get all asset id's currently registered to an exchange
@@ -183,6 +190,8 @@ public:
 	AGIS_API std::optional<std::shared_ptr<Asset> const> get_asset(std::string const& asset_id) const;
 	
 	AGIS_API bool asset_exists(std::string asset_id) const;
+	AGIS_API bool portfolio_exists(std::string const& portfolio_id) const;
+	AGIS_API bool strategy_exists(std::string const& strategy_id) const;
 };
 
 #ifdef __cplusplus

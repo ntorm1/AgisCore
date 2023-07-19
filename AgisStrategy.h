@@ -258,7 +258,7 @@ public:
 	void __reset();
 	void __build();
 
-	bool __strategy_exists(std::string const& id) { return this->strategy_id_map.count(id) > 0; }
+	bool __strategy_exists(std::string const& id) const { return this->strategy_id_map.count(id) > 0; }
 
 private:
 	std::unordered_map<std::string, size_t> strategy_id_map;
@@ -283,9 +283,9 @@ public:
 
 	void build() override {}
 
-	void restore(json& j);
+	AGIS_API void restore(json& j);
 
-	void to_json(json& j);
+	AGIS_API void to_json(json& j);
 };
 
 AGIS_API void agis_realloc(ExchangeView* allocation, double c);

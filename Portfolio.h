@@ -243,11 +243,12 @@ public:
     void __on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids);
 
     void __register_portfolio(PortfolioPtr portfolio);
+    void __remove_portfolio(std::string const& portfolio);
     void __register_strategy(AgisStrategyRef strategy);
 
     PortfolioPtr const& __get_portfolio(std::string const& id);
     PortfolioPtr const& __get_portfolio(size_t index) { return this->portfolios.at(index); };
-    bool __portfolio_exists(std::string const& id) { return this->portfolio_map.count(id) > 0; }
+    bool __portfolio_exists(std::string const& id) const { return this->portfolio_map.count(id) > 0; }
 
     AGIS_API json to_json() const;
     AGIS_API void restore(json const& j);

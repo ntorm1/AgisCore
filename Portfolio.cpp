@@ -197,12 +197,16 @@ void PortfolioMap::__on_order_fill(OrderPtr const& order)
     portfolio->__on_order_fill(order);
 }
 
+
+//============================================================================
 void PortfolioMap::__remember_order(OrderRef order)
 {
     auto& portfolio = this->portfolios.at(order.get()->get_portfolio_index());
     portfolio->__remember_order(std::move(order));
 }
 
+
+//============================================================================
 void PortfolioMap::__on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids)
 {
     for (auto& portfolio_pair : this->portfolios)
@@ -218,6 +222,15 @@ void PortfolioMap::__register_portfolio(PortfolioPtr portfolio)
 {
     this->portfolio_map.emplace(portfolio->__get_portfolio_id(), portfolio->__get_index());
     this->portfolios.emplace(portfolio->__get_index(), std::move(portfolio));
+}
+
+
+//============================================================================
+void PortfolioMap::__remove_portfolio(std::string const& portfolio_id)
+{
+    auto index = this->portfolio_map.at(portfolio_id);
+    this->portfolios.erase(index);
+    this->portfolio_map.erase(portfolio_id);
 }
 
 
