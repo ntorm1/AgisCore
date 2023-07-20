@@ -269,6 +269,12 @@ void AgisStrategyMap::__reset()
 	);
 }
 
+void AgisStrategyMap::__clear()
+{
+	this->strategies.clear();
+	this->strategy_id_map.clear();
+}
+
 
 //============================================================================
 void AgisStrategyMap::__build()

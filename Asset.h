@@ -113,7 +113,6 @@ public:
     void __goto(long long datetime);
     void __reset();
 
-
 private:
     bool is_loaded = false;
     std::string asset_id;

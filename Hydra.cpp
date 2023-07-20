@@ -168,6 +168,7 @@ AGIS_API bool Hydra::strategy_exists(std::string const& strategy_id) const
 //============================================================================
 void Hydra::clear()
 {
+    this->strategies.__clear();
     this->exchanges.__clear();
     this->portfolios.__clear();
 }
@@ -218,7 +219,11 @@ void Hydra::restore(json const& j)
         {
             std::string strategy_id = strategy_json["strategy_id"];
             double allocation = strategy_json["allocation"];
-            auto strategy = std::make_unique<AbstractAgisStrategy>(portfolio, strategy_id, allocation);
+            auto strategy = std::make_unique<AbstractAgisStrategy>(
+                portfolio,
+                strategy_id,
+                allocation
+            );
             this->register_strategy(std::move(strategy));
         }
     }

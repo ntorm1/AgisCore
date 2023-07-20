@@ -162,8 +162,10 @@ public:
     json to_json() const;
     void restore(json const& strategies);
     void __reset();
+    static void __reset_counter() { Portfolio::portfolio_counter = 0; }
     void __remember_order(OrderRef order);
     void __on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids);
+
 
 private:
 	/// <summary>
@@ -235,7 +237,7 @@ public:
 	PortfolioMap() = default;
 
     void __evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close);
-    void __clear() { this->portfolios.clear(); }
+    void __clear();
     void __reset();
 
 	void __on_order_fill(OrderPtr const& order);

@@ -85,6 +85,8 @@ public:
 	/// </summary>
 	AGIS_API virtual void __reset();
 
+	AGIS_API static void __reset_counter() { strategy_counter.store(0); }
+
 	/// <summary>
 	/// Build the strategy, called once registered to a hydra instance
 	/// </summary>
@@ -256,6 +258,7 @@ public:
 	
 	bool __next();
 	void __reset();
+	void __clear();
 	void __build();
 
 	bool __strategy_exists(std::string const& id) const { return this->strategy_id_map.count(id) > 0; }

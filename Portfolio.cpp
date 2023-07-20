@@ -179,6 +179,14 @@ void PortfolioMap::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, 
     );
 }
 
+void PortfolioMap::__clear()
+{
+    Portfolio::__reset_counter();
+    AgisStrategy::__reset_counter();
+    this->portfolios.clear();
+    this->portfolio_map.clear();
+}
+
 
 //============================================================================
 void PortfolioMap::__reset()
@@ -272,6 +280,7 @@ json Portfolio::to_json() const
 //============================================================================
 void PortfolioMap::restore(json const& j)
 {
+    Portfolio::__reset_counter();
     json portfolios = j["portfolios"];
 
     // Store the exchange items in a vector for processing

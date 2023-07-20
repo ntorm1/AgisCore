@@ -748,6 +748,13 @@ AGIS_API bool ExchangeMap::step()
 void ExchangeMap::__clear()
 {
 	this->exchanges.clear();
+	this->asset_map.clear();
+	this->assets.clear();
+	this->assets_expired.clear();
+	this->expired_asset_index.clear();
+	this->current_index = 0;
+	this->candles = 0;
+	this->asset_counter = 0;
 }
 
 
