@@ -73,7 +73,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 	bool panic
 )
 {
-	if (row < 0) { throw std::runtime_error("invalid row param"); }
+	if (row > 0) { throw std::runtime_error("Row must be <= 0"); }
 	auto number_assets = (N == -1) ? this->assets.size() : static_cast<size_t>(N);
 
 	ExchangeView exchange_view(this->exchange_index, number_assets);
@@ -529,6 +529,18 @@ bool ExchangeMap::asset_exists(std::string const&  asset_id) const
 		return true;
 	}
 	return false;
+}
+
+AGIS_API std::vector<std::string> ExchangeMap::get_exchange_ids() const
+{
+	std::vector<std::string> keys;
+	keys.reserve(this->exchanges.size()); 
+
+	std::transform(this->exchanges.begin(), this->exchanges.end(), std::back_inserter(keys),
+		[](const std::pair<std::string, ExchangePtr>& pair) {
+			return pair.first;
+		});
+	return keys;
 }
 
 

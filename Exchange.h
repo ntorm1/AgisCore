@@ -233,9 +233,9 @@ public:
 	/// <returns>Does a asset with this id exist already</returns>
 	AGIS_API bool asset_exists(std::string const& asset_id) const;
 
-	AGIS_API long long get_datetime() const;
+	AGIS_API std::vector<std::string> get_exchange_ids() const;
 
-	
+	AGIS_API long long get_datetime() const;
 	AGIS_API double __get_market_price(size_t asset_index, bool on_close) const;
 	AGIS_API double __get_market_price(std::string& asset_id, bool on_close) const;
 	

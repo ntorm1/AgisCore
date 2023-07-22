@@ -93,7 +93,7 @@ public:
     AGIS_API std::vector<std::string> __get_dt_index_str() const;
 
     bool __contains_column(std::string const& col) { return this->headers.count(col) > 0; }
-    bool __valid_row(int n)const { return n <= (this->current_index - 1); }
+    bool __valid_row(int n)const { return abs(n) <= (this->current_index - 1); }
 
     void __set_index(size_t index_) { this->asset_index = index_; }
     void __set_exchange_offset(size_t offset) { this->exchange_offset = offset; }

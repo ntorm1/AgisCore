@@ -10,6 +10,28 @@ const std::function<double(double, double)> agis_subtract = [](double a, double 
 const std::function<double(double, double)> agis_multiply = [](double a, double b) { return a * b; };
 const std::function<double(double, double)> agis_divide = [](double a, double b) { return a / b; };
 
+
+std::unordered_map<std::string, AgisOperation> agis_function_map  = {
+   {"INIT", agis_init},
+   {"IDENTITY", agis_identity},
+   {"ADD", agis_add},
+   {"SUBTRACT", agis_subtract},
+   {"MULTIPLY", agis_multiply},
+   {"DIVIDE", agis_divide}
+};
+
+
+
+std::vector<std::string> agis_function_strings = {
+    "INIT",
+    "IDENTITY",
+    "ADD",
+    "SUBTRACT",
+    "MULTIPLY",
+    "DIVIDE"
+};
+
+
 const std::function<double(
     const std::shared_ptr<Asset>& asset,
     const std::string& col,
