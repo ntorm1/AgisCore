@@ -3,7 +3,7 @@
 #include <memory>
 #include <functional>
 #include <unordered_map>
-#include "Asset.h"
+#include "Exchange.h"
 
 AGIS_API extern const std::function<double(double, double)> agis_init;
 AGIS_API extern const std::function<double(double, double)> agis_identity;
@@ -28,6 +28,8 @@ enum class AGIS_Function {
 
 extern AGIS_API std::unordered_map<std::string, AgisOperation> agis_function_map;
 extern AGIS_API std::vector<std::string> agis_function_strings;
+extern AGIS_API std::unordered_map<std::string, ExchangeQueryType> agis_query_map;
+extern AGIS_API std::vector<std::string> agis_query_strings;
 
 
 

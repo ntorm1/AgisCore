@@ -96,9 +96,12 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 	return exchange_view;
 }
 
+
+//============================================================================
 AGIS_API ExchangeView Exchange::get_exchange_view(
 	const std::function<double(std::shared_ptr<Asset>const&)>& func,
-	ExchangeQueryType query_type, int N)
+	ExchangeQueryType query_type, 
+	int N)
 {
 	auto number_assets = (N == -1) ? this->assets.size() : static_cast<size_t>(N);
 	ExchangeView exchange_view(this->exchange_index, number_assets);

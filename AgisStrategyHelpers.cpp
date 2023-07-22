@@ -21,6 +21,20 @@ std::unordered_map<std::string, AgisOperation> agis_function_map  = {
 };
 
 
+std::unordered_map<std::string, ExchangeQueryType> agis_query_map = {
+   {"Default", ExchangeQueryType::Default},
+   {"NLargest", ExchangeQueryType::NLargest},
+   {"NSmallest", ExchangeQueryType::NSmallest },
+   {"NExtreme", ExchangeQueryType::NExtreme},
+};
+
+std::vector<std::string>  agis_query_strings = 
+{
+    "Default",	/// return all assets in view
+    "NLargest",	/// return the N largest
+    "NSmallest",/// return the N smallest
+    "NExtreme"	/// return the N/2 smallest and largest
+};
 
 std::vector<std::string> agis_function_strings = {
     "INIT",
