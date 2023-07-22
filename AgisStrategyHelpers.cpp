@@ -28,6 +28,13 @@ std::unordered_map<std::string, ExchangeQueryType> agis_query_map = {
    {"NExtreme", ExchangeQueryType::NExtreme},
 };
 
+std::unordered_map<std::string, AllocType> agis_strat_alloc_map = {
+   {"Default", AllocType::UNITS},
+   {"NLargest", AllocType::DOLLARS},
+   {"PCT", AllocType::PCT},
+};
+
+
 std::vector<std::string>  agis_query_strings = 
 {
     "Default",	/// return all assets in view
@@ -44,6 +51,13 @@ std::vector<std::string> agis_function_strings = {
     "MULTIPLY",
     "DIVIDE"
 };
+
+std::vector<std::string> agis_strat_alloc_strings = {
+    "UNITS",
+    "DOLLARS",
+    "PCT"
+};
+
 
 
 const std::function<double(

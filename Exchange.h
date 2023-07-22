@@ -284,6 +284,14 @@ private:
         } \
     } while (false)
 
+
+enum class ExchangeViewOpp
+{
+	UNIFORM,
+	LINEAR_DECREASE,
+	LINEAR_INCREASE
+};
+
 struct ExchangeView
 {
 	std::vector<std::pair<size_t, double>> view;
@@ -297,7 +305,32 @@ struct ExchangeView
 	size_t size() const { return this->view.size(); }
 	void sort(size_t N, ExchangeQueryType sort_type);
 
-	//============================================================================
+
+	void uniform_weights(double c)
+	{
+		for (auto& pair : view) {
+			pair.second = c;
+		}
+	}
+
+	void linear_decreasing_weights(double _sum)
+	{
+		size_t N = view.size();
+		double sum = (N * (N + 1)) / 2; // Sum of numbers from 1 to N
+		for (size_t i = 0; i < N; ++i) {
+			view[i].second = (_sum * (N - i) / sum);
+		}
+	}
+
+	void linear_increasing_weights(double _sum)
+	{
+		int N = view.size();
+		double sum = (N * (N + 1)) / 2; // Sum of numbers from 1 to N
+		for (int i = 0; i < N; ++i) {
+			view[i].second = (_sum * (i + 1) / sum);
+		}
+	}
+
 	ExchangeView operator+(const ExchangeView& other) const {
 		CHECK_INDEX_MATCH(*this, other);
 		CHECK_SIZE_MATCH(*this, other);
