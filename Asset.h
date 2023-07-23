@@ -135,6 +135,8 @@ private:
     size_t close_index;
     long long* dt_index;
     double* data;
+    double* close;
+    double* open;
     std::optional<std::pair<long long, long long>> window;
 
     std::unordered_map<std::string, size_t> headers;

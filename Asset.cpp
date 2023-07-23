@@ -54,16 +54,19 @@ NexusStatusCode Asset::load(
     this->window = window_;
 
     auto filetype = file_type(source);
+    NexusStatusCode res;
     switch (filetype)
     {
     case FileType::CSV:
-        return this->load_csv();
+        res = this->load_csv();
+        break;
     case FileType::PARQUET: {
-        auto res = this->load_parquet();
-        if (res.code() != arrow::StatusCode::OK) {
+        auto arrow_res = this->load_parquet();
+        if (arrow_res.code() != arrow::StatusCode::OK) {
             throw std::runtime_error("file load failed");
         }
-        return NexusStatusCode::Ok;
+        res = NexusStatusCode::Ok;
+        break;
     }
     case FileType::HDF5: {
         H5::H5File file(this->source, H5F_ACC_RDONLY);
@@ -73,16 +76,23 @@ NexusStatusCode Asset::load(
         H5::DataSpace dataspace = dataset.getSpace();
         H5::DataSet datasetIndex = file.openDataSet(asset_id + "/datetime");
         H5::DataSpace dataspaceIndex = datasetIndex.getSpace();
-        return this->load(
+        res = this->load(
             dataset,
             dataspace,
             datasetIndex,
             dataspaceIndex
         );
+        break;
     }
     default:
         throw std::runtime_error("Not implemented");
     }
+
+    if (res != NexusStatusCode::Ok) { return res; }
+
+    this->close = this->data + (this->rows) * this->close_index;
+    this->open = this->data + (this->rows) * this->open_index;
+    return res;
 }
 
 AGIS_API NexusStatusCode Asset::load(
@@ -144,6 +154,9 @@ AGIS_API NexusStatusCode Asset::load(
 
     // Read the 1D datetime index from the dataset
     datasetIndex.read(this->dt_index, H5::PredType::NATIVE_INT64, dataspaceIndex);
+
+    this->close = this->data + (this->rows) * this->close_index;
+    this->open = this->data + (this->rows) * this->open_index;
 
     return NexusStatusCode::Ok;
 }
@@ -366,6 +379,8 @@ AGIS_API std::vector<std::string> Asset::__get_dt_index_str() const
 void Asset::__step()
 {
     this->current_index++;
+    this->open++;
+    this->close++;
 }
 
 
@@ -390,10 +405,6 @@ bool Asset::__is_valid_time(long long& datetime)
 void Asset::__goto(long long datetime)
 {
     //goto date is beyond the datetime index
-    if (datetime >= this->dt_index[this->rows - 1])
-    {
-        this->current_index = this->rows - 1;
-    }
     // search for datetime in the index
     for (int i = this->current_index; i < this->rows; i++)
     {
@@ -413,22 +424,16 @@ void Asset::__reset()
     this->current_index = this->warmup;
     this->__is_expired = false;
     if(!__is_aligned) this->__is_streaming = false;
+    this->close = this->data + (this->rows) * this->close_index;
+    this->open = this->data + (this->rows) * this->open_index;
 }
 
 
 //============================================================================
 AGIS_API double Asset::__get_market_price(bool on_close) const
 {
-    if (on_close)
-    {
-        size_t offset = (this->rows * this->close_index) + this->current_index - 1;
-        return *(this->data  + offset);
-    }
-    else
-    {
-        size_t offset = (this->rows * this->open_index) + this->current_index - 1;
-        return *(this->data + offset);
-    }
+    if (on_close) return *(this->close - 1);
+    else return *(this->open - 1);
 }
 
 
