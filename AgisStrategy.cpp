@@ -391,11 +391,44 @@ AGIS_API void agis_realloc(ExchangeView* allocation, double c)
 
 
 //============================================================================
+void AbstractAgisStrategy::next()
+{
+	auto& ev_lambda_ref = *this->ev_lambda_struct;
+
+	auto ev = ev_lambda_ref.exchange_view_labmda(
+		ev_lambda_ref.opperation,
+		ev_lambda_ref.exchange,
+		ev_lambda_ref.query_type,
+		ev_lambda_ref.N
+	);
+
+	auto& strat_alloc_ref = *ev_lambda_ref.strat_alloc_struct;
+	if (strat_alloc_ref.ev_opp_type == "UNIFORM")
+		ev.uniform_weights(strat_alloc_ref.target_leverage);
+	else if (strat_alloc_ref.ev_opp_type == "LINEAR_DECREASE")
+		ev.linear_decreasing_weights(strat_alloc_ref.target_leverage);	
+	else if (strat_alloc_ref.ev_opp_type == "LINEAR_INCREASE")
+		ev.linear_increasing_weights(strat_alloc_ref.target_leverage);
+
+	this->strategy_allocate(
+		&ev,
+		strat_alloc_ref.epsilon,
+		strat_alloc_ref.clear_missing,
+		std::nullopt,
+		strat_alloc_ref.alloc_type
+	);
+}
+
+
+//============================================================================
 void AbstractAgisStrategy::build()
 {
 	if (!ev_lambda_struct.has_value()) {
 		throw std::runtime_error("missing abstract lambda strategy");
 	}
+
+	ExchangePtr exchange = ev_lambda_struct.value().exchange;
+	this->exchange_subscribe(exchange->get_exchange_id());
 }
 
 void AbstractAgisStrategy::extract_ev_lambda()

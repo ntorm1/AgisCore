@@ -119,6 +119,7 @@ public:
 	);
 
 
+	AGIS_API std::string get_exchange_id() const { return this->exchange_id; }
 	AGIS_API StridedPointer<long long> const __get_dt_index() const;
 	AGIS_API size_t const __get_size() const { return this->dt_index_size; }
 	void __goto(long long datetime);

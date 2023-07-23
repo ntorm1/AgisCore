@@ -49,6 +49,7 @@ private:
 	AgisRouter router;
 
 	int logging;
+	bool is_built = false;
 
 public:
 	AGIS_API Hydra(int logging_ = 0);
@@ -77,7 +78,7 @@ public:
 	/// Reset the hydra instance to it's original state before any steps forward in time
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API void reset();
+	AGIS_API void __reset();
 
 	/// <summary>
 	/// Save the current state of Hydra instance to json

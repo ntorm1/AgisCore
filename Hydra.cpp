@@ -43,6 +43,8 @@ void Hydra::__step()
 //============================================================================
 AGIS_API void Hydra::__run()
 {
+    if (!this->is_built) { this->build(); this->is_built = true; }
+
     size_t step_count = this->exchanges.__get_dt_index().size();
     for (size_t i = 0; i < step_count; i++)
     {
@@ -58,6 +60,7 @@ NexusStatusCode Hydra::new_exchange(
     Frequency freq_,
     std::string dt_format_)
 {
+    this->is_built = false;
     return this->exchanges.new_exchange(exchange_id_, source_dir_, freq_, dt_format_);
 }
 
@@ -69,6 +72,7 @@ AGIS_API PortfolioPtr const& Hydra::new_portfolio(std::string id, double cash)
     {
         throw std::runtime_error("portfolio already exists");
     }
+    this->is_built = false;
     auto portfolio = std::make_unique<Portfolio>(id, cash);
     this->portfolios.__register_portfolio(std::move(portfolio));
 
@@ -115,6 +119,7 @@ AGIS_API const AgisStrategyRef Hydra::get_strategy(std::string strategy_id)
 //============================================================================
 AGIS_API NexusStatusCode Hydra::remove_exchange(std::string exchange_id_)
 {
+    this->is_built = false;
     return this->exchanges.remove_exchange(exchange_id_);
 }
 
@@ -183,7 +188,7 @@ AGIS_API void Hydra::build()
 
 
 //============================================================================
-AGIS_API void Hydra::reset()
+AGIS_API void Hydra::__reset()
 {
     this->exchanges.__reset();
     this->portfolios.__reset();

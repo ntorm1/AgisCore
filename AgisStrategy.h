@@ -30,7 +30,8 @@ AGIS_API typedef std::vector<AssetLambda> AgisAssetLambdaChain;
 AGIS_API typedef std::function<ExchangeView(
 	std::function<double(AssetPtr const&)>,
 	ExchangePtr const,
-	ExchangeQueryType)
+	ExchangeQueryType,
+	int)
 > ExchangeViewLambda;
 
 enum class AGIS_Function {
@@ -40,6 +41,14 @@ enum class AGIS_Function {
 	SUBTRACT,
 	MULTIPLY,
 	DIVIDE
+};
+
+
+enum class AGIS_API AllocType
+{
+	UNITS,		// set strategy portfolio to have N units
+	DOLLARS,	// set strategy portfolio to have $N worth of units
+	PCT			// set strategy portfolio to have %N worth of units (% of nlv)
 };
 
 
@@ -54,10 +63,11 @@ struct AGIS_API StrategyAllocLambdaStruct {
 	double target_leverage;
 	bool clear_missing;
 	std::string ev_opp_type;
-	std::string str_alloc_type;
+	AllocType alloc_type;
 };
 
 struct AGIS_API ExchangeViewLambdaStruct {
+	int N;
 	ExchangeViewLambda exchange_view_labmda;
 	ExchangePtr exchange;
 	ExchangeQueryType query_type;
@@ -86,14 +96,6 @@ extern AGIS_API const std::function<double(
 	std::pair<Operation, std::function<double(const std::shared_ptr<Asset>&)>>
 	>& operations)> asset_feature_lambda_chain;
 
-
-
-enum class AGIS_API AllocType
-{
-	UNITS,		// set strategy portfolio to have N units
-	DOLLARS,	// set strategy portfolio to have $N worth of units
-	PCT			// set strategy portfolio to have %N worth of units (% of nlv)
-};
 
 
 extern AGIS_API std::unordered_map<std::string, AllocType> agis_strat_alloc_map;
@@ -357,13 +359,13 @@ public:
 		double allocation
 		): AgisStrategy(strategy_id, portfolio_, allocation) {}
 
-	void next() override {}
+	AGIS_API void next() override;
 
-	void subscribe() override {}
+	AGIS_API void subscribe() override {}
 	
-	void reset() override {}
+	AGIS_API void reset() override {}
 
-	void build() override;
+	AGIS_API void build() override;
 
 	AGIS_API void extract_ev_lambda();
 
