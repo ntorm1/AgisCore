@@ -439,7 +439,7 @@ void AbstractAgisStrategy::extract_ev_lambda()
 }
 
 //============================================================================
-void AbstractAgisStrategy::restore(json& j)
+void AbstractAgisStrategy::restore(fs::path path)
 {
 }
 

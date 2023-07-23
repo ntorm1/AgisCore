@@ -144,6 +144,12 @@ public:
 	/// </summary>
 	/// <returns></returns>
 	AGIS_API PortfolioMap const& get_portfolios() { return this->portfolios; }
+
+	/// <summary>
+	/// Get ref to the agis strategy map
+	/// </summary>
+	/// <returns></returns>
+	AGIS_API AgisStrategyMap& __get_strategy_map() { return this->strategies; }
 	
 	/// <summary>
 	/// Get const ref to a portfolio registered to the hydra instance

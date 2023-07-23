@@ -147,10 +147,11 @@ public:
 	AGIS_API virtual void to_json(json& j);
 
 	/// <summary>
-	/// Base deserialization of the AgisStrategy class
+	/// Restore a strategy from a give filepath 
 	/// </summary>
-	/// <param name="j"></param>
-	virtual void restore(json& j) {};
+	/// <param name="path"></param>
+	/// <returns></returns>
+	AGIS_API virtual void restore(fs::path path) {};
 
 	/// <summary>
 	/// Subscribe to an exchange, next() will be called when that exchange steps
@@ -334,6 +335,7 @@ public:
 
 	void register_strategy(AgisStrategyPtr strategy);
 	const AgisStrategyRef get_strategy(std::string strategy_id);
+	std::unordered_map<size_t, AgisStrategyPtr>& __get_strategies() { return this->strategies; }
 	
 	bool __next();
 	void __reset();
@@ -376,7 +378,7 @@ public:
 		std::optional<ExchangeViewLambdaStruct>
 		()> f_) { this->ev_lambda = f_; };
 
-	AGIS_API void restore(json& j);
+	AGIS_API void restore(fs::path path) override;
 
 	AGIS_API void to_json(json& j);
 
