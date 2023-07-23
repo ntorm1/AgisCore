@@ -3,10 +3,105 @@
 #include <tbb/parallel_for_each.h>
 
 #include "AgisStrategy.h"
-#include "Exchange.h"
+
+
+//============================================================================
+const std::function<double(double, double)> agis_init = [](double a, double b) { return b; };
+const std::function<double(double, double)> agis_identity = [](double a, double b) { return a; };
+const std::function<double(double, double)> agis_add = [](double a, double b) { return a + b; };
+const std::function<double(double, double)> agis_subtract = [](double a, double b) { return a - b; };
+const std::function<double(double, double)> agis_multiply = [](double a, double b) { return a * b; };
+const std::function<double(double, double)> agis_divide = [](double a, double b) { return a / b; };
 
 
 
+//============================================================================
+std::unordered_map<std::string, AgisOperation> agis_function_map = {
+   {"INIT", agis_init},
+   {"IDENTITY", agis_identity},
+   {"ADD", agis_add},
+   {"SUBTRACT", agis_subtract},
+   {"MULTIPLY", agis_multiply},
+   {"DIVIDE", agis_divide}
+};
+
+
+//============================================================================
+std::unordered_map<std::string, ExchangeQueryType> agis_query_map = {
+   {"Default", ExchangeQueryType::Default},
+   {"NLargest", ExchangeQueryType::NLargest},
+   {"NSmallest", ExchangeQueryType::NSmallest },
+   {"NExtreme", ExchangeQueryType::NExtreme},
+};
+
+
+//============================================================================
+std::vector<std::string>  agis_query_strings =
+{
+	"Default",	/// return all assets in view
+	"NLargest",	/// return the N largest
+	"NSmallest",/// return the N smallest
+	"NExtreme"	/// return the N/2 smallest and largest
+};
+
+
+//============================================================================
+std::vector<std::string> agis_function_strings = {
+	"INIT",
+	"IDENTITY",
+	"ADD",
+	"SUBTRACT",
+	"MULTIPLY",
+	"DIVIDE"
+};
+
+
+//============================================================================
+std::vector<std::string> agis_strat_alloc_strings = {
+	//"UNITS",
+	//"DOLLARS",
+	"PCT"
+};
+
+
+//============================================================================
+const std::function<double(
+	const std::shared_ptr<Asset>& asset,
+	const std::string& col,
+	int offset
+	)> asset_feature_lambda = [](
+		const std::shared_ptr<Asset>& asset,
+		const std::string& col,
+		int offset
+		) { return asset->get_asset_feature(col, offset); };
+
+
+//============================================================================
+const std::function<double(
+	const std::shared_ptr<Asset>&,
+	const std::vector<
+	std::pair<Operation, std::function<double(const std::shared_ptr<Asset>&)>>
+	>& operations)> asset_feature_lambda_chain = [](
+		const std::shared_ptr<Asset>& asset,
+		const std::vector<std::pair<Operation, std::function<double(const std::shared_ptr<Asset>&)>>>& operations
+		)
+{
+	double result = 0;
+	for (const auto& operation : operations) {
+		const auto& op = operation.first;
+		const auto& assetFeatureLambda = operation.second;
+		result = op(result, assetFeatureLambda(asset));
+	}
+	return result;
+};
+
+
+//============================================================================
+std::unordered_map<std::string, AllocType> agis_strat_alloc_map = {
+   {"UNITS", AllocType::UNITS},
+   {"DOLLARS", AllocType::DOLLARS},
+   {"PCT", AllocType::PCT},
+};
 
 //============================================================================
 void AgisStrategy::__reset()
@@ -294,6 +389,19 @@ AGIS_API void agis_realloc(ExchangeView* allocation, double c)
 	}
 }
 
+
+//============================================================================
+void AbstractAgisStrategy::build()
+{
+	if (!ev_lambda_struct.has_value()) {
+		throw std::runtime_error("missing abstract lambda strategy");
+	}
+}
+
+void AbstractAgisStrategy::extract_ev_lambda()
+{
+	this->ev_lambda_struct = this->ev_lambda();
+}
 
 //============================================================================
 void AbstractAgisStrategy::restore(json& j)

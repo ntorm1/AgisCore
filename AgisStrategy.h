@@ -1,14 +1,11 @@
 #pragma once
-#ifdef AGISCORE_EXPORTS
-#define AGIS_API __declspec(dllexport)
-#else
-#define AGIS_API __declspec(dllimport)
-#endif
 #include "pch.h"
 
 #include "AgisRouter.h"
 #include "Order.h"
 #include "Portfolio.h"
+#include "Exchange.h"
+
 
 static std::atomic<size_t> strategy_counter(0);
 
@@ -16,7 +13,80 @@ class AgisStrategy;
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
 AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
 
-struct ExchangeView;
+
+
+AGIS_API extern const std::function<double(double, double)> agis_init;
+AGIS_API extern const std::function<double(double, double)> agis_identity;
+AGIS_API extern const std::function<double(double, double)> agis_add;
+AGIS_API extern const std::function<double(double, double)> agis_subtract;
+AGIS_API extern const std::function<double(double, double)> agis_multiply;
+AGIS_API extern const std::function<double(double, double)> agis_divide;
+
+
+AGIS_API typedef std::function<double(double, double)> AgisOperation;
+AGIS_API typedef std::pair<AgisOperation, std::function<double(const std::shared_ptr<Asset>&)>> AssetLambda;
+AGIS_API typedef std::function<double(AssetPtr const&)> ExchangeViewOperation;
+AGIS_API typedef std::vector<AssetLambda> AgisAssetLambdaChain;
+AGIS_API typedef std::function<ExchangeView(
+	std::function<double(AssetPtr const&)>,
+	ExchangePtr const,
+	ExchangeQueryType)
+> ExchangeViewLambda;
+
+enum class AGIS_Function {
+	INIT,
+	IDENTITY,
+	ADD,
+	SUBTRACT,
+	MULTIPLY,
+	DIVIDE
+};
+
+
+extern AGIS_API std::unordered_map<std::string, AgisOperation> agis_function_map;
+extern AGIS_API std::vector<std::string> agis_function_strings;
+extern AGIS_API std::unordered_map<std::string, ExchangeQueryType> agis_query_map;
+extern AGIS_API std::vector<std::string> agis_query_strings;
+extern AGIS_API std::vector<std::string> agis_strat_alloc_strings;
+
+struct AGIS_API StrategyAllocLambdaStruct {
+	double epsilon;
+	double target_leverage;
+	bool clear_missing;
+	std::string ev_opp_type;
+	std::string str_alloc_type;
+};
+
+struct AGIS_API ExchangeViewLambdaStruct {
+	ExchangeViewLambda exchange_view_labmda;
+	ExchangePtr exchange;
+	ExchangeQueryType query_type;
+	ExchangeViewOperation opperation;
+	std::optional<StrategyAllocLambdaStruct> strat_alloc_struct = std::nullopt;
+};
+
+
+AGIS_API typedef std::function<double(
+	double a,
+	double b
+	)> Operation;
+
+AGIS_API typedef const std::function<double(
+	const std::shared_ptr<Asset>&,
+	const std::string&,
+	int
+	)> AssetFeatureLambda;
+
+extern AGIS_API AssetFeatureLambda asset_feature_lambda;
+
+
+extern AGIS_API const std::function<double(
+	const std::shared_ptr<Asset>&,
+	const std::vector<
+	std::pair<Operation, std::function<double(const std::shared_ptr<Asset>&)>>
+	>& operations)> asset_feature_lambda_chain;
+
+
 
 enum class AGIS_API AllocType
 {
@@ -24,6 +94,10 @@ enum class AGIS_API AllocType
 	DOLLARS,	// set strategy portfolio to have $N worth of units
 	PCT			// set strategy portfolio to have %N worth of units (% of nlv)
 };
+
+
+extern AGIS_API std::unordered_map<std::string, AllocType> agis_strat_alloc_map;
+
 
 class AgisStrategy
 {
@@ -270,8 +344,13 @@ private:
 };
 
 
+
 class AbstractAgisStrategy : public AgisStrategy {
 public:
+	using AbstractExchangeViewLambda = std::function<
+		std::optional<ExchangeViewLambdaStruct>
+		()>;
+
 	AbstractAgisStrategy(
 		PortfolioPtr const& portfolio_,
 		std::string const& strategy_id,
@@ -284,11 +363,21 @@ public:
 	
 	void reset() override {}
 
-	void build() override {}
+	void build() override;
+
+	AGIS_API void extract_ev_lambda();
+
+	AGIS_API void set_abstract_ev_lambda(std::function<
+		std::optional<ExchangeViewLambdaStruct>
+		()> f_) { this->ev_lambda = f_; };
 
 	AGIS_API void restore(json& j);
 
 	AGIS_API void to_json(json& j);
+
+private:
+	AbstractExchangeViewLambda ev_lambda;
+	std::optional<ExchangeViewLambdaStruct> ev_lambda_struct = std::nullopt;
 };
 
 AGIS_API void agis_realloc(ExchangeView* allocation, double c);

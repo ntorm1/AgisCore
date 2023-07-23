@@ -66,9 +66,6 @@
     <ClInclude Include="Trade.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgisStrategyHelpers.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="utils_time.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -105,9 +102,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AgisRouter.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="AgisStrategyHelpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

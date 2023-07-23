@@ -305,11 +305,18 @@ struct ExchangeView
 	size_t size() const { return this->view.size(); }
 	void sort(size_t N, ExchangeQueryType sort_type);
 
+	
+	void apply_weights(std::string const& type, double c) {
+		if (type == "UNIFORM") this->uniform_weights(c);
+		else if (type == "LINEAR_DECREASE") this->linear_decreasing_weights(c);
+		else if (type == "LINEAR_INCREASE") this->linear_increasing_weights(c);
+	};
 
 	void uniform_weights(double c)
 	{
+		auto weight = c / static_cast<double>(view.size());
 		for (auto& pair : view) {
-			pair.second = c;
+			pair.second = weight;
 		}
 	}
 
@@ -324,9 +331,9 @@ struct ExchangeView
 
 	void linear_increasing_weights(double _sum)
 	{
-		int N = view.size();
+		size_t N = view.size();
 		double sum = (N * (N + 1)) / 2; // Sum of numbers from 1 to N
-		for (int i = 0; i < N; ++i) {
+		for (size_t i = 0; i < N; ++i) {
 			view[i].second = (_sum * (i + 1) / sum);
 		}
 	}
