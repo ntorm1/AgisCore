@@ -73,7 +73,9 @@ const std::function<double(
 		const std::shared_ptr<Asset>& asset,
 		const std::string& col,
 		int offset
-		) { return asset->get_asset_feature(col, offset); };
+		) { 
+	return asset->get_asset_feature(col, offset); 
+};
 
 
 //============================================================================
@@ -219,12 +221,12 @@ AGIS_API void AgisStrategy::strategy_allocate(
 				continue;
 			}
 		}
-		for (auto asset_id : results)
+		for (auto asset_index : results)
 		{
-			auto trade_opt = this->get_trade(asset_id);
+			auto trade_opt = this->get_trade(asset_index);
 			auto units = trade_opt.value().get()->units;
 			this->place_market_order(
-				asset_id,
+				asset_index,
 				-1 * units
 			);
 		}
@@ -258,7 +260,7 @@ AGIS_API void AgisStrategy::strategy_allocate(
 			double exsisting_units = trade_opt.value().get()->units;
 			gmp_sub_assign(size, exsisting_units);
 
-			double offset = abs((exsisting_units - size) / exsisting_units);
+			double offset = abs(size) / abs(exsisting_units);
 			if (offset < epsilon) { continue; }
 		}
 
@@ -342,7 +344,7 @@ bool AgisStrategyMap::__next()
 		flag.store(true, std::memory_order_relaxed);
 	};
 	
-	tbb::parallel_for_each(
+	std::for_each(
 		this->strategies.begin(),
 		this->strategies.end(),
 		strategy_next

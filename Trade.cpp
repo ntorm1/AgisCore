@@ -83,8 +83,16 @@ void Trade::evaluate(double market_price, bool on_close)
     auto unrealized_pl_new = this->units*(market_price-this->average_price);
     
     auto& strat = this->strategy.get();
+    if (abs(nlv_new - this->nlv) > 10) {
+        auto x = 2;
+    }
     strat->nlv_adjust(nlv_new - this->nlv);
     strat->unrealized_adjust(unrealized_pl_new - this->unrealized_pl);
+
+    if (strat->get_nlv() < 0)
+    {
+        auto y = 2;
+    }
 
     this->nlv = nlv_new;
     this->unrealized_pl = unrealized_pl_new;

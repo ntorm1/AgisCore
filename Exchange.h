@@ -212,14 +212,16 @@ public:
 	/// <param name="asset_id">id of the asset to search for</param>
 	/// <returns>shared pointer to asset if it is found</returns>
 	AGIS_API std::optional<std::shared_ptr<Asset> const> get_asset(std::string const& asset_id) const;
-	
+	AGIS_API std::shared_ptr<Asset> get_asset(size_t index) const { return this->assets[index]; }
+
 	/// <summary>
 	/// Get the unique index associated with a asset id
 	/// </summary>
 	/// <param name="id"></param>
 	/// <returns></returns>
 	AGIS_API size_t get_asset_index(std::string const& id) const { return this->asset_map.at(id); }
-	
+
+
 	/// <summary>
 	/// Get a shared pointer to an existing exchange
 	/// </summary>

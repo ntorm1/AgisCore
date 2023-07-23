@@ -7,8 +7,6 @@
 #include "Portfolio.h"
 
 
-
-
 struct AgisRouterPrivate
 {
     tbb::concurrent_queue<OrderPtr> channel;
@@ -45,8 +43,6 @@ void AgisRouter::processOrder(OrderPtr order) {
         break;
     }
 
-    
-
     LOCK_GUARD
     this->order_history.push_back(std::move(order));
     auto order_ref = std::ref(this->order_history.back());
@@ -57,13 +53,14 @@ void AgisRouter::processOrder(OrderPtr order) {
 
 void AgisRouter::__process() {
     if (this->p->channel.unsafe_size() == 0) { return; }
-    tbb::parallel_for_each(
+    std::for_each(
         this->p->channel.unsafe_begin(),
         this->p->channel.unsafe_end(),
         [this](OrderPtr& order) {
             processOrder(std::move(order));
         }
     );
+    this->p->channel.clear();
 }
 
 

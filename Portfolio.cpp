@@ -172,7 +172,7 @@ void PortfolioMap::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, 
         portfolio.second->__evaluate(router, exchanges, on_close);
     };
 
-    tbb::parallel_for_each(
+    std::for_each(
         this->portfolios.begin(),
         this->portfolios.end(),
         portfolio_evaluate
@@ -217,6 +217,7 @@ void PortfolioMap::__remember_order(OrderRef order)
 //============================================================================
 void PortfolioMap::__on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids)
 {
+    if (!ids.size()) return;
     for (auto& portfolio_pair : this->portfolios)
     {
         auto& portfolio = portfolio_pair.second;
@@ -365,7 +366,8 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
     {
         // attempt to get the current market price of the underlying asset of the position
         auto& position = it->second;
-        auto market_price = exchanges.__get_market_price(position->asset_id, on_close);
+        auto asset = exchanges.get_asset(position->asset_id);
+        auto market_price = asset->__get_market_price(on_close);
         if(market_price == 0.0)
         {
             continue;
@@ -376,6 +378,14 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
         position->__evaluate(orders, market_price, on_close);
         this->nlv += position->nlv;
         this->unrealized_pl += position->unrealized_pl;
+
+        // if asset expire next step clear from the portfolio
+        if (!asset->__is_valid_next_time)
+        {
+            auto order = position->generate_position_inverse();
+            order->__set_state(OrderState::CHEAT);
+            router.place_order(std::move(order));
+        }
     }
     if (orders.size())
     {

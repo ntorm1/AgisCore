@@ -115,6 +115,8 @@ public:
 		this->strategy_index = strategy_counter++;
 		this->router = nullptr;
 		this->portfolio_allocation = portfolio_allocation;
+		this->nlv = portfolio_allocation * portfolio->get_cash();
+		this->cash = portfolio_allocation * portfolio->get_cash();
 	}
 
 	/// <summary>
@@ -202,7 +204,8 @@ public:
 	void nlv_adjust(double nlv_adjustment) { gmp_add_assign(this->nlv, nlv_adjustment); };
 	void cash_adjust(double cash_adjustment) { gmp_add_assign(this->cash, cash_adjustment); };
 	void unrealized_adjust(double unrealized_adjustment) { this->unrealized_pl += unrealized_adjustment; };
-	
+	double get_nlv() { return this->nlv; }
+
 	/// <summary>
 	/// Get the unique strategy index of a strategy instance
 	/// </summary>

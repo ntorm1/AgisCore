@@ -431,11 +431,15 @@ AGIS_API double Asset::__get_market_price(bool on_close) const
     }
 }
 
+
+//============================================================================
 AgisMatrix<double> const Asset::__get__data() const
 {
     return AgisMatrix(this->data, this->rows, this->columns);
 }
 
+
+//============================================================================
 AGIS_API std::vector<std::string> Asset::get_column_names() const
 {
     std::vector<std::string> keys;
@@ -445,22 +449,25 @@ AGIS_API std::vector<std::string> Asset::get_column_names() const
     return keys;
 }
 
+
+//============================================================================
 AGIS_API double Asset::get_asset_feature(std::string const& col, int index) const noexcept
 {
-    if (!this->headers.contains(col)) { throw std::exception("invalid column"); }
-    if (-1*(index-1) > static_cast<int>(current_index)) { throw std::exception("invalid row"); }
-
     size_t col_offset = this->headers.at(col) * this->rows;
     size_t row_offset = this->current_index + index - 1;
     return *(this->data + row_offset + col_offset);
 }
 
+
+//============================================================================
 double Asset::__get(std::string col, size_t row) const
 {
     auto col_offset = this->headers.at(col) * this->rows;
     return *(this->data + row + col_offset);
 }
 
+
+//============================================================================
 Frequency string_to_freq(const std::string& str)
  {
      if (str == "Tick") {

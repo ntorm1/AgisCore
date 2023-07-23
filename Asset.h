@@ -104,6 +104,7 @@ public:
     bool __is_aligned = false;
     bool __is_streaming = false;
     bool __is_expired = false;
+    bool __is_valid_next_time = true;
     void __step();
     bool __is_valid_time(long long& datetime);
     long long __get_asset_time() const { return this->dt_index[this->current_index];}

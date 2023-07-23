@@ -92,7 +92,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 		view.push_back(std::make_pair(asset->get_asset_index(), val));
 	}
 	if (view.size() == 1) { return exchange_view; }
-	exchange_view.sort(N, query_type);
+	exchange_view.sort(number_assets, query_type);
 	return exchange_view;
 }
 
@@ -108,11 +108,15 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 	auto& view = exchange_view.view;
 	for (auto& asset : this->assets)
 	{
+		if (!asset) continue;
+		if (!asset->__is_streaming) continue;
+
 		double val;
 		try { val = func(asset); }
 		catch (const std::exception&e) {throw e; }
 		view.push_back(std::make_pair(asset->get_asset_index(), val));
 	}
+	exchange_view.sort(number_assets, query_type);
 	return exchange_view;
 }
 
@@ -266,6 +270,17 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 		else
 		{
 			asset->__is_streaming = false;
+		}
+
+		// check to see if the asset's next time step is the same as the exchagnes
+		if (this->current_index < this->dt_index_size)
+		{
+			if (asset->__get_asset_time() !=
+				this->dt_index[this->current_index + 1])
+			{
+				asset->__is_valid_next_time = false;
+			}
+			else asset->__is_valid_next_time = true;
 		}
 	};
 
@@ -664,7 +679,7 @@ void ExchangeMap::__process_orders(AgisRouter& router, bool on_close)
 		exchange.second->__process_orders(router, on_close);
 	};
 
-	tbb::parallel_for_each(
+	std::for_each(
 		this->exchanges.begin(),
 		this->exchanges.end(),
 		exchange_process
@@ -741,7 +756,7 @@ AGIS_API bool ExchangeMap::step()
 		exchange_pair.second->__took_step = true;
 	};
 
-	tbb::parallel_for_each(
+	std::for_each(
 		this->exchanges.begin(),
 		this->exchanges.end(),
 		process_exchange);
