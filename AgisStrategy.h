@@ -1,5 +1,6 @@
 #pragma once
 #include "pch.h"
+#include <utility>
 
 #include "AgisRouter.h"
 #include "Order.h"
@@ -12,7 +13,6 @@ static std::atomic<size_t> strategy_counter(0);
 class AgisStrategy;
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
 AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
-
 
 
 AGIS_API extern const std::function<double(double, double)> agis_init;
@@ -53,11 +53,19 @@ enum class AGIS_API AllocType
 };
 
 
+AGIS_API typedef const std::pair<long long, long long> TradingWindow;
+
+extern AGIS_API TradingWindow us_equity_reg_hrs;
+extern AGIS_API TradingWindow all_hrs;
+
 extern AGIS_API std::unordered_map<std::string, AgisOperation> agis_function_map;
 extern AGIS_API std::vector<std::string> agis_function_strings;
 extern AGIS_API std::unordered_map<std::string, ExchangeQueryType> agis_query_map;
 extern AGIS_API std::vector<std::string> agis_query_strings;
 extern AGIS_API std::vector<std::string> agis_strat_alloc_strings;
+extern AGIS_API std::vector<std::string> agis_trading_windows;
+extern AGIS_API std::unordered_map<std::string, TradingWindow> agis_trading_window_map;
+
 
 struct AGIS_API StrategyAllocLambdaStruct {
 	double epsilon;
@@ -208,6 +216,7 @@ public:
 	void cash_adjust(double cash_adjustment) { gmp_add_assign(this->cash, cash_adjustment); };
 	void unrealized_adjust(double unrealized_adjustment) { this->unrealized_pl += unrealized_adjustment; };
 	double get_nlv() { return this->nlv; }
+	double get_allocation() { return this->portfolio_allocation; }
 
 	/// <summary>
 	/// Get the unique strategy index of a strategy instance
@@ -231,7 +240,8 @@ public:
 	/// Set the window in which a strategy can trade. Endpoints are included
 	/// </summary>
 	/// <param name="w"></param>
-	void set_trading_window(std::pair<long long, long long>& w) {this->trading_window = w;}
+	void set_trading_window(std::optional<
+		std::pair<long long, long long> const> w) {this->trading_window = w;}
 
 protected:
 	void AGIS_API place_market_order(

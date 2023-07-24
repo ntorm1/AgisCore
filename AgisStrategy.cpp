@@ -65,6 +65,31 @@ std::vector<std::string> agis_strat_alloc_strings = {
 
 
 //============================================================================
+std::vector<std::string> agis_trading_windows = {
+	"",
+	"US_EQUITY_REG_HRS"
+};
+
+
+//============================================================================
+std::unordered_map<std::string, TradingWindow> agis_trading_window_map = {
+	{"US_EQUITY_REG_HRS", us_equity_reg_hrs}
+};
+
+
+TradingWindow us_equity_reg_hrs  = {
+   (9 * 60 * 60 + 30 * 60) * 1000000000LL,
+   16 * 60 * 60 * 1000000000LL
+};
+
+//============================================================================
+TradingWindow all_hrs  = {
+   0,
+   24 * 60 * 60 * 1000000000LL
+};
+
+
+//============================================================================
 const std::function<double(
 	const std::shared_ptr<Asset>& asset,
 	const std::string& col,

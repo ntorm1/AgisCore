@@ -170,7 +170,6 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="utils_array.h" />
-    <ClInclude Include="utils_time.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AgisRouter.cpp" />
