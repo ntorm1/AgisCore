@@ -25,14 +25,15 @@ AGIS_API extern const std::function<double(double, double)> agis_divide;
 
 AGIS_API typedef std::function<double(double, double)> AgisOperation;
 AGIS_API typedef std::pair<AgisOperation, std::function<double(const std::shared_ptr<Asset>&)>> AssetLambda;
-AGIS_API typedef std::function<double(AssetPtr const&)> ExchangeViewOperation;
 AGIS_API typedef std::vector<AssetLambda> AgisAssetLambdaChain;
+AGIS_API typedef std::function<double(AssetPtr const&)> ExchangeViewOperation;
 AGIS_API typedef std::function<ExchangeView(
-	std::function<double(AssetPtr const&)>,
+	AgisAssetLambdaChain const&,
 	ExchangePtr const,
 	ExchangeQueryType,
 	int)
 > ExchangeViewLambda;
+
 
 enum class AGIS_Function {
 	INIT,
@@ -68,10 +69,11 @@ struct AGIS_API StrategyAllocLambdaStruct {
 
 struct AGIS_API ExchangeViewLambdaStruct {
 	int N;
+	size_t warmup;
+	AgisAssetLambdaChain asset_lambda;
 	ExchangeViewLambda exchange_view_labmda;
 	ExchangePtr exchange;
 	ExchangeQueryType query_type;
-	ExchangeViewOperation opperation;
 	std::optional<StrategyAllocLambdaStruct> strat_alloc_struct = std::nullopt;
 };
 

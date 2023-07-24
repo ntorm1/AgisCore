@@ -127,7 +127,7 @@ public:
 	AGIS_API long long __get_market_time() { return this->dt_index[this->current_index]; }
 
 
-	size_t __get_exchange_index() const { return this->exchange_index; };
+	size_t __get_exchange_index() const { return this->exchange_index - 1; };
 	void __place_order(std::unique_ptr<Order> order);
 	void __process_orders(AgisRouter& router, bool on_close);
 	void __process_order(bool on_close, OrderPtr& order);

@@ -396,9 +396,12 @@ AGIS_API void agis_realloc(ExchangeView* allocation, double c)
 void AbstractAgisStrategy::next()
 {
 	auto& ev_lambda_ref = *this->ev_lambda_struct;
+	
+	//TODO maybe make warmup set to hydra index not exchange index
+	if (ev_lambda_ref.exchange->__get_exchange_index() < ev_lambda_ref.warmup) { return; }
 
 	auto ev = ev_lambda_ref.exchange_view_labmda(
-		ev_lambda_ref.opperation,
+		ev_lambda_ref.asset_lambda,
 		ev_lambda_ref.exchange,
 		ev_lambda_ref.query_type,
 		ev_lambda_ref.N
