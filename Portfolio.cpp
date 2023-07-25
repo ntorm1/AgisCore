@@ -299,6 +299,14 @@ void PortfolioMap::restore(json const& j)
 
 
 //============================================================================
+AGIS_API PortfolioRef PortfolioMap::get_portfolio(std::string const& id)
+{
+    auto index = this->portfolio_map.at(id);
+    auto p = std::cref(this->portfolios.at(index));
+    return p;
+}
+
+//============================================================================
 AGIS_API json PortfolioMap::to_json() const
 {
     json j;

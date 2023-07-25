@@ -190,6 +190,7 @@ bool AgisStrategy::__is_step()
 	{
 		auto window = this->trading_window.value();
 		auto current_time = this->exchange_map->get_datetime();
+		//TODO fix this
 		if (current_time < window.first || current_time > window.second) { return false; }
 	}
 	return true;

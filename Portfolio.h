@@ -25,6 +25,7 @@ AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
 AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
 
 AGIS_API typedef std::unique_ptr<Portfolio> PortfolioPtr;
+AGIS_API typedef std::reference_wrapper<const PortfolioPtr> PortfolioRef;
 AGIS_API typedef std::unique_ptr<Position> PositionPtr;
 AGIS_API typedef std::reference_wrapper<const PositionPtr> PositionRef;
 
@@ -157,7 +158,7 @@ public:
 
     AGIS_API std::vector<PositionPtr> const& get_position_history() { return this->position_history; }
     AGIS_API std::vector<SharedTradePtr> const& get_trade_history() { return this->trade_history; }
-
+    AGIS_API std::vector<double> const& get_nlv_history() { return this->nlv_history; }
 
     json to_json() const;
     void restore(json const& strategies);
@@ -252,6 +253,7 @@ public:
     PortfolioPtr const& __get_portfolio(size_t index) { return this->portfolios.at(index); };
     bool __portfolio_exists(std::string const& id) const { return this->portfolio_map.count(id) > 0; }
 
+    AGIS_API PortfolioRef get_portfolio(std::string const& id);
     AGIS_API json to_json() const;
     AGIS_API void restore(json const& j);
 

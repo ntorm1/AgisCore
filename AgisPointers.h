@@ -18,6 +18,8 @@ public:
     // Constructor
     StridedPointer(T* ptr, std::size_t size, std::size_t stride)
         : data(ptr), elementCount(size), strideSize(stride) {}
+    StridedPointer(std::vector<T>& v)
+        : data(v.data()), elementCount(v.size()), strideSize(1) {}
     StridedPointer() = default;
 
     ~StridedPointer() = default;
