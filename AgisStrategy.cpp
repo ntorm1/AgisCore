@@ -78,14 +78,14 @@ std::unordered_map<std::string, TradingWindow> agis_trading_window_map = {
 
 
 TradingWindow us_equity_reg_hrs  = {
-   (9 * 60 * 60 + 30 * 60) * 1000000000LL,
-   16 * 60 * 60 * 1000000000LL
+	{9,30},
+	{16,0}
 };
 
 //============================================================================
 TradingWindow all_hrs  = {
-   0,
-   24 * 60 * 60 * 1000000000LL
+	{0,0},
+	{23,59}
 };
 
 
@@ -136,6 +136,8 @@ void AgisStrategy::__reset()
 	this->order_history.clear();
 	this->cash_history.clear();
 	this->nlv_history.clear();
+	this->cash = this->starting_cash;
+	this->nlv = this->cash;
 	this->reset();
 }
 
@@ -188,10 +190,9 @@ bool AgisStrategy::__is_step()
 	if (!(*this->__exchange_step)) { return false; }
 	if (this->trading_window.has_value())
 	{
-		auto window = this->trading_window.value();
-		auto current_time = this->exchange_map->get_datetime();
-		//TODO fix this
-		if (current_time < window.first || current_time > window.second) { return false; }
+		auto& window = *this->trading_window;
+		auto& current_tp = this->exchange_map->get_tp();
+		if (current_tp < window.first || current_tp > window.second) { return false; }
 	}
 	return true;
 }
@@ -432,15 +433,22 @@ void AbstractAgisStrategy::next()
 		ev_lambda_ref.query_type,
 		ev_lambda_ref.N
 	);
-
 	auto& strat_alloc_ref = *ev_lambda_ref.strat_alloc_struct;
-	if (strat_alloc_ref.ev_opp_type == "UNIFORM")
-		ev.uniform_weights(strat_alloc_ref.target_leverage);
-	else if (strat_alloc_ref.ev_opp_type == "LINEAR_DECREASE")
-		ev.linear_decreasing_weights(strat_alloc_ref.target_leverage);	
-	else if (strat_alloc_ref.ev_opp_type == "LINEAR_INCREASE")
-		ev.linear_increasing_weights(strat_alloc_ref.target_leverage);
-
+	switch (this->ev_opp_type)
+		{
+		case ExchangeViewOpp::UNIFORM: {
+			ev.uniform_weights(strat_alloc_ref.target_leverage);
+			break;
+		}
+		case ExchangeViewOpp::LINEAR_INCREASE: {
+			ev.linear_increasing_weights(strat_alloc_ref.target_leverage);
+			break;
+		}
+		case ExchangeViewOpp::LINEAR_DECREASE: {
+			ev.linear_decreasing_weights(strat_alloc_ref.target_leverage);
+			break;
+		}
+	}
 	this->strategy_allocate(
 		&ev,
 		strat_alloc_ref.epsilon,
@@ -465,6 +473,16 @@ void AbstractAgisStrategy::build()
 void AbstractAgisStrategy::extract_ev_lambda()
 {
 	this->ev_lambda_struct = this->ev_lambda();
+	auto& ev_lambda_ref = *this->ev_lambda_struct;
+
+	// set ev alloc type
+	auto& strat_alloc_ref = *ev_lambda_ref.strat_alloc_struct;
+	if (strat_alloc_ref.ev_opp_type == "UNIFORM")
+		this->ev_opp_type = ExchangeViewOpp::UNIFORM;
+	else if (strat_alloc_ref.ev_opp_type == "LINEAR_DECREASE")
+		this->ev_opp_type = ExchangeViewOpp::LINEAR_DECREASE;
+	else if (strat_alloc_ref.ev_opp_type == "LINEAR_INCREASE")
+		this->ev_opp_type = ExchangeViewOpp::LINEAR_INCREASE;
 }
 
 //============================================================================

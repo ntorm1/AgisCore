@@ -38,6 +38,30 @@ enum ExchangeQueryType
 };
 
 
+/// <summary>
+/// Struct representing a point in time using eastern time.
+/// </summary>
+struct TimePoint {
+	int hour; 
+	int minute;
+
+	bool operator<(TimePoint const& rhs) const {
+		if (this->hour < rhs.hour)
+			return true;
+		else if (this->hour == rhs.hour)
+			return this->minute < rhs.minute;
+		return false;
+	}
+	bool operator>(TimePoint const& rhs) const {
+		if (this->hour > rhs.hour)
+			return true;
+		else if (this->hour == rhs.hour)
+			return this->minute > rhs.minute;
+		return false;
+	}
+};
+
+
 class  Exchange
 {
 public:
@@ -236,6 +260,7 @@ public:
 	/// <returns>Does a asset with this id exist already</returns>
 	AGIS_API bool asset_exists(std::string const& asset_id) const;
 
+
 	AGIS_API std::vector<std::string> get_exchange_ids() const;
 
 	AGIS_API long long get_datetime() const;
@@ -247,6 +272,15 @@ public:
 
 	AGIS_API void __goto(long long datetime);
 	AGIS_API void __reset();
+	
+	/// <summary>
+	/// Convery a nanosecond epoch timestemp to Timpoint with hour and second for eastern tz
+	/// </summary>
+	/// <param name="epoch">Epoch to convert</param>
+	/// <returns></returns>
+	TimePoint epoch_to_tp(long long epoch);
+	TimePoint const& get_tp() const {return this->time_point;}
+	
 	void __set_asset(size_t asset_index, std::shared_ptr<Asset> asset);
 
 	void __place_order(std::unique_ptr<Order> order);
@@ -265,6 +299,7 @@ private:
 	ThreadSafeVector<size_t> expired_asset_index;
 
 
+	TimePoint time_point;
 	long long* dt_index = nullptr;
 	size_t dt_index_size = 0;
 	size_t current_index = 0;
@@ -415,3 +450,4 @@ struct ExchangeView
 		return *this;
 	}
 };
+

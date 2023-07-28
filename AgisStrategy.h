@@ -53,7 +53,7 @@ enum class AGIS_API AllocType
 };
 
 
-AGIS_API typedef const std::pair<long long, long long> TradingWindow;
+AGIS_API typedef const std::pair<TimePoint, TimePoint> TradingWindow;
 
 extern AGIS_API TradingWindow us_equity_reg_hrs;
 extern AGIS_API TradingWindow all_hrs;
@@ -127,6 +127,7 @@ public:
 		this->portfolio_allocation = portfolio_allocation;
 		this->nlv = portfolio_allocation * portfolio->get_cash();
 		this->cash = portfolio_allocation * portfolio->get_cash();
+		this->starting_cash = this->cash;
 	}
 
 	/// <summary>
@@ -241,7 +242,7 @@ public:
 	/// </summary>
 	/// <param name="w"></param>
 	void set_trading_window(std::optional<
-		std::pair<long long, long long> const> w) {this->trading_window = w;}
+		std::pair<TimePoint, TimePoint> const> w) {this->trading_window = w;}
 
 protected:
 	void AGIS_API place_market_order(
@@ -319,6 +320,7 @@ private:
 	double realized_pl = 0;
 	double nlv = 0;
 	double cash = 0;
+	double starting_cash = 0;
 	double portfolio_allocation = 0;
 
 	bool is_subsribed = false; 
@@ -328,7 +330,7 @@ private:
 	/// exchange stepped forward in time
 	/// </summary>
 	bool* __exchange_step;
-	std::optional<std::pair<long long, long long>> trading_window = std::nullopt;
+	std::optional<std::pair<TimePoint, TimePoint>> trading_window = std::nullopt;
 
 
 	size_t strategy_index;
@@ -397,6 +399,7 @@ public:
 private:
 	AbstractExchangeViewLambda ev_lambda;
 	std::optional<ExchangeViewLambdaStruct> ev_lambda_struct = std::nullopt;
+	ExchangeViewOpp ev_opp_type;
 };
 
 AGIS_API void agis_realloc(ExchangeView* allocation, double c);

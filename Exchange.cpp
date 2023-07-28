@@ -2,8 +2,8 @@
 #include <execution>
 #include <tbb/parallel_for_each.h>
 #include <future>
-
-
+#include <chrono>
+#include <Windows.h>
 #include "utils_array.h"
 #include "Exchange.h"
 #include "AgisRouter.h"
@@ -114,11 +114,17 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 		double val;
 		try { val = func(asset); }
 		catch (const std::exception&e) {throw e; }
+
 		view.push_back(std::make_pair(asset->get_asset_index(), val));
+	}
+	if (view.size() == 0)
+	{
+		auto y = 2;
 	}
 	exchange_view.sort(number_assets, query_type);
 	return exchange_view;
 }
+
 
 //============================================================================
 StridedPointer<long long> const Exchange::__get_dt_index() const
@@ -706,6 +712,18 @@ void ExchangeMap::__process_order(bool on_close, OrderPtr& order)
 
 
 //============================================================================
+TimePoint ExchangeMap::epoch_to_tp(long long epoch)
+{
+	// Convert nanosecond epoch to std::chrono::time_point
+	struct tm epoch_time;
+	epoch /= 1e9;
+	time_t epoch_time_as_time_t = epoch;
+	memcpy(&epoch_time, localtime(&epoch_time_as_time_t), sizeof(struct tm));
+	return TimePoint{ epoch_time.tm_hour, epoch_time.tm_min };
+}
+
+
+//============================================================================
 AGIS_API void ExchangeMap::__build()
 {
 	size_t exchange_offset = 0;
@@ -747,6 +765,9 @@ AGIS_API bool ExchangeMap::step()
 	}
 
 	auto current_time = this->dt_index[this->current_index];
+
+	// set the exchagne time point 
+	this->time_point = epoch_to_tp(current_time);
 
 	expired_asset_index.clear();
 	// Define a lambda function that processes each asset
@@ -823,6 +844,7 @@ bool compareBySecondValueDesc(const std::pair<size_t, double>& a, const std::pai
 
 void ExchangeView::sort(size_t N, ExchangeQueryType sort_type)
 {
+	if (view.size() <= N) { return; }
 	switch (sort_type) {
 		case(ExchangeQueryType::Default):
 			return;
