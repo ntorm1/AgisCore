@@ -146,12 +146,12 @@ public:
 	AGIS_API std::string get_exchange_id() const { return this->exchange_id; }
 	AGIS_API StridedPointer<long long> const __get_dt_index() const;
 	AGIS_API size_t const __get_size() const { return this->dt_index_size; }
-	void __goto(long long datetime);
 	AGIS_API double __get_market_price(size_t asset_index, bool on_close) const;
 	AGIS_API long long __get_market_time() { return this->dt_index[this->current_index]; }
 
-
-	size_t __get_exchange_index() const { return this->exchange_index - 1; };
+	void __set_warmup(size_t warmup);
+	void __goto(long long datetime);
+	size_t __get_exchange_index() const { return this->current_index - 1; };
 	void __place_order(std::unique_ptr<Order> order);
 	void __process_orders(AgisRouter& router, bool on_close);
 	void __process_order(bool on_close, OrderPtr& order);
@@ -181,6 +181,7 @@ private:
 	long long exchange_time;
 	size_t dt_index_size = 0;
 	size_t current_index = 0;
+	size_t warmup;
 	size_t candles = 0;
 	bool is_built = false;
 };

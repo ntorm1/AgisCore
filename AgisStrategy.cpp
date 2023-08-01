@@ -468,6 +468,9 @@ void AbstractAgisStrategy::build()
 
 	ExchangePtr exchange = ev_lambda_struct.value().exchange;
 	this->exchange_subscribe(exchange->get_exchange_id());
+
+	// set the minimum warmup on assets in the exchange to at least this warmup.
+	exchange->__set_warmup(this->ev_lambda_struct.value().warmup);
 }
 
 void AbstractAgisStrategy::extract_ev_lambda()

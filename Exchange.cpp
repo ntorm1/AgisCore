@@ -117,10 +117,6 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 
 		view.push_back(std::make_pair(asset->get_asset_index(), val));
 	}
-	if (view.size() == 0)
-	{
-		auto y = 2;
-	}
 	exchange_view.sort(number_assets, query_type);
 	return exchange_view;
 }
@@ -146,6 +142,15 @@ AGIS_API bool Exchange::asset_exists(std::string asset_id)
 	return false;
 }
 
+
+//============================================================================
+void Exchange::__set_warmup(size_t warmup)
+{
+	for (auto& asset : this->assets)
+	{
+		asset->__set_warmup(warmup);
+	}
+}
 
 //============================================================================
 void Exchange::__goto(long long datetime)
@@ -270,7 +275,6 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 		if (asset->__get_asset_time() == this->exchange_time)
 		{
 			// add asset to market view, step the asset forward in time
-			asset->__is_streaming = true;
 			asset->__step();
 		}
 		else
@@ -291,7 +295,6 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 	};
 
 	std::for_each(
-		std::execution::par,
 		this->assets.begin(),
 		this->assets.end(),
 		process_asset);

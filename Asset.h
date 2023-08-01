@@ -76,6 +76,7 @@ public:
     AGIS_API size_t const get_rows() const { return this->rows; }
     AGIS_API size_t const get_cols() const { return this->columns; }
     AGIS_API size_t const get_warmup()const { return this->warmup; }
+    AGIS_API size_t const get_current_index() const { return this->current_index - 1; }
     AGIS_API std::string const& get_exchange_id() { return this->exchange_id; }
     AGIS_API std::vector<std::string> get_column_names() const;
     AGIS_API std::unordered_map<std::string, size_t> const& get_headers() { return this->headers; };
@@ -101,6 +102,8 @@ public:
 
 
     AGIS_API void __set_alignment(bool is_aligned_) { this->__is_aligned = is_aligned_; }
+    bool __in_warmup() { return (this->current_index - 1) < this->warmup; }
+    void __set_warmup(size_t warmup_) { if (this->warmup < warmup_) this->warmup = warmup_;}
     bool __is_aligned = false;
     bool __is_streaming = false;
     bool __is_expired = false;

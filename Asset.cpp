@@ -381,6 +381,8 @@ void Asset::__step()
     this->current_index++;
     this->open++;
     this->close++;
+    if (this->__in_warmup()) this->__is_streaming = false;
+    else this->__is_streaming = true;
 }
 
 
