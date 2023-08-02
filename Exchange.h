@@ -331,6 +331,8 @@ enum class ExchangeViewOpp
 	LINEAR_INCREASE
 };
 
+AGIS_API std::string exchangeViewOppToString(ExchangeViewOpp ev_opp);
+
 struct ExchangeView
 {
 	std::vector<std::pair<size_t, double>> view;

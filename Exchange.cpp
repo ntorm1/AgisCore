@@ -876,3 +876,18 @@ void ExchangeView::sort(size_t N, ExchangeQueryType sort_type)
 		}
 	}
 }
+
+AGIS_API std::string exchangeViewOppToString(ExchangeViewOpp ev_opp)
+{
+	switch (ev_opp) {
+	case ExchangeViewOpp::UNIFORM:
+		return "UNIFORM";
+	case ExchangeViewOpp::LINEAR_DECREASE:
+		return "LINEAR_DECREASE";
+	case ExchangeViewOpp::LINEAR_INCREASE:
+		return "LINEAR_INCREASE";
+	default:
+		return "UNKNOWN";
+	}
+	
+}

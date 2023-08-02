@@ -151,7 +151,6 @@ void AgisStrategy::__build(
 	this->exchange_map = exchange_map;
 	this->cash = this->portfolio_allocation * this->portfolio->get_cash();
 	this->nlv = this->cash;
-	this->subscribe();
 }
 
 
@@ -497,4 +496,53 @@ void AbstractAgisStrategy::restore(fs::path path)
 void AbstractAgisStrategy::to_json(json& j)
 {
 	AgisStrategy::to_json(j);
+}
+
+
+//============================================================================
+std::string AbstractAgisStrategy::code_gen()
+{
+	auto exchange_id = this->ev_lambda_struct.value().exchange->get_exchange_id();
+	auto warmup = this->ev_lambda_struct.value().warmup;
+	std::string build_method =
+	R"( \
+    this->exchange = this->get_exchange()" + exchange_id + R"(; \
+    this->exchange_subscribe(exchange->get_exchange_id()); \
+    exchange->__set_warmup()" + std::to_string(warmup) + R"(; \
+    )";
+
+	std::string strategy_header = R"(
+	#pragma once
+
+	// the following code is generated, editing it will result may result in unintended
+	// consequences so generally not a good idea.
+
+	#include "AgisStrategy.h"
+
+	class {CLASS_NAME} : public AgisStrategy {{
+	public:
+		AGIS_API void reset() override {{}}
+
+		AGIS_API void build() override {{BUILD_METHOD}}
+
+		AGIS_API void next() override {{NEXT_METHOD}}
+
+	private:
+		ExchangeViewOpp ev_opp_type = {EV_OPP_TYPE};
+		ExchangePtr exchange;
+	}};
+	)";
+
+	// Replace the placeholder with the BUILD_METHOD
+	auto pos = strategy_header.find("{BUILD_METHOD}");
+	if (pos != std::string::npos) {
+		strategy_header.replace(pos, 13, build_method);
+	}
+
+	// Replace the placeholder with the EV_OPP_TYPE value
+	pos = strategy_header.find("{EV_OPP_TYPE}");
+	if (pos != std::string::npos) {
+		// Convert the enumeration value to its integer representation
+		strategy_header.replace(pos, 12,ev_opp_to_str(this->ev_opp_type));
+	}
 }

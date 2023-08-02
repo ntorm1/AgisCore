@@ -146,12 +146,6 @@ public:
 	virtual void build() = 0;
 
 	/// <summary>
-	/// Pure virtual function to subsrice to exchange steps. Without this next() 
-	/// will never be called.
-	/// </summary>
-	virtual void subscribe() = 0;
-
-	/// <summary>
 	/// Base serialization of the AgisStrategy class
 	/// </summary>
 	/// <param name="j"></param>
@@ -379,8 +373,6 @@ public:
 		): AgisStrategy(strategy_id, portfolio_, allocation) {}
 
 	AGIS_API void next() override;
-
-	AGIS_API void subscribe() override {}
 	
 	AGIS_API void reset() override {}
 
@@ -396,10 +388,12 @@ public:
 
 	AGIS_API void to_json(json& j);
 
+	AGIS_API std::string code_gen();
+
 private:
 	AbstractExchangeViewLambda ev_lambda;
 	std::optional<ExchangeViewLambdaStruct> ev_lambda_struct = std::nullopt;
-	ExchangeViewOpp ev_opp_type;
+	ExchangeViewOpp ev_opp_type = ExchangeViewOpp::UNIFORM;
 };
 
 AGIS_API void agis_realloc(ExchangeView* allocation, double c);
