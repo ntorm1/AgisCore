@@ -14,18 +14,23 @@ class AgisStrategy;
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
 AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
 
-
-AGIS_API extern const std::function<double(double, double)> agis_init;
-AGIS_API extern const std::function<double(double, double)> agis_identity;
-AGIS_API extern const std::function<double(double, double)> agis_add;
-AGIS_API extern const std::function<double(double, double)> agis_subtract;
-AGIS_API extern const std::function<double(double, double)> agis_multiply;
-AGIS_API extern const std::function<double(double, double)> agis_divide;
-
-
 AGIS_API typedef std::function<double(double, double)> AgisOperation;
+AGIS_API extern const AgisOperation agis_init;
+AGIS_API extern const AgisOperation agis_identity;
+AGIS_API extern const AgisOperation agis_add;
+AGIS_API extern const AgisOperation agis_subtract;
+AGIS_API extern const AgisOperation agis_multiply;
+AGIS_API extern const AgisOperation agis_divide;
+AGIS_API std::string opp_to_str(const AgisOperation& func);
+
 AGIS_API typedef std::pair<AgisOperation, std::function<double(const std::shared_ptr<Asset>&)>> AssetLambda;
-AGIS_API typedef std::vector<AssetLambda> AgisAssetLambdaChain;
+struct AGIS_API AssetLambdaScruct {
+	AssetLambda l;
+	std::string column;
+	int row;
+};
+
+AGIS_API typedef std::vector<AssetLambdaScruct> AgisAssetLambdaChain;
 AGIS_API typedef std::function<double(AssetPtr const&)> ExchangeViewOperation;
 AGIS_API typedef std::function<ExchangeView(
 	AgisAssetLambdaChain const&,
@@ -102,9 +107,7 @@ extern AGIS_API AssetFeatureLambda asset_feature_lambda;
 
 extern AGIS_API const std::function<double(
 	const std::shared_ptr<Asset>&,
-	const std::vector<
-	std::pair<Operation, std::function<double(const std::shared_ptr<Asset>&)>>
-	>& operations)> asset_feature_lambda_chain;
+	const std::vector<AssetLambdaScruct>& operations)> asset_feature_lambda_chain;
 
 
 
@@ -239,6 +242,8 @@ public:
 		std::pair<TimePoint, TimePoint> const> w) {this->trading_window = w;}
 
 protected:
+	bool abstract_class = false;
+
 	void AGIS_API place_market_order(
 		size_t asset_index,
 		double units,
@@ -370,7 +375,9 @@ public:
 		PortfolioPtr const& portfolio_,
 		std::string const& strategy_id,
 		double allocation
-		): AgisStrategy(strategy_id, portfolio_, allocation) {}
+	) : AgisStrategy(strategy_id, portfolio_, allocation) {
+		this->abstract_class = true;
+	}
 
 	AGIS_API void next() override;
 	

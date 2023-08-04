@@ -877,7 +877,7 @@ void ExchangeView::sort(size_t N, ExchangeQueryType sort_type)
 	}
 }
 
-AGIS_API std::string exchangeViewOppToString(ExchangeViewOpp ev_opp)
+AGIS_API std::string ev_opp_to_str(ExchangeViewOpp ev_opp)
 {
 	switch (ev_opp) {
 	case ExchangeViewOpp::UNIFORM:
@@ -890,4 +890,18 @@ AGIS_API std::string exchangeViewOppToString(ExchangeViewOpp ev_opp)
 		return "UNKNOWN";
 	}
 	
+}
+
+AGIS_API std::string ev_query_type(ExchangeQueryType ev_query)
+{
+	switch (ev_query) {
+	case ExchangeQueryType::Default:
+		return "Default";
+	case ExchangeQueryType::NLargest:
+		return "NLargest";
+	case ExchangeQueryType::NSmallest:
+		return "NSmallest";
+	case ExchangeQueryType::NExtreme:
+		return "NExtreme";
+	}
 }

@@ -3,6 +3,7 @@
 #include <tbb/parallel_for_each.h>
 
 #include "AgisStrategy.h"
+#include "AgisErrors.h"
 
 
 //============================================================================
@@ -106,17 +107,16 @@ const std::function<double(
 //============================================================================
 const std::function<double(
 	const std::shared_ptr<Asset>&,
-	const std::vector<
-	std::pair<Operation, std::function<double(const std::shared_ptr<Asset>&)>>
-	>& operations)> asset_feature_lambda_chain = [](
+	const std::vector<AssetLambdaScruct>& operations)> asset_feature_lambda_chain = [](
 		const std::shared_ptr<Asset>& asset,
-		const std::vector<std::pair<Operation, std::function<double(const std::shared_ptr<Asset>&)>>>& operations
+		const std::vector<AssetLambdaScruct>& operations
 		)
 {
 	double result = 0;
 	for (const auto& operation : operations) {
-		const auto& op = operation.first;
-		const auto& assetFeatureLambda = operation.second;
+		auto& lambda = operation.l;
+		const auto& op = lambda.first;
+		const auto& assetFeatureLambda = lambda.second;
 		result = op(result, assetFeatureLambda(asset));
 	}
 	return result;
@@ -151,6 +151,10 @@ void AgisStrategy::__build(
 	this->exchange_map = exchange_map;
 	this->cash = this->portfolio_allocation * this->portfolio->get_cash();
 	this->nlv = this->cash;
+
+	auto s = exchange_map->__get_dt_index().size();
+	this->nlv_history.reserve(s);
+	this->cash_history.reserve(s);
 }
 
 
@@ -409,6 +413,31 @@ void AgisStrategyMap::__build()
 }
 
 
+AGIS_API std::string opp_to_str(const AgisOperation& func)
+{
+	if (&func == &agis_init) {
+		return "agis_init";
+	}
+	else if (&func == &agis_identity) {
+		return "agis_identity";
+	}
+	else if (&func == &agis_add) {
+		return "agis_add";
+	}
+	else if (&func == &agis_subtract) {
+		return "agis_subtract";
+	}
+	else if (&func == &agis_multiply) {
+		return "agis_multiply";
+	}
+	else if (&func == &agis_divide) {
+		return "agis_divide";
+	}
+	else {
+		return "Unknown function";
+	}
+}
+
 //============================================================================
 AGIS_API void agis_realloc(ExchangeView* allocation, double c)
 {
@@ -502,8 +531,15 @@ void AbstractAgisStrategy::to_json(json& j)
 //============================================================================
 std::string AbstractAgisStrategy::code_gen()
 {
+	if (!this->ev_lambda_struct.has_value())
+	{
+		AGIS_THROW("Abstract strategy has not been built yet");
+	}
 	auto exchange_id = this->ev_lambda_struct.value().exchange->get_exchange_id();
 	auto warmup = this->ev_lambda_struct.value().warmup;
+	auto& ev_lambda_ref = *this->ev_lambda_struct;
+	auto& strat_alloc_ref = *ev_lambda_ref.strat_alloc_struct;
+
 	std::string build_method =
 	R"( \
     this->exchange = this->get_exchange()" + exchange_id + R"(; \
@@ -511,11 +547,59 @@ std::string AbstractAgisStrategy::code_gen()
     exchange->__set_warmup()" + std::to_string(warmup) + R"(; \
     )";
 
+
+	std::string asset_lambda = R"()";
+	for (auto& pair : ev_lambda_ref.asset_lambda)
+	{
+		std::string lambda_mid = R"(
+			operations.emplace_back({OPP}, [&](const AssetPtr& asset) {
+				return asset_feature_lambda(asset, {COL}, {INDEX});
+			});
+
+		)";
+		auto pos = lambda_mid.find("{OPP}");
+		lambda_mid.replace(pos, 5, opp_to_str(pair.l.first));
+		pos = lambda_mid.find("{COL}");
+		lambda_mid.replace(pos, 5, pair.column);
+		pos = lambda_mid.find("{INDEX}");
+		lambda_mid.replace(pos, 7, std::to_string(pair.row));
+		asset_lambda = asset_lambda + lambda_mid;
+	}
+
+	std::string next_method = R"(
+		auto next_lambda = [](const AssetPtr&) -> double {
+			AgisAssetLambdaChain operations;
+
+			{LAMBDA_CHAIN}
+			
+			double result = asset_feature_lambda_chain(
+				asset, 
+				operations
+			);
+			return result;
+		}
+		
+		auto exchange_view = exchange->get_exchange_view(
+			daily_return, 
+			{EXCHANGE_QUERY_TYPE}
+		);
+
+		//ev.linear_decreasing_weights(strat_alloc_ref.target_leverage);
+
+	)";
+
+	// Replace the placeholder with the BUILD_METHOD
+	auto pos = next_method.find("{EXCHANGE_QUERY_TYPE}");
+	next_method.replace(pos, 21, ev_query_type(ev_lambda_ref.query_type));
+	pos = next_method.find("{LAMBDA_CHAIN}");
+	next_method.replace(pos, 14, asset_lambda);
+
+
 	std::string strategy_header = R"(
 	#pragma once
 
-	// the following code is generated, editing it will result may result in unintended
-	// consequences so generally not a good idea.
+	// the following code is generated from an abstract strategy flow graph.
+	// Editing it will result may result in unintended consequences.
 
 	#include "AgisStrategy.h"
 
@@ -534,15 +618,16 @@ std::string AbstractAgisStrategy::code_gen()
 	)";
 
 	// Replace the placeholder with the BUILD_METHOD
-	auto pos = strategy_header.find("{BUILD_METHOD}");
-	if (pos != std::string::npos) {
-		strategy_header.replace(pos, 13, build_method);
-	}
+	pos = strategy_header.find("{BUILD_METHOD}");
+	strategy_header.replace(pos, 13, build_method);
 
+	// Replace the placeholder with the NEXT_METHOD
+	pos = strategy_header.find("{NEXT_METHOD}");
+	strategy_header.replace(pos, 12, next_method);
+	
 	// Replace the placeholder with the EV_OPP_TYPE value
 	pos = strategy_header.find("{EV_OPP_TYPE}");
-	if (pos != std::string::npos) {
-		// Convert the enumeration value to its integer representation
-		strategy_header.replace(pos, 12,ev_opp_to_str(this->ev_opp_type));
-	}
+	strategy_header.replace(pos, 12,ev_opp_to_str(this->ev_opp_type));
+
+	return strategy_header;
 }

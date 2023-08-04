@@ -70,7 +70,7 @@ AGIS_API PortfolioPtr const& Hydra::new_portfolio(std::string id, double cash)
 {
     if (this->portfolios.__portfolio_exists(id))
     {
-        throw std::runtime_error("portfolio already exists");
+        AGIS_THROW("portfolio already exists");
     }
     this->is_built = false;
     auto portfolio = std::make_unique<Portfolio>(id, cash);
@@ -85,7 +85,7 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
 {
     if (this->strategies.__strategy_exists(strategy->get_strategy_id()))
     {
-        throw std::runtime_error("strategy already exsits");
+        AGIS_THROW("strategy already exsits");
     }
 
     // build the strategy instance

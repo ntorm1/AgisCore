@@ -331,7 +331,8 @@ enum class ExchangeViewOpp
 	LINEAR_INCREASE
 };
 
-AGIS_API std::string exchangeViewOppToString(ExchangeViewOpp ev_opp);
+AGIS_API std::string ev_opp_to_str(ExchangeViewOpp ev_opp);
+AGIS_API std::string ev_query_type(ExchangeQueryType ev_query);
 
 struct ExchangeView
 {
@@ -364,7 +365,7 @@ struct ExchangeView
 	void linear_decreasing_weights(double _sum)
 	{
 		size_t N = view.size();
-		double sum = (N * (N + 1)) / 2; // Sum of numbers from 1 to N
+		double sum = static_cast<double>(N * (N + 1)) / 2; // Sum of numbers from 1 to N (cast to double)
 		for (size_t i = 0; i < N; ++i) {
 			view[i].second = (_sum * (N - i) / sum);
 		}
@@ -373,7 +374,7 @@ struct ExchangeView
 	void linear_increasing_weights(double _sum)
 	{
 		size_t N = view.size();
-		double sum = (N * (N + 1)) / 2; // Sum of numbers from 1 to N
+		double sum = static_cast<double>(N * (N + 1)) / 2; // Sum of numbers from 1 to N (cast to double)
 		for (size_t i = 0; i < N; ++i) {
 			view[i].second = (_sum * (i + 1) / sum);
 		}
