@@ -149,7 +149,6 @@ public:
 	AGIS_API double __get_market_price(size_t asset_index, bool on_close) const;
 	AGIS_API long long __get_market_time() { return this->dt_index[this->current_index]; }
 
-	void __set_warmup(size_t warmup);
 	void __goto(long long datetime);
 	size_t __get_exchange_index() const { return this->current_index - 1; };
 	void __place_order(std::unique_ptr<Order> order);

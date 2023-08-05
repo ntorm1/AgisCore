@@ -1,12 +1,13 @@
 #pragma once
 #include "pch.h"
 #include <utility>
-
+#include <filesystem>
 #include "AgisRouter.h"
 #include "Order.h"
 #include "Portfolio.h"
 #include "Exchange.h"
 
+namespace fs = std::filesystem;
 
 static std::atomic<size_t> strategy_counter(0);
 
@@ -41,14 +42,13 @@ AGIS_API typedef std::function<ExchangeView(
 
 
 enum class AGIS_Function {
-	INIT,
-	IDENTITY,
-	ADD,
-	SUBTRACT,
-	MULTIPLY,
-	DIVIDE
+	INIT,		// returns the element in the second position
+	IDENTITY,	// returns the element in the first position
+	ADD,		// addition
+	SUBTRACT,	// subtraction
+	MULTIPLY,	// multiply
+	DIVIDE		// divide
 };
-
 
 enum class AGIS_API AllocType
 {
@@ -56,6 +56,7 @@ enum class AGIS_API AllocType
 	DOLLARS,	// set strategy portfolio to have $N worth of units
 	PCT			// set strategy portfolio to have %N worth of units (% of nlv)
 };
+AGIS_API std::string alloc_to_str(AllocType alloc_type);
 
 
 AGIS_API typedef const std::pair<TimePoint, TimePoint> TradingWindow;
@@ -241,6 +242,12 @@ public:
 	void set_trading_window(std::optional<
 		std::pair<TimePoint, TimePoint> const> w) {this->trading_window = w;}
 
+	/// <summary>
+	/// Find out if the class is and Abstract Agis Class
+	/// </summary>
+	/// <returns></returns>
+	bool __is_abstract_class() const { return this->abstract_class; }
+
 protected:
 	bool abstract_class = false;
 
@@ -395,12 +402,18 @@ public:
 
 	AGIS_API void to_json(json& j);
 
-	AGIS_API std::string code_gen();
+	AGIS_API void code_gen(fs::path strat_folder);
 
 private:
 	AbstractExchangeViewLambda ev_lambda;
 	std::optional<ExchangeViewLambdaStruct> ev_lambda_struct = std::nullopt;
 	ExchangeViewOpp ev_opp_type = ExchangeViewOpp::UNIFORM;
+
+	/// <summary>
+	/// The number if steps need to happen on the target exchange before the 
+	/// strategy next() method is called
+	/// </summary>
+	size_t warmup = 0;
 };
 
 AGIS_API void agis_realloc(ExchangeView* allocation, double c);

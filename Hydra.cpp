@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h" 
 
+#include "Utils.h"
 #include "Hydra.h"
 #include "Exchange.h"
 
@@ -86,6 +87,10 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
     if (this->strategies.__strategy_exists(strategy->get_strategy_id()))
     {
         AGIS_THROW("strategy already exsits");
+    }
+    if (!is_valid_class_name(strategy->get_strategy_id()))
+    {
+        AGIS_THROW("Strategy ID must contain characters that are letters, digits, or underscores");
     }
 
     // build the strategy instance

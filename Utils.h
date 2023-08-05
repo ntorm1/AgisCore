@@ -31,5 +31,6 @@ AGIS_API std::string epoch_to_str(
 AGIS_API std::vector<std::string> files_in_folder(const std::string& folderPath);
 AGIS_API bool is_folder(const std::string& path);
 AGIS_API bool is_file(const std::string& path);
+AGIS_API bool is_valid_class_name(const std::string& name);
 AGIS_API FileType file_type(const std::string& path);
 AGIS_API std::string join_paths(const std::string& parentPath, const std::string& childPath);

@@ -6,6 +6,8 @@
 #include <iomanip>
 #include "Utils.h"
 
+
+//============================================================================
 bool str_ins_cmp(const std::string& a, const std::string& b)
 {
     return std::equal(a.begin(), a.end(),
@@ -15,6 +17,8 @@ bool str_ins_cmp(const std::string& a, const std::string& b)
         });
 }
 
+
+//============================================================================
 long long str_to_epoch(
     const std::string& dateString,
     const std::string& formatString)
@@ -32,6 +36,8 @@ long long str_to_epoch(
     return std::chrono::duration_cast<std::chrono::nanoseconds>(timePoint.time_since_epoch()).count();
 }
 
+
+//============================================================================
 std::string epoch_to_str(
     long long epochTime,
     const std::string& formatString)
@@ -53,23 +59,47 @@ std::string epoch_to_str(
     return ss.str();
 }
 
+
+//============================================================================
 bool is_file(const std::string& filePath)
 {
     return fs::exists(filePath) && fs::is_regular_file(filePath);
 }
 
+
+//============================================================================
+AGIS_API bool is_valid_class_name(const std::string& className)
+{
+    if (className.empty())
+        return false;
+
+    // Check if the rest of the characters are valid (letters, digits, or underscores)
+    for (char c : className) {
+        if (!(std::isalnum(c) || c == '_'))
+            return false;
+    }
+
+    return true;
+}
+
+
+//============================================================================
 bool is_folder(const std::string& path)
 {
     std::filesystem::path fsPath(path);
     return std::filesystem::is_directory(fsPath);
 }
 
+
+//============================================================================
 std::string join_paths(const std::string& parentPath, const std::string& childPath)
 {
     fs::path fullPath = fs::path(parentPath) / fs::path(childPath);
     return fullPath.string();
 }
 
+
+//============================================================================
 FileType file_type(const std::string& filePath) {
     fs::path path(filePath);
     std::string extension = path.extension().string();
@@ -79,6 +109,8 @@ FileType file_type(const std::string& filePath) {
     throw std::runtime_error("not impl");
 }
 
+
+//============================================================================
 std::vector<std::string> files_in_folder(const std::string& folderPath)
 {
     std::vector<std::string> files;

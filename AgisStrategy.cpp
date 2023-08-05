@@ -1,9 +1,12 @@
 #include "pch.h"
-
+#include <fstream>
+#include <sstream>
 #include <tbb/parallel_for_each.h>
+
 
 #include "AgisStrategy.h"
 #include "AgisErrors.h"
+
 
 
 //============================================================================
@@ -413,30 +416,48 @@ void AgisStrategyMap::__build()
 }
 
 
+//============================================================================
 AGIS_API std::string opp_to_str(const AgisOperation& func)
 {
-	if (&func == &agis_init) {
+	int a = 1; int b = 2;
+	if (func(a,b) == agis_init(a,b)) {
 		return "agis_init";
 	}
-	else if (&func == &agis_identity) {
+	else if (func(a, b) == agis_identity(a, b)) {
 		return "agis_identity";
 	}
-	else if (&func == &agis_add) {
+	else if (func(a, b) == agis_add(a, b)) {
 		return "agis_add";
 	}
-	else if (&func == &agis_subtract) {
+	else if (func(a, b) == agis_subtract(a, b)) {
 		return "agis_subtract";
 	}
-	else if (&func == &agis_multiply) {
+	else if (func(a, b) == agis_multiply(a, b)) {
 		return "agis_multiply";
 	}
-	else if (&func == &agis_divide) {
+	else if (func(a, b) == agis_divide(a, b)) {
 		return "agis_divide";
 	}
 	else {
 		return "Unknown function";
 	}
 }
+
+
+//============================================================================
+AGIS_API std::string alloc_to_str(AllocType alloc_type)
+{
+	static const std::map<AllocType, std::string> typeStrings = {
+		{AllocType::UNITS, "UNITS"},
+		{AllocType::DOLLARS, "DOLLARS"},
+		{AllocType::PCT, "PCT"}
+	};
+
+	auto it = typeStrings.find(alloc_type);
+	if (it != typeStrings.end()) return it->second;
+	return "UNKNOWN";
+}
+
 
 //============================================================================
 AGIS_API void agis_realloc(ExchangeView* allocation, double c)
@@ -452,7 +473,7 @@ void AbstractAgisStrategy::next()
 {
 	auto& ev_lambda_ref = *this->ev_lambda_struct;
 	
-	//TODO maybe make warmup set to hydra index not exchange index
+	// verify strategy warmup period has passed
 	if (ev_lambda_ref.exchange->__get_exchange_index() < ev_lambda_ref.warmup) { return; }
 
 	auto ev = ev_lambda_ref.exchange_view_labmda(
@@ -497,8 +518,8 @@ void AbstractAgisStrategy::build()
 	ExchangePtr exchange = ev_lambda_struct.value().exchange;
 	this->exchange_subscribe(exchange->get_exchange_id());
 
-	// set the minimum warmup on assets in the exchange to at least this warmup.
-	exchange->__set_warmup(this->ev_lambda_struct.value().warmup);
+	// set the strategy warmup period
+	this->warmup = this->ev_lambda_struct.value().warmup;
 }
 
 void AbstractAgisStrategy::extract_ev_lambda()
@@ -529,7 +550,49 @@ void AbstractAgisStrategy::to_json(json& j)
 
 
 //============================================================================
-std::string AbstractAgisStrategy::code_gen()
+void str_replace_all(std::string& source, const std::string& oldStr, const std::string& newStr) {
+	size_t pos = source.find(oldStr);
+	while (pos != std::string::npos) {
+		source.replace(pos, oldStr.length(), newStr);
+		pos = source.find(oldStr, pos + newStr.length());
+	}
+}
+
+
+//============================================================================
+void code_gen_write(fs::path filename, std::string const& source)
+{
+	// Check if the file already exists and has the same content as source
+	bool file_exists = false;
+	std::string existing_content;
+
+	std::ifstream file_input(filename);
+	if (file_input.is_open()) {
+		file_exists = true;
+		std::stringstream buffer;
+		buffer << file_input.rdbuf();
+		existing_content = buffer.str();
+		file_input.close();
+	}
+
+	// Compare existing content with source
+	if (file_exists && existing_content == source) {
+		return;
+	}
+
+	// Write the new content to the file
+	std::ofstream file_output(filename);
+	if (file_output.is_open()) {
+		file_output << source;
+		file_output.close();
+	}
+	else {
+		AGIS_THROW("Failed to open " + filename.string() + " for writing.");
+	}
+}
+
+//============================================================================
+void AbstractAgisStrategy::code_gen(fs::path strat_folder)
 {
 	if (!this->ev_lambda_struct.has_value())
 	{
@@ -540,23 +603,57 @@ std::string AbstractAgisStrategy::code_gen()
 	auto& ev_lambda_ref = *this->ev_lambda_struct;
 	auto& strat_alloc_ref = *ev_lambda_ref.strat_alloc_struct;
 
+	std::string strategy_header = R"(#pragma once
+
+// the following code is generated from an abstract strategy flow graph.
+// Editing it will result may result in unintended consequences.
+
+#include "AgisStrategy.h"
+
+class {STRATEGY_CLASS} : public AgisStrategy {
+public:
+	AGIS_API void reset() override {}
+
+	AGIS_API void build() override;
+
+	AGIS_API void next() override;
+
+private:
+	ExchangeViewOpp ev_opp_type = {EV_OPP_TYPE};
+	ExchangePtr exchange;
+	size_t warmup = {WARMUP};
+};
+)";
+
+	// Replace the placeholder with the EV_OPP_TYPE value
+	auto pos = strategy_header.find("{EV_OPP_TYPE}");
+	strategy_header.replace(pos, 13, ev_opp_to_str(this->ev_opp_type));
+
+	pos = strategy_header.find("{WARMUP}");
+	strategy_header.replace(pos, 8, std::to_string(warmup));
+
+	// Replace strategy class name
+	std::string place_holder = "{STRATEGY_CLASS}";
+	std::string strategy_class = this->get_strategy_id() + "Class";
+	str_replace_all(strategy_header, place_holder, strategy_class);
+
+	// Insert exchange ID
+	std::string exchange_str = R"("{ID}")";
+	pos = exchange_str.find("{ID}");
+	exchange_str.replace(pos, 4, exchange_id);
+	
 	std::string build_method =
-	R"( \
-    this->exchange = this->get_exchange()" + exchange_id + R"(; \
-    this->exchange_subscribe(exchange->get_exchange_id()); \
-    exchange->__set_warmup()" + std::to_string(warmup) + R"(; \
-    )";
+	R"(this->exchange = this->get_exchange()" + exchange_str + R"(); 
+	this->exchange_subscribe(exchange->get_exchange_id());)";
 
 
 	std::string asset_lambda = R"()";
 	for (auto& pair : ev_lambda_ref.asset_lambda)
 	{
-		std::string lambda_mid = R"(
-			operations.emplace_back({OPP}, [&](const AssetPtr& asset) {
-				return asset_feature_lambda(asset, {COL}, {INDEX});
-			});
-
-		)";
+		std::string lambda_mid = R"(operations.emplace_back({OPP}, [&](const AssetPtr& asset) {
+			return asset_feature_lambda(asset, "{COL}", {INDEX});
+		});
+)";
 		auto pos = lambda_mid.find("{OPP}");
 		lambda_mid.replace(pos, 5, opp_to_str(pair.l.first));
 		pos = lambda_mid.find("{COL}");
@@ -566,68 +663,96 @@ std::string AbstractAgisStrategy::code_gen()
 		asset_lambda = asset_lambda + lambda_mid;
 	}
 
-	std::string next_method = R"(
-		auto next_lambda = [](const AssetPtr&) -> double {
-			AgisAssetLambdaChain operations;
+	std::string next_method = R"(auto next_lambda = [](const AssetPtr&) -> double {
+		AgisAssetLambdaChain operations;
 
-			{LAMBDA_CHAIN}
+		{LAMBDA_CHAIN}
 			
-			double result = asset_feature_lambda_chain(
-				asset, 
-				operations
-			);
-			return result;
-		}
-		
-		auto exchange_view = exchange->get_exchange_view(
-			daily_return, 
-			{EXCHANGE_QUERY_TYPE}
+		double result = asset_feature_lambda_chain(
+			asset, 
+			operations
 		);
+		return result;
+	}
+		
+	auto ev = this->exchange->get_exchange_view(
+		daily_return, 
+		{EXCHANGE_QUERY_TYPE}
+	);
 
-		//ev.linear_decreasing_weights(strat_alloc_ref.target_leverage);
+	this->strategy_allocate(
+		&ev,
+		{EPSILON},
+		{CLEAR},
+		std::nullopt,
+		AllocType::{ALLOC_TYPE}
+	);
 
 	)";
 
-	// Replace the placeholder with the BUILD_METHOD
-	auto pos = next_method.find("{EXCHANGE_QUERY_TYPE}");
+	// Replace the exchange query type
+	pos = next_method.find("{EXCHANGE_QUERY_TYPE}");
 	next_method.replace(pos, 21, ev_query_type(ev_lambda_ref.query_type));
+
+	// Replace the lambda chain
 	pos = next_method.find("{LAMBDA_CHAIN}");
 	next_method.replace(pos, 14, asset_lambda);
 
+	auto& strat_alloc_struct = *ev_lambda_ref.strat_alloc_struct;
+	// Replace epsilon
+	pos = next_method.find("{EPSILON}");
+	next_method.replace(pos, 9, std::to_string(strat_alloc_struct.epsilon));
 
-	std::string strategy_header = R"(
-	#pragma once
+	// Clear position if missing
+	pos = next_method.find("{CLEAR}");
+	next_method.replace(pos, 7, std::to_string(strat_alloc_struct.clear_missing));
 
-	// the following code is generated from an abstract strategy flow graph.
-	// Editing it will result may result in unintended consequences.
+	// Strategy allocation type
+	pos = next_method.find("{ALLOC_TYPE}");
+	next_method.replace(pos, 12, alloc_to_str(strat_alloc_struct.alloc_type));
 
-	#include "AgisStrategy.h"
+	auto target_leverage = std::to_string(strat_alloc_ref.target_leverage);
+	std::string ev_opp_str;
+	if (strat_alloc_ref.ev_opp_type == "UNIFORM")
+		ev_opp_str = R"(ev.uniform_weights(strat_alloc_ref.target_leverage);)";
+	else if (strat_alloc_ref.ev_opp_type == "LINEAR_DECREASE")
+		ev_opp_str = R"(ev.linear_decreasing_weights(strat_alloc_ref.target_leverage);)";
+	else if (strat_alloc_ref.ev_opp_type == "LINEAR_INCREASE")
+		ev_opp_str = R"(ev.linear_increasing_weights(strat_alloc_ref.target_leverage);)";
+	next_method += ev_opp_str;
 
-	class {CLASS_NAME} : public AgisStrategy {{
-	public:
-		AGIS_API void reset() override {{}}
+	std::string strategy_source = R"(
+// the following code is generated from an abstract strategy flow graph.
+// Editing it will result may result in unintended consequences.
 
-		AGIS_API void build() override {{BUILD_METHOD}}
+#include "{STRATEGY_CLASS}.h"
 
-		AGIS_API void next() override {{NEXT_METHOD}}
+void {STRATEGY_CLASS}::build(){
+	// set the strategies target exchanges
+	{BUILD_METHOD}
+};
 
-	private:
-		ExchangeViewOpp ev_opp_type = {EV_OPP_TYPE};
-		ExchangePtr exchange;
-	}};
-	)";
+void {STRATEGY_CLASS}::next(){
+	if (this->exchange->__get_exchange_index() < this->warmup) { return; }
+	// define the lambda function the strategy will apply
+	{NEXT_METHOD}
+};
+)";
 
 	// Replace the placeholder with the BUILD_METHOD
-	pos = strategy_header.find("{BUILD_METHOD}");
-	strategy_header.replace(pos, 13, build_method);
+	pos = strategy_source.find("{BUILD_METHOD}");
+	strategy_source.replace(pos, 14, build_method);
 
 	// Replace the placeholder with the NEXT_METHOD
-	pos = strategy_header.find("{NEXT_METHOD}");
-	strategy_header.replace(pos, 12, next_method);
-	
-	// Replace the placeholder with the EV_OPP_TYPE value
-	pos = strategy_header.find("{EV_OPP_TYPE}");
-	strategy_header.replace(pos, 12,ev_opp_to_str(this->ev_opp_type));
+	pos = strategy_source.find("{NEXT_METHOD}");
+	strategy_source.replace(pos, 13, next_method);
 
-	return strategy_header;
+	// Replace strategy class name
+	str_replace_all(strategy_source, place_holder, strategy_class);
+
+
+	auto header_path = strat_folder / (strategy_class + ".h");
+	auto source_path = strat_folder / (strategy_class + ".cpp");
+	AGIS_TRY(code_gen_write(header_path, strategy_header))
+	AGIS_TRY(code_gen_write(source_path, strategy_source))
 }

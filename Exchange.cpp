@@ -144,15 +144,6 @@ AGIS_API bool Exchange::asset_exists(std::string asset_id)
 
 
 //============================================================================
-void Exchange::__set_warmup(size_t warmup)
-{
-	for (auto& asset : this->assets)
-	{
-		asset->__set_warmup(warmup);
-	}
-}
-
-//============================================================================
 void Exchange::__goto(long long datetime)
 {
 	// goto date is beyond the datetime index
