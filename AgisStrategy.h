@@ -97,7 +97,7 @@ AGIS_API typedef std::function<double(
 	double b
 	)> Operation;
 
-AGIS_API typedef const std::function<double(
+AGIS_API typedef const std::function<AgisResult<double>(
 	const std::shared_ptr<Asset>&,
 	const std::string&,
 	int

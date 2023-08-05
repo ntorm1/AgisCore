@@ -139,7 +139,8 @@ public:
 	AGIS_API ExchangeView get_exchange_view(
 		const std::function<double(std::shared_ptr<Asset> const&)>& func,
 		ExchangeQueryType query_type = ExchangeQueryType::Default,
-		int N = -1
+		int N = -1,
+		bool panic = false
 	);
 
 
@@ -338,6 +339,7 @@ struct ExchangeView
 	std::vector<std::pair<size_t, double>> view;
 	size_t exchange_index;
 
+	ExchangeView() = default;
 	ExchangeView(size_t index, size_t count) {
 		this->exchange_index = index;
 		this->view.reserve(count);

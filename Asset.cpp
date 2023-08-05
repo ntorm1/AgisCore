@@ -458,11 +458,19 @@ AGIS_API std::vector<std::string> Asset::get_column_names() const
 
 
 //============================================================================
-AGIS_API double Asset::get_asset_feature(std::string const& col, int index) const noexcept
+AgisResult<double> Asset::get_asset_feature(std::string const& col, int index) const
 {
+    if (index - 1 >= static_cast<int>(current_index)) 
+    {
+        return AgisResult<double>(AGIS_EXCEP("Invalid row index: " + std::to_string(index)));
+    }
+    if (this->headers.find(col) == this->headers.end())
+    {
+        return AgisResult<double>(AGIS_EXCEP("Invalid column name: " + col));
+    }
     size_t col_offset = this->headers.at(col) * this->rows;
     size_t row_offset = this->current_index + index - 1;
-    return *(this->data + row_offset + col_offset);
+    return AgisResult<double> (*(this->data + row_offset + col_offset));
 }
 
 
@@ -509,3 +517,4 @@ Frequency string_to_freq(const std::string& str)
 template class AGIS_API StridedPointer<long long>;
 template class AGIS_API StridedPointer<double>;
 template class AGIS_API AgisMatrix<double>;
+template class AGIS_API AgisResult<double>;

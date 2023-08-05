@@ -94,7 +94,7 @@ TradingWindow all_hrs  = {
 
 
 //============================================================================
-const std::function<double(
+const std::function<AgisResult<double>(
 	const std::shared_ptr<Asset>& asset,
 	const std::string& col,
 	int offset
@@ -476,11 +476,14 @@ void AbstractAgisStrategy::next()
 	// verify strategy warmup period has passed
 	if (ev_lambda_ref.exchange->__get_exchange_index() < ev_lambda_ref.warmup) { return; }
 
-	auto ev = ev_lambda_ref.exchange_view_labmda(
-		ev_lambda_ref.asset_lambda,
-		ev_lambda_ref.exchange,
-		ev_lambda_ref.query_type,
-		ev_lambda_ref.N
+	ExchangeView ev;
+	AGIS_TRY(
+		ev = ev_lambda_ref.exchange_view_labmda(
+			ev_lambda_ref.asset_lambda,
+			ev_lambda_ref.exchange,
+			ev_lambda_ref.query_type,
+			ev_lambda_ref.N
+		);
 	);
 	auto& strat_alloc_ref = *ev_lambda_ref.strat_alloc_struct;
 	switch (this->ev_opp_type)
@@ -606,7 +609,7 @@ void AbstractAgisStrategy::code_gen(fs::path strat_folder)
 	std::string strategy_header = R"(#pragma once
 
 // the following code is generated from an abstract strategy flow graph.
-// Editing it will result may result in unintended consequences.
+// EDIT IT AT YOUR OWN RISK 
 
 #include "AgisStrategy.h"
 
@@ -723,7 +726,7 @@ private:
 
 	std::string strategy_source = R"(
 // the following code is generated from an abstract strategy flow graph.
-// Editing it will result may result in unintended consequences.
+// EDIT IT AT YOUR OWN RISK 
 
 #include "{STRATEGY_CLASS}.h"
 

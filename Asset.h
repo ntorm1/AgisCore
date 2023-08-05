@@ -80,7 +80,7 @@ public:
     AGIS_API std::string const& get_exchange_id() { return this->exchange_id; }
     AGIS_API std::vector<std::string> get_column_names() const;
     AGIS_API std::unordered_map<std::string, size_t> const& get_headers() { return this->headers; };
-    AGIS_API double get_asset_feature(std::string const& col, int index) const noexcept;
+    AGIS_API AgisResult<double> get_asset_feature(std::string const& col, int index) const;
 
     AGIS_API double __get(std::string col, size_t row) const;
     AGIS_API long long __get_dt(size_t row) const { return *(this->dt_index + row); };

@@ -7,19 +7,20 @@
 
 #define AGIS_SLOW
 
-enum class AGIS_API NexusStatusCode {
-	Ok,
-	InvalidIO,
-	InvalidArgument,
-	InvalidId,
-	InvalidMemoryOp,
-	InvalidColumns,
-	InvalidTz
-};
-
-
 #include <exception>
 #include <string>
+#include <variant>
+
+enum class AGIS_API NexusStatusCode {
+    Ok,
+    InvalidIO,
+    InvalidArgument,
+    InvalidId,
+    InvalidMemoryOp,
+    InvalidColumns,
+    InvalidTz
+};
+
 
 class AgisException : public std::exception {
 private:
@@ -33,6 +34,41 @@ public:
         return message.c_str();
     }
 };
+
+template <typename T>
+class AgisResult {
+public:
+    // Define the variant type with T and AgisException
+    using ValueType = std::variant<T, AgisException>;
+
+    AGIS_API AgisResult(const ValueType& _value)
+    {
+        this->value = _value;
+    }
+
+    AGIS_API bool is_exception()
+    {
+        return std::holds_alternative<AgisException>(this->value);
+    }
+
+    AGIS_API T unwrap(bool panic = true)
+    {
+        if (!this->is_exception()) {
+            return std::get<T>(this->value);
+        }
+        if (panic)
+        {
+            throw std::get<AgisException>(this->value);
+        }
+        return T();
+    }
+
+private:
+    ValueType value;
+};
+
+#define AGIS_EXCEP(msg) \
+    AgisException(std::string(__FILE__) + ":" + std::to_string(__LINE__) + " - " + msg)
 
 #define AGIS_THROW(msg) \
     throw AgisException(std::string(__FILE__) + ":" + std::to_string(__LINE__) + " - " + msg)

@@ -1,9 +1,12 @@
 #pragma once
+
+
+//#define AGIS_HIGH_PRECISION
+
+#ifdef AGIS_HIGH_PRECISION
 #include <gmp.h>
-
-#define AGIS_HIGH_PRECISION
-
 static int constexpr bits = 128;
+#endif
 
 inline void gmp_add_assign(double& x, double y)
 {

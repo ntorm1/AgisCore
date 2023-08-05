@@ -82,14 +82,18 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 	for (auto& asset : this->assets)
 	{
 		if (!asset) continue;
-		if (!asset->__is_streaming 
-			|| !asset->__contains_column(col)
-			|| !asset->__valid_row(row)){
-			if (panic) { throw std::runtime_error("invalid asset found"); }
+		if (!asset->__is_streaming)
+		{
+			if (panic) throw std::runtime_error("invalid asset found"); 
 			continue;
 		}
 		auto val = asset->get_asset_feature(col, row);
-		view.push_back(std::make_pair(asset->get_asset_index(), val));
+		if (val.is_exception() && !panic)
+		{
+			continue;
+		}
+		auto v = val.unwrap();
+		view.push_back(std::make_pair(asset->get_asset_index(), v));
 	}
 	if (view.size() == 1) { return exchange_view; }
 	exchange_view.sort(number_assets, query_type);
@@ -101,7 +105,8 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 AGIS_API ExchangeView Exchange::get_exchange_view(
 	const std::function<double(std::shared_ptr<Asset>const&)>& func,
 	ExchangeQueryType query_type, 
-	int N)
+	int N,
+	bool panic)
 {
 	auto number_assets = (N == -1) ? this->assets.size() : static_cast<size_t>(N);
 	ExchangeView exchange_view(this->exchange_index, number_assets);
@@ -113,7 +118,10 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 
 		double val;
 		try { val = func(asset); }
-		catch (const std::exception&e) {throw e; }
+		catch (const std::exception&e) {
+			if (panic) throw e;
+			else continue;
+		}
 
 		view.push_back(std::make_pair(asset->get_asset_index(), val));
 	}
