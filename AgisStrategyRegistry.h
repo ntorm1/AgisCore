@@ -9,18 +9,28 @@
 class StrategyRegistry {
 public:
     using CreateInstanceFunc = std::function<std::unique_ptr<AgisStrategy>(
-        std::string,
-        PortfolioPtr const&,
-        double)>;
+        PortfolioPtr const&
+        )>;
     using RegistryMap = std::unordered_map<std::string, CreateInstanceFunc>;
+    using PortfolioIdMap = std::unordered_map<std::string, std::string>;
+
 
     static RegistryMap& getRegistry() {
         static RegistryMap registry;
         return registry;
     }
 
-    static bool registerStrategy(const std::string& className, CreateInstanceFunc createFunc) {
+    static PortfolioIdMap& getIDMap() {
+        static PortfolioIdMap id_registry;
+        return id_registry;
+    }
+
+    static bool registerStrategy(
+        const std::string& className, 
+        CreateInstanceFunc createFunc,
+        const std::string& portfolio_id) {
         getRegistry().emplace(className, createFunc);
+        getIDMap().emplace(className, portfolio_id);
         return true;
     }
 

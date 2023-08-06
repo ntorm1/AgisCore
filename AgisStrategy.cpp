@@ -8,6 +8,7 @@
 #include "AgisErrors.h"
 
 
+std::atomic<size_t> AgisStrategy::strategy_counter(0);
 
 //============================================================================
 const std::function<double(double, double)> agis_init = [](double a, double b) { return b; };
@@ -619,6 +620,7 @@ void AbstractAgisStrategy::code_gen(fs::path strat_folder)
 		AGIS_THROW("Abstract strategy has not been built yet");
 	}
 	auto exchange_id = this->ev_lambda_struct.value().exchange->get_exchange_id();
+	auto portfolio_id = this->get_portfolio_id();
 	auto warmup = this->ev_lambda_struct.value().warmup;
 	auto& ev_lambda_ref = *this->ev_lambda_struct;
 	auto& strat_alloc_ref = *ev_lambda_ref.strat_alloc_struct;
@@ -635,23 +637,19 @@ void AbstractAgisStrategy::code_gen(fs::path strat_folder)
 // EDIT IT AT YOUR OWN RISK 
 #include "AgisStrategy.h"
 
-class {STRATEGY_CLASS} : public AgisStrategy {
+class {STRATEGY_ID}Class : public AgisStrategy {
 public:
-	AGIS_STRATEGY_API {STRATEGY_CLASS}(
-        std::string id, 
-        PortfolioPtr const& portfolio_,
-        double portfolio_allocation
-    ) : AgisStrategy(id, portfolio_, portfolio_allocation) {
+	AGIS_STRATEGY_API {STRATEGY_ID}Class (
+        PortfolioPtr const& portfolio_
+    ) : AgisStrategy("{STRATEGY_ID}Class", portfolio_, {ALLOC}) {
 		this->abstract_class = false;
 	};
 
     AGIS_STRATEGY_API inline static std::unique_ptr<AgisStrategy> create_instance(
-        std::string id, 
-        PortfolioPtr const& portfolio_,
-        double portfolio_allocation
+        PortfolioPtr const& portfolio_
     ) 
 	{
-        return std::make_unique<{STRATEGY_CLASS}>(id, portfolio_, portfolio_allocation);
+        return std::make_unique<{STRATEGY_ID}Class>(portfolio_);
     }
 
 	AGIS_STRATEGY_API inline void reset() override {}
@@ -671,13 +669,18 @@ private:
 	auto pos = strategy_header.find("{EV_OPP_TYPE}");
 	strategy_header.replace(pos, 13, ev_opp_to_str(this->ev_opp_type));
 
+	// Replace the allocation amount
+	pos = strategy_header.find("{ALLOC}");
+	strategy_header.replace(pos, 7, std::to_string(this->get_allocation()));
+
+	// Replace the warmup 
 	pos = strategy_header.find("{WARMUP}");
 	strategy_header.replace(pos, 8, std::to_string(warmup));
 
 	// Replace strategy class name
-	std::string place_holder = "{STRATEGY_CLASS}";
-	std::string strategy_class = this->get_strategy_id() + "Class";
-	str_replace_all(strategy_header, place_holder, strategy_class);
+	std::string place_holder = "{STRATEGY_ID}";
+	std::string strategy_id = this->get_strategy_id();
+	str_replace_all(strategy_header, place_holder, strategy_id);
 
 	// Insert exchange ID
 	std::string exchange_str = R"("{ID}")";
@@ -770,14 +773,14 @@ private:
 // the following code is generated from an abstract strategy flow graph.
 // EDIT IT AT YOUR OWN RISK 
 
-#include "{STRATEGY_CLASS}.h"
+#include "{STRATEGY_ID}Class.h"
 
-void {STRATEGY_CLASS}::build(){
+void {STRATEGY_ID}Class::build(){
 	// set the strategies target exchanges
 	{BUILD_METHOD}
 };
 
-void {STRATEGY_CLASS}::next(){
+void {STRATEGY_ID}Class::next(){
 	if (this->exchange->__get_exchange_index() < this->warmup) { return; }
 	// define the lambda function the strategy will apply
 	{NEXT_METHOD}
@@ -793,11 +796,11 @@ void {STRATEGY_CLASS}::next(){
 	strategy_source.replace(pos, 13, next_method);
 
 	// Replace strategy class name
-	str_replace_all(strategy_source, place_holder, strategy_class);
+	str_replace_all(strategy_source, place_holder, strategy_id);
 
 
-	auto header_path = strat_folder / (strategy_class + ".h");
-	auto source_path = strat_folder / (strategy_class + ".cpp");
+	auto header_path = strat_folder / (strategy_id + "Class.h");
+	auto source_path = strat_folder / (strategy_id + "Class.cpp");
 	AGIS_TRY(code_gen_write(header_path, strategy_header))
 	AGIS_TRY(code_gen_write(source_path, strategy_source))
 }

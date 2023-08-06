@@ -14,8 +14,6 @@
 
 namespace fs = std::filesystem;
 
-static std::atomic<size_t> strategy_counter(0);
-
 class AgisStrategy;
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
 AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
@@ -236,10 +234,16 @@ public:
 	std::string get_strategy_id() { return this->strategy_id; }
 
 	/// <summary>
+	/// Get the index of the portfolio the strategy is registered to 
+	/// </summary>
+	/// <returns>Unique index of the portfolio the strategy is registered to</returns>
+	size_t get_portfolio_index() { return this->portfolio->__get_index(); }
+
+	/// <summary>
 	/// Get the id of the portfolio the strategy is registered to 
 	/// </summary>
-	/// <returns>Unique if of the portfolio the strategy is registered to</returns>
-	size_t get_portfolio_index() { return this->portfolio->__get_index(); }
+	/// <returns>Unique id of the portfolio the strategy is registered to</returns>
+	std::string get_portfolio_id() { return this->portfolio->__get_portfolio_id(); }
 
 	/// <summary>
 	/// Set the window in which a strategy can trade. Endpoints are included
@@ -309,12 +313,17 @@ protected:
 
 private:
 	/// <summary>
+	/// Counter of strategy instances
+	/// </summary>
+	AGIS_API static std::atomic<size_t> strategy_counter;
+
+	/// <summary>
 	/// Pointer to the Agis order router
 	/// </summary>
 	AgisRouter* router;
 
 	/// <summary>
-	/// Pointer to the main portfolio map object
+	///	Parent portfolio of the Agis Strategy
 	/// </summary>
 	PortfolioPtr const& portfolio;
 	

@@ -306,6 +306,16 @@ AGIS_API PortfolioRef PortfolioMap::get_portfolio(std::string const& id)
     return p;
 }
 
+AGIS_API std::vector<std::string> PortfolioMap::get_portfolio_ids() const
+{
+    std::vector<std::string> v;
+    for (auto p : this->portfolio_map)
+    {
+        v.push_back(p.first);
+    }
+    return v;
+}
+
 //============================================================================
 AGIS_API json PortfolioMap::to_json() const
 {

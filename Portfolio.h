@@ -254,6 +254,7 @@ public:
     bool __portfolio_exists(std::string const& id) const { return this->portfolio_map.count(id) > 0; }
 
     AGIS_API PortfolioRef get_portfolio(std::string const& id);
+    AGIS_API std::vector<std::string> get_portfolio_ids() const;
     AGIS_API json to_json() const;
     AGIS_API void restore(json const& j);
 
