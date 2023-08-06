@@ -124,7 +124,7 @@ extern AGIS_API std::unordered_map<std::string, AllocType> agis_strat_alloc_map;
 class AgisStrategy
 {
 public:
-	
+	AgisStrategy() = default;
 	AgisStrategy(
 		std::string id, 
 		PortfolioPtr const& portfolio_,
@@ -217,8 +217,8 @@ public:
 	
 	AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() const { return this->trade_history; }
 
-	void nlv_adjust(double nlv_adjustment) { gmp_add_assign(this->nlv, nlv_adjustment); };
-	void cash_adjust(double cash_adjustment) { gmp_add_assign(this->cash, cash_adjustment); };
+	void nlv_adjust(double nlv_adjustment) { this->nlv += nlv_adjustment; };
+	void cash_adjust(double cash_adjustment) { this->cash += cash_adjustment; };
 	void unrealized_adjust(double unrealized_adjustment) { this->unrealized_pl += unrealized_adjustment; };
 	double get_nlv() { return this->nlv; }
 	double get_allocation() { return this->portfolio_allocation; }
@@ -341,7 +341,7 @@ private:
 	/// Pointer to the exchange's step boolean telling us wether or not the subscribed 
 	/// exchange stepped forward in time
 	/// </summary>
-	bool* __exchange_step;
+	bool* __exchange_step = nullptr;
 	std::optional<std::pair<TimePoint, TimePoint>> trading_window = std::nullopt;
 
 
@@ -422,4 +422,6 @@ private:
 	size_t warmup = 0;
 };
 
+AGIS_API void str_replace_all(std::string& source, const std::string& oldStr, const std::string& newStr);
+AGIS_API void code_gen_write(fs::path filename, std::string const& source);
 AGIS_API void agis_realloc(ExchangeView* allocation, double c);

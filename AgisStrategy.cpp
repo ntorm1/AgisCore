@@ -635,17 +635,34 @@ void AbstractAgisStrategy::code_gen(fs::path strat_folder)
 // EDIT IT AT YOUR OWN RISK 
 #include "AgisStrategy.h"
 
-class AGIS_STRATEGY_API {STRATEGY_CLASS} : public AgisStrategy {
+class {STRATEGY_CLASS} : public AgisStrategy {
 public:
-	void reset() override {}
+	AGIS_STRATEGY_API {STRATEGY_CLASS}(
+        std::string id, 
+        PortfolioPtr const& portfolio_,
+        double portfolio_allocation
+    ) : AgisStrategy(id, portfolio_, portfolio_allocation) {
+		this->abstract_class = false;
+	};
 
-	void build() override;
+    AGIS_STRATEGY_API inline static std::unique_ptr<AgisStrategy> create_instance(
+        std::string id, 
+        PortfolioPtr const& portfolio_,
+        double portfolio_allocation
+    ) 
+	{
+        return std::make_unique<{STRATEGY_CLASS}>(id, portfolio_, portfolio_allocation);
+    }
 
-	void next() override;
+	AGIS_STRATEGY_API inline void reset() override {}
+
+	AGIS_STRATEGY_API void build() override;
+
+	AGIS_STRATEGY_API void next() override;
 
 private:
 	ExchangeViewOpp ev_opp_type = ExchangeViewOpp::{EV_OPP_TYPE};
-	ExchangePtr exchange;
+	ExchangePtr exchange = nullptr;
 	size_t warmup = {WARMUP};
 };
 )";

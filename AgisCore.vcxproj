@@ -158,6 +158,7 @@
     <ClInclude Include="AgisPointers.h" />
     <ClInclude Include="AgisRouter.h" />
     <ClInclude Include="AgisStrategy.h" />
+    <ClInclude Include="AgisStrategyRegistry.h" />
     <ClInclude Include="Asset.h" />
     <ClInclude Include="Exchange.h" />
     <ClInclude Include="framework.h" />

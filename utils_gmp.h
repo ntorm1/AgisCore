@@ -1,5 +1,9 @@
 #pragma once
-
+#ifdef AGISCORE_EXPORTS
+#define AGIS_API __declspec(dllexport)
+#else
+#define AGIS_API __declspec(dllimport)
+#endif
 
 //#define AGIS_HIGH_PRECISION
 
@@ -8,7 +12,7 @@
 static int constexpr bits = 128;
 #endif
 
-inline void gmp_add_assign(double& x, double y)
+AGIS_API inline void gmp_add_assign(double& x, double y)
 {
 #ifdef AGIS_HIGH_PRECISION
     mpf_t mpf_x, mpf_y;

@@ -72,6 +72,7 @@ public:
 		std::string dt_format,
 		ExchangeMap* exchanges
 	);
+	AGIS_API Exchange() = default;
 	AGIS_API ~Exchange();
 
 	/// <summary>
