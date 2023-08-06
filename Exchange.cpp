@@ -106,15 +106,17 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 	const std::function<double(std::shared_ptr<Asset>const&)>& func,
 	ExchangeQueryType query_type, 
 	int N,
-	bool panic)
+	bool panic,
+	size_t warmup)
 {
 	auto number_assets = (N == -1) ? this->assets.size() : static_cast<size_t>(N);
 	ExchangeView exchange_view(this->exchange_index, number_assets);
 	auto& view = exchange_view.view;
 	for (auto& asset : this->assets)
 	{
-		if (!asset) continue;
-		if (!asset->__is_streaming) continue;
+		if (!asset) continue;								// asset not in view
+		if (!asset->__is_streaming) continue;				// asset is not streaming
+		if (asset->get_current_index() < warmup) continue;	// asset current index less than required warmup
 
 		double val;
 		try { val = func(asset); }

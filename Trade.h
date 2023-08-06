@@ -85,7 +85,7 @@ public:
         return std::make_unique<ExitBars>(*this);
     }
 
-    bool AGIS_API exit() override {
+    AGIS_API inline bool  exit() override {
         auto res = this->bars == this->trade->bars_held; 
         return res;
     }

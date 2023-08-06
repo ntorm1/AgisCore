@@ -125,6 +125,23 @@ const std::function<double(
 	return result;
 };
 
+//============================================================================
+const std::function<double(
+	const std::shared_ptr<Asset>&,
+	const std::vector<AssetLambda>& operations)> concrete_lambda_chain = [](
+		const std::shared_ptr<Asset>& asset,
+		const std::vector<AssetLambda>& operations
+		)
+{
+	double result = 0;
+	for (const auto& lambda : operations) {
+		const auto& op = lambda.first;
+		const auto& assetFeatureLambda = lambda.second;
+		result = op(result, assetFeatureLambda(asset));
+	}
+	return result;
+};
+
 
 //============================================================================
 std::unordered_map<std::string, AllocType> agis_strat_alloc_map = {
@@ -608,21 +625,26 @@ void AbstractAgisStrategy::code_gen(fs::path strat_folder)
 
 	std::string strategy_header = R"(#pragma once
 
+#ifdef AGISSTRATEGY_EXPORTS // This should be defined when building the DLL
+#  define AGIS_STRATEGY_API __declspec(dllexport)
+#else
+#  define AGIS_STRATEGY_API __declspec(dllimport)
+#endif
+
 // the following code is generated from an abstract strategy flow graph.
 // EDIT IT AT YOUR OWN RISK 
-
 #include "AgisStrategy.h"
 
-class {STRATEGY_CLASS} : public AgisStrategy {
+class AGIS_STRATEGY_API {STRATEGY_CLASS} : public AgisStrategy {
 public:
-	AGIS_API void reset() override {}
+	void reset() override {}
 
-	AGIS_API void build() override;
+	void build() override;
 
-	AGIS_API void next() override;
+	void next() override;
 
 private:
-	ExchangeViewOpp ev_opp_type = {EV_OPP_TYPE};
+	ExchangeViewOpp ev_opp_type = ExchangeViewOpp::{EV_OPP_TYPE};
 	ExchangePtr exchange;
 	size_t warmup = {WARMUP};
 };
@@ -653,8 +675,9 @@ private:
 	std::string asset_lambda = R"()";
 	for (auto& pair : ev_lambda_ref.asset_lambda)
 	{
+		//TODO fix this
 		std::string lambda_mid = R"(operations.emplace_back({OPP}, [&](const AssetPtr& asset) {
-			return asset_feature_lambda(asset, "{COL}", {INDEX});
+			return asset_feature_lambda(asset, "{COL}", {INDEX}).unwrap();
 		});
 )";
 		auto pos = lambda_mid.find("{OPP}");
@@ -665,21 +688,21 @@ private:
 		lambda_mid.replace(pos, 7, std::to_string(pair.row));
 		asset_lambda = asset_lambda + lambda_mid;
 	}
-
-	std::string next_method = R"(auto next_lambda = [](const AssetPtr&) -> double {
-		AgisAssetLambdaChain operations;
-
+	std::string next_method = R"(auto next_lambda = [](const AssetPtr& asset) -> double {
+		static std::vector<AssetLambda> operations;
+		if (operations.empty()) {
 		{LAMBDA_CHAIN}
+		}
 			
-		double result = asset_feature_lambda_chain(
+		double result = concrete_lambda_chain(
 			asset, 
 			operations
 		);
 		return result;
-	}
+	};
 		
 	auto ev = this->exchange->get_exchange_view(
-		daily_return, 
+		next_lambda, 
 		{EXCHANGE_QUERY_TYPE}
 	);
 
@@ -717,11 +740,13 @@ private:
 	auto target_leverage = std::to_string(strat_alloc_ref.target_leverage);
 	std::string ev_opp_str;
 	if (strat_alloc_ref.ev_opp_type == "UNIFORM")
-		ev_opp_str = R"(ev.uniform_weights(strat_alloc_ref.target_leverage);)";
+		ev_opp_str = R"(ev.uniform_weights({LEV});)";
 	else if (strat_alloc_ref.ev_opp_type == "LINEAR_DECREASE")
-		ev_opp_str = R"(ev.linear_decreasing_weights(strat_alloc_ref.target_leverage);)";
+		ev_opp_str = R"(ev.linear_decreasing_weights({LEV});)";
 	else if (strat_alloc_ref.ev_opp_type == "LINEAR_INCREASE")
-		ev_opp_str = R"(ev.linear_increasing_weights(strat_alloc_ref.target_leverage);)";
+		ev_opp_str = R"(ev.linear_increasing_weights({LEV});)";
+	pos = ev_opp_str.find("{LEV}");
+	ev_opp_str.replace(pos, 5, std::to_string(strat_alloc_struct.target_leverage));
 	next_method += ev_opp_str;
 
 	std::string strategy_source = R"(

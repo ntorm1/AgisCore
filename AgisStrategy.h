@@ -1,4 +1,9 @@
 #pragma once
+#ifdef AGISCORE_EXPORTS
+#define AGIS_API __declspec(dllexport)
+#else
+#define AGIS_API __declspec(dllimport)
+#endif
 #include "pch.h"
 #include <utility>
 #include <filesystem>
@@ -109,8 +114,9 @@ extern AGIS_API AssetFeatureLambda asset_feature_lambda;
 extern AGIS_API const std::function<double(
 	const std::shared_ptr<Asset>&,
 	const std::vector<AssetLambdaScruct>& operations)> asset_feature_lambda_chain;
-
-
+extern AGIS_API const std::function<double(
+	const std::shared_ptr<Asset>&,
+	const std::vector<AssetLambda>& operations)> concrete_lambda_chain;
 
 extern AGIS_API std::unordered_map<std::string, AllocType> agis_strat_alloc_map;
 
@@ -160,7 +166,7 @@ public:
 	/// </summary>
 	/// <param name="path"></param>
 	/// <returns></returns>
-	AGIS_API virtual void restore(fs::path path) {};
+	AGIS_API inline virtual void restore(fs::path path) {};
 
 	/// <summary>
 	/// Subscribe to an exchange, next() will be called when that exchange steps
@@ -173,7 +179,7 @@ public:
 	/// </summary>
 	AGIS_API virtual void __reset();
 
-	AGIS_API static void __reset_counter() { strategy_counter.store(0); }
+	AGIS_API inline static void __reset_counter() { strategy_counter.store(0); }
 
 	/// <summary>
 	/// Build the strategy, called once registered to a hydra instance
@@ -207,9 +213,9 @@ public:
 	/// Get all orders that have been  placed by the strategy
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API std::vector<OrderRef> const& get_order_history() const { return this->order_history; }
+	AGIS_API inline std::vector<OrderRef> const& get_order_history() const { return this->order_history; }
 	
-	AGIS_API std::vector<SharedTradePtr> const& get_trade_history() const { return this->trade_history; }
+	AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() const { return this->trade_history; }
 
 	void nlv_adjust(double nlv_adjustment) { gmp_add_assign(this->nlv, nlv_adjustment); };
 	void cash_adjust(double cash_adjustment) { gmp_add_assign(this->cash, cash_adjustment); };
@@ -388,13 +394,13 @@ public:
 
 	AGIS_API void next() override;
 	
-	AGIS_API void reset() override {}
+	AGIS_API inline void reset() override {}
 
 	AGIS_API void build() override;
 
 	AGIS_API void extract_ev_lambda();
 
-	AGIS_API void set_abstract_ev_lambda(std::function<
+	AGIS_API inline void set_abstract_ev_lambda(std::function<
 		std::optional<ExchangeViewLambdaStruct>
 		()> f_) { this->ev_lambda = f_; };
 

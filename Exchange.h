@@ -140,15 +140,16 @@ public:
 		const std::function<double(std::shared_ptr<Asset> const&)>& func,
 		ExchangeQueryType query_type = ExchangeQueryType::Default,
 		int N = -1,
-		bool panic = false
+		bool panic = false,
+		size_t warmup = 0
 	);
 
 
-	AGIS_API std::string get_exchange_id() const { return this->exchange_id; }
-	AGIS_API StridedPointer<long long> const __get_dt_index() const;
-	AGIS_API size_t const __get_size() const { return this->dt_index_size; }
-	AGIS_API double __get_market_price(size_t asset_index, bool on_close) const;
-	AGIS_API long long __get_market_time() { return this->dt_index[this->current_index]; }
+	AGIS_API inline std::string get_exchange_id() const { return this->exchange_id; }
+	AGIS_API inline StridedPointer<long long> const __get_dt_index() const;
+	AGIS_API inline size_t const __get_size() const { return this->dt_index_size; }
+	AGIS_API inline double __get_market_price(size_t asset_index, bool on_close) const;
+	AGIS_API inline long long __get_market_time() { return this->dt_index[this->current_index]; }
 
 	void __goto(long long datetime);
 	size_t __get_exchange_index() const { return this->current_index - 1; };
@@ -236,15 +237,15 @@ public:
 	/// </summary>
 	/// <param name="asset_id">id of the asset to search for</param>
 	/// <returns>shared pointer to asset if it is found</returns>
-	AGIS_API std::optional<std::shared_ptr<Asset> const> get_asset(std::string const& asset_id) const;
-	AGIS_API std::shared_ptr<Asset> get_asset(size_t index) const { return this->assets[index]; }
+	AGIS_API inline std::optional<std::shared_ptr<Asset> const> get_asset(std::string const& asset_id) const;
+	AGIS_API inline std::shared_ptr<Asset> get_asset(size_t index) const { return this->assets[index]; }
 
 	/// <summary>
 	/// Get the unique index associated with a asset id
 	/// </summary>
 	/// <param name="id"></param>
 	/// <returns></returns>
-	AGIS_API size_t get_asset_index(std::string const& id) const { return this->asset_map.at(id); }
+	AGIS_API inline size_t get_asset_index(std::string const& id) const { return this->asset_map.at(id); }
 
 
 	/// <summary>
@@ -269,7 +270,7 @@ public:
 	AGIS_API double __get_market_price(std::string& asset_id, bool on_close) const;
 	
 	AGIS_API StridedPointer<long long> const __get_dt_index() const;
-	AGIS_API long long __get_market_time() { return this->dt_index[this->current_index]; }
+	AGIS_API inline long long __get_market_time() { return this->dt_index[this->current_index]; }
 
 	AGIS_API void __goto(long long datetime);
 	AGIS_API void __reset();

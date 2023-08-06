@@ -514,7 +514,7 @@ Frequency string_to_freq(const std::string& str)
      }
 }
 
+
 template class AGIS_API StridedPointer<long long>;
 template class AGIS_API StridedPointer<double>;
 template class AGIS_API AgisMatrix<double>;
-template class AGIS_API AgisResult<double>;

@@ -70,22 +70,22 @@ public:
     );
 
 
-    AGIS_API std::string get_asset_id() const { return this->asset_id; }
-    AGIS_API size_t get_asset_index() const { return this->asset_index; }
-    AGIS_API size_t const get_size() const { return this->rows - this->warmup; }
-    AGIS_API size_t const get_rows() const { return this->rows; }
-    AGIS_API size_t const get_cols() const { return this->columns; }
-    AGIS_API size_t const get_warmup()const { return this->warmup; }
-    AGIS_API size_t const get_current_index() const { return this->current_index - 1; }
-    AGIS_API std::string const& get_exchange_id() { return this->exchange_id; }
+    AGIS_API inline  std::string get_asset_id() const { return this->asset_id; }
+    AGIS_API inline  size_t get_asset_index() const { return this->asset_index; }
+    AGIS_API inline  size_t const get_size() const { return this->rows - this->warmup; }
+    AGIS_API inline  size_t const get_rows() const { return this->rows; }
+    AGIS_API inline  size_t const get_cols() const { return this->columns; }
+    AGIS_API inline  size_t const get_warmup()const { return this->warmup; }
+    AGIS_API inline  size_t const get_current_index() const { return this->current_index - 1; }
+    AGIS_API inline  std::string const& get_exchange_id() { return this->exchange_id; }
     AGIS_API std::vector<std::string> get_column_names() const;
-    AGIS_API std::unordered_map<std::string, size_t> const& get_headers() { return this->headers; };
+    AGIS_API inline std::unordered_map<std::string, size_t> const& get_headers() { return this->headers; };
     AGIS_API AgisResult<double> get_asset_feature(std::string const& col, int index) const;
 
     AGIS_API double __get(std::string col, size_t row) const;
-    AGIS_API long long __get_dt(size_t row) const { return *(this->dt_index + row); };
-    AGIS_API size_t __get_open_index() const {return this->open_index;}
-    AGIS_API size_t __get_close_index() const { return this->close_index; }
+    AGIS_API inline long long __get_dt(size_t row) const { return *(this->dt_index + row); };
+    AGIS_API inline size_t __get_open_index() const {return this->open_index;}
+    AGIS_API inline size_t __get_close_index() const { return this->close_index; }
     
     AGIS_API double __get_market_price(bool on_close) const;
     AGIS_API AgisMatrix<double> const __get__data() const;
@@ -101,7 +101,7 @@ public:
     size_t __get_index(bool offset = true) const { return offset ? this->asset_index : this->asset_index - this->exchange_offset; }
 
 
-    AGIS_API void __set_alignment(bool is_aligned_) { this->__is_aligned = is_aligned_; }
+    AGIS_API inline void __set_alignment(bool is_aligned_) { this->__is_aligned = is_aligned_; }
     bool __in_warmup() { return (this->current_index - 1) < this->warmup; }
     void __set_warmup(size_t warmup_) { if (this->warmup < warmup_) this->warmup = warmup_;}
     bool __is_aligned = false;

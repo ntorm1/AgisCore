@@ -41,17 +41,17 @@ public:
     // Define the variant type with T and AgisException
     using ValueType = std::variant<T, AgisException>;
 
-    AGIS_API AgisResult(const ValueType& _value)
+    AGIS_API inline AgisResult(const ValueType& _value)
     {
         this->value = _value;
     }
 
-    AGIS_API bool is_exception()
+    AGIS_API inline bool is_exception()
     {
         return std::holds_alternative<AgisException>(this->value);
     }
 
-    AGIS_API T unwrap(bool panic = true)
+    AGIS_API inline T unwrap(bool panic = true)
     {
         if (!this->is_exception()) {
             return std::get<T>(this->value);

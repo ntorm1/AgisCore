@@ -124,7 +124,7 @@ public:
     /// </summary>
     /// <param name="asset_index">unique asset index to search for</param>
     /// <returns></returns>
-    AGIS_API bool position_exists(size_t asset_index) { return positions.count(asset_index) > 0; }
+    AGIS_API inline bool position_exists(size_t asset_index) { return positions.count(asset_index) > 0; }
 
     /// <summary>
     /// Get a position by asset index if it exists in the portfolio
@@ -152,13 +152,13 @@ public:
     AGIS_API void register_strategy(AgisStrategyRef strategy);
 
     
-    double get_cash() const { return this->cash; }
-    double get_nlv() const { return this->nlv; }
-    double get_unrealized_pl() const { return this->unrealized_pl; }
+    double inline get_cash() const { return this->cash; }
+    double inline get_nlv() const { return this->nlv; }
+    double inline get_unrealized_pl() const { return this->unrealized_pl; }
 
-    AGIS_API std::vector<PositionPtr> const& get_position_history() { return this->position_history; }
-    AGIS_API std::vector<SharedTradePtr> const& get_trade_history() { return this->trade_history; }
-    AGIS_API std::vector<double> const& get_nlv_history() { return this->nlv_history; }
+    AGIS_API inline std::vector<PositionPtr> const& get_position_history() { return this->position_history; }
+    AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() { return this->trade_history; }
+    AGIS_API inline std::vector<double> const& get_nlv_history() { return this->nlv_history; }
 
     json to_json() const;
     void restore(json const& strategies);
