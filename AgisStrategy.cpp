@@ -211,6 +211,7 @@ void AgisStrategy::exchange_subscribe(std::string const& exchange_id)
 //============================================================================
 bool AgisStrategy::__is_step()
 {
+	if (!this->is_live) { return false; }
 	if (!(*this->__exchange_step)) { return false; }
 	if (this->trading_window.has_value())
 	{
@@ -417,6 +418,8 @@ void AgisStrategyMap::__reset()
 	);
 }
 
+
+//============================================================================
 void AgisStrategyMap::__clear()
 {
 	this->strategies.clear();
@@ -431,6 +434,15 @@ void AgisStrategyMap::__build()
 	{
 		strategy.second->build();
 	}
+}
+
+
+//============================================================================
+void AgisStrategyMap::remove_strategy(std::string const& id)
+{
+	auto index = this->strategy_id_map.at(id);
+	this->strategies.erase(index);
+	this->strategy_id_map.erase(id);
 }
 
 
@@ -723,8 +735,11 @@ private:
 		
 	auto ev = this->exchange->get_exchange_view(
 		next_lambda, 
-		{EXCHANGE_QUERY_TYPE}
+		{EXCHANGE_QUERY_TYPE},
+		{N}
 	);
+
+	{EV_TRANSFORM}
 
 	this->strategy_allocate(
 		&ev,
@@ -739,6 +754,9 @@ private:
 	// Replace the exchange query type
 	pos = next_method.find("{EXCHANGE_QUERY_TYPE}");
 	next_method.replace(pos, 21, ev_query_type(ev_lambda_ref.query_type));
+
+	pos = next_method.find("{N}");
+	next_method.replace(pos, 3, std::to_string(ev_lambda_ref.N));
 
 	// Replace the lambda chain
 	pos = next_method.find("{LAMBDA_CHAIN}");
@@ -757,6 +775,7 @@ private:
 	pos = next_method.find("{ALLOC_TYPE}");
 	next_method.replace(pos, 12, alloc_to_str(strat_alloc_struct.alloc_type));
 
+	// Replace ev transform
 	auto target_leverage = std::to_string(strat_alloc_ref.target_leverage);
 	std::string ev_opp_str;
 	if (strat_alloc_ref.ev_opp_type == "UNIFORM")
@@ -767,7 +786,8 @@ private:
 		ev_opp_str = R"(ev.linear_increasing_weights({LEV});)";
 	pos = ev_opp_str.find("{LEV}");
 	ev_opp_str.replace(pos, 5, std::to_string(strat_alloc_struct.target_leverage));
-	next_method += ev_opp_str;
+	pos = next_method.find("{EV_TRANSFORM}");
+	next_method.replace(pos, 14, ev_opp_str);
 
 	std::string strategy_source = R"(
 // the following code is generated from an abstract strategy flow graph.

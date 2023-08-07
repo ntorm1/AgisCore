@@ -177,6 +177,12 @@ public:
 	/// </summary>
 	AGIS_API virtual void __reset();
 
+	/// <summary>
+	/// Set wether or not the strategy is currently running
+	/// </summary>
+	/// <returns></returns>
+	AGIS_API inline void set_is_live(bool _is_live) { this->is_live = _is_live; };
+
 	AGIS_API inline static void __reset_counter() { strategy_counter.store(0); }
 
 	/// <summary>
@@ -344,6 +350,7 @@ private:
 	double starting_cash = 0;
 	double portfolio_allocation = 0;
 
+	bool is_live = true;
 	bool is_subsribed = false; 
 	std::string exchange_subsrciption;
 	/// <summary>
@@ -368,7 +375,8 @@ class AgisStrategyMap
 public:
 	AgisStrategyMap() = default;
 
-	void register_strategy(AgisStrategyPtr strategy);
+	AGIS_API void remove_strategy(std::string const& id);
+	AGIS_API void register_strategy(AgisStrategyPtr strategy);
 	const AgisStrategyRef get_strategy(std::string strategy_id);
 	std::unordered_map<size_t, AgisStrategyPtr>& __get_strategies() { return this->strategies; }
 	

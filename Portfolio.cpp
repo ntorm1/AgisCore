@@ -355,6 +355,9 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
         {
             this->modify_position(order);
         }
+        else if (order->force_close) {
+            this->close_position(order);
+        }
         else if (
             !position->__trade_exits(order->get_strategy_index()) ||
             position->__get_trade_count() > 1
@@ -362,10 +365,7 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
         {
             this->modify_position(order);
         }
-        else
-        {
-            this->close_position(order);
-        }
+        else this->close_position(order);
     }
     // adjust account levels
     auto amount = order->get_units() * order->get_average_price();
@@ -402,6 +402,7 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
         {
             auto order = position->generate_position_inverse();
             order->__set_state(OrderState::CHEAT);
+            order->__set_force_close(true);
             router.place_order(std::move(order));
         }
     }
@@ -521,6 +522,7 @@ void Portfolio::__on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t>
 
         auto order = position.value().get()->generate_position_inverse();
         order->__set_state(OrderState::CHEAT);
+        order->__set_force_close(true);
         router.place_order(std::move(order));
     }
 }

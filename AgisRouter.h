@@ -40,6 +40,5 @@ public:
 
     void __process();
 
-
     std::vector<OrderPtr> const& get_order_history() { return this->order_history; }
 };

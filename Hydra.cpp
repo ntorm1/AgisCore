@@ -105,6 +105,7 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
         this->strategies.get_strategy(id)
     );
     this->portfolios.__register_strategy(strat_ref);
+    this->is_built = false;
 }
 
 
@@ -137,6 +138,13 @@ AGIS_API NexusStatusCode Hydra::remove_portfolio(std::string portfolio_id_)
     }
     this->portfolios.__remove_portfolio(portfolio_id_);
     return NexusStatusCode::Ok;
+}
+
+
+//============================================================================
+AGIS_API void Hydra::remove_strategy(std::string const& strategy_id)
+{
+    this->strategies.remove_strategy(strategy_id);
 }
 
 

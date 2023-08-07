@@ -181,6 +181,13 @@ public:
 	/// <param name="portfolio_id_">Unique id of the portfolio to remove</param>
 	/// <returns></returns>
 	AGIS_API NexusStatusCode remove_portfolio(std::string portfolio_id_);
+
+	/// <summary>
+	/// Remove a strategy from the hydra instance
+	/// </summary>
+	/// <param name="strategy_id">Unique id of the strategy</param>
+	/// <returns></returns>
+	AGIS_API void remove_strategy(std::string const& strategy_id);
 	
 	/// <summary>
 	/// Get all asset id's currently registered to an exchange

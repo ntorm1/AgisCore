@@ -716,13 +716,28 @@ void ExchangeMap::__process_order(bool on_close, OrderPtr& order)
 
 
 //============================================================================
+inline std::tm localtime_xp(std::time_t& timer)
+{
+	std::tm bt{};
+#if defined(__unix__)
+	localtime_r(&timer, &bt);
+#elif defined(_MSC_VER)
+	localtime_s(&bt, &timer);
+#else
+	static std::mutex mtx;
+	std::lock_guard<std::mutex> lock(mtx);
+	bt = *std::localtime(&timer);
+#endif
+	return bt;
+}
+
+//============================================================================
 TimePoint ExchangeMap::epoch_to_tp(long long epoch)
 {
 	// Convert nanosecond epoch to std::chrono::time_point
-	struct tm epoch_time;
 	epoch /= 1e9;
 	time_t epoch_time_as_time_t = epoch;
-	memcpy(&epoch_time, localtime(&epoch_time_as_time_t), sizeof(struct tm));
+	struct tm epoch_time = localtime_xp(epoch_time_as_time_t);
 	return TimePoint{ epoch_time.tm_hour, epoch_time.tm_min };
 }
 

@@ -103,6 +103,8 @@ protected:
     std::optional<TradeExitPtr> exit = std::nullopt;
 
 public:
+    bool force_close = false;                   /// force an order to close out a position
+
     typedef std::shared_ptr<Order> order_sp_t;
 
     Order(OrderType order_type_,
@@ -115,7 +117,6 @@ public:
 
     [[nodiscard]] size_t get_order_id() const { return this->order_id; }
     [[nodiscard]] size_t get_asset_index() const { return this->asset_index; }
-    [[nodiscard]] size_t get_exchange_index() const { return this->strategy_index; }
     [[nodiscard]] size_t get_strategy_index() const { return this->strategy_index; }
     [[nodiscard]] size_t get_portfolio_index() const { return this->portfolio_index; }
     [[nodiscard]] OrderType get_order_type() const { return this->order_type; }
@@ -133,6 +134,7 @@ public:
     
     void set_order_create_time(long long t) { this->order_create_time = t; }
     void __set_state(OrderState state) { this->order_state = state; }
+    void __set_force_close(bool force_close_) { this->force_close = force_close_; }
 
     virtual void fill(double market_price, long long fill_time);
     virtual void cancel(long long cancel_time);
