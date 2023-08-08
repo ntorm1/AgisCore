@@ -244,6 +244,19 @@ void PortfolioMap::__remove_portfolio(std::string const& portfolio_id)
 
 
 //============================================================================
+void PortfolioMap::__remove_strategy(size_t strategy_id)
+{
+    for (auto& p : this->portfolios)
+    {
+        if (p.second->__strategy_exists(strategy_id))
+        {
+            p.second->__remove_strategy(strategy_id);
+        }
+    }
+}
+
+
+//============================================================================
 void PortfolioMap::__register_strategy(AgisStrategyRef strategy)
 {
     auto& portfolio = this->portfolios.at(strategy.get()->get_portfolio_index());
@@ -421,7 +434,6 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
     {
         strat.second.get()->__evaluate(on_close);
     }
-
 }
 
 
@@ -501,6 +513,21 @@ void Portfolio::__reset()
     this->trade_history.clear();
     this->nlv_history.clear();
     this->cash_history.clear();
+}
+
+
+//============================================================================
+void Portfolio::__remove_strategy(size_t index)
+{
+    auto it = std::find_if(strategy_ids.begin(), strategy_ids.end(),
+        [index](const auto& pair) {
+            return pair.second == index;
+        });
+    if (it != strategy_ids.end()) {
+        // If the value is found, erase the corresponding pair using the iterator
+        strategy_ids.erase(it);
+    }
+    this->strategies.erase(index);
 }
 
 

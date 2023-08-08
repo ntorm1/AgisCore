@@ -163,6 +163,8 @@ public:
     json to_json() const;
     void restore(json const& strategies);
     void __reset();
+    void __remove_strategy(size_t index);
+    inline bool __strategy_exists(size_t index) { return this->strategies.contains(index); }
     static void __reset_counter() { Portfolio::portfolio_counter = 0; }
     void __remember_order(OrderRef order);
     void __on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids);
@@ -246,7 +248,8 @@ public:
     void __on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids);
 
     void __register_portfolio(PortfolioPtr portfolio);
-    void __remove_portfolio(std::string const& portfolio);
+    void __remove_portfolio(std::string const& portfolio_id);
+    void __remove_strategy(size_t strategy_index);
     void __register_strategy(AgisStrategyRef strategy);
 
     PortfolioPtr const& __get_portfolio(std::string const& id);

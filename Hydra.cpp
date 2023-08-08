@@ -45,6 +45,7 @@ void Hydra::__step()
 AGIS_API void Hydra::__run()
 {
     if (!this->is_built) { this->build(); this->is_built = true; }
+    this->__reset();
 
     size_t step_count = this->exchanges.__get_dt_index().size();
     for (size_t i = 0; i < step_count; i++)
@@ -144,7 +145,9 @@ AGIS_API NexusStatusCode Hydra::remove_portfolio(std::string portfolio_id_)
 //============================================================================
 AGIS_API void Hydra::remove_strategy(std::string const& strategy_id)
 {
-    this->strategies.remove_strategy(strategy_id);
+    auto index = this->strategies.__get_strategy_index(strategy_id);
+    this->strategies.__remove_strategy(strategy_id);
+    this->portfolios.__remove_strategy(index);
 }
 
 
@@ -236,12 +239,17 @@ void Hydra::restore(json const& j)
         for (const auto& strategy_json : strategies)
         {
             std::string strategy_id = strategy_json["strategy_id"];
+            std::string trading_window = strategy_json["trading_window"];
+
             double allocation = strategy_json["allocation"];
             auto strategy = std::make_unique<AbstractAgisStrategy>(
                 portfolio,
                 strategy_id,
                 allocation
             );
+
+            strategy->set_trading_window(trading_window).unwrap();
+
             this->register_strategy(std::move(strategy));
         }
     }

@@ -79,3 +79,6 @@ private:
     } catch (const std::exception& e) { \
         throw AgisException(std::string(__FILE__) + ":" + std::to_string(__LINE__) + " - " + e.what()); \
     }
+
+#define AGIS_UNWRAP(result, variable_name) \
+    T variable_name = result.unwrap(false)

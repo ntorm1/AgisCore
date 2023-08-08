@@ -259,10 +259,25 @@ public:
 		std::pair<TimePoint, TimePoint> const> w) {this->trading_window = w;}
 
 	/// <summary>
+	/// Set the trading window from prefined string 
+	/// </summary>
+	/// <param name="window_name"></param>
+	AgisResult<bool> set_trading_window(std::string const& window_name);
+
+
+	inline std::optional<TradingWindow> get_trading_window() { return this->trading_window; };
+
+	/// <summary>
 	/// Find out if the class is and Abstract Agis Class
 	/// </summary>
 	/// <returns></returns>
 	bool __is_abstract_class() const { return this->abstract_class; }
+
+	/// <summary>
+	/// Find out if the strategy is currently live in the hydra instance. Used for stepping and compiliing
+	/// Only a strategy that is live will have code gen run. Else it will recompile what is in it.
+	/// </summary>
+	AGIS_API bool __is_live() const { return this->is_live; }
 
 protected:
 	bool abstract_class = false;
@@ -316,6 +331,11 @@ protected:
 		AllocType alloc_type = AllocType::UNITS
 	);
 
+	/// <summary>
+	/// Valid window in which the strategy next function is called
+	/// </summary>
+	std::optional<std::pair<TimePoint, TimePoint>> trading_window = std::nullopt;
+
 
 private:
 	/// <summary>
@@ -358,7 +378,6 @@ private:
 	/// exchange stepped forward in time
 	/// </summary>
 	bool* __exchange_step = nullptr;
-	std::optional<std::pair<TimePoint, TimePoint>> trading_window = std::nullopt;
 
 
 	size_t strategy_index;
@@ -375,7 +394,8 @@ class AgisStrategyMap
 public:
 	AgisStrategyMap() = default;
 
-	AGIS_API void remove_strategy(std::string const& id);
+	AGIS_API void __remove_strategy(std::string const& id);
+	AGIS_API inline size_t __get_strategy_index(std::string const& id) { return this->strategy_id_map.at(id); }
 	AGIS_API void register_strategy(AgisStrategyPtr strategy);
 	const AgisStrategyRef get_strategy(std::string strategy_id);
 	std::unordered_map<size_t, AgisStrategyPtr>& __get_strategies() { return this->strategies; }
@@ -439,6 +459,7 @@ private:
 	size_t warmup = 0;
 };
 
+AGIS_API std::string trading_window_to_key_str(std::optional<TradingWindow> input_window_opt);
 AGIS_API void str_replace_all(std::string& source, const std::string& oldStr, const std::string& newStr);
 AGIS_API void code_gen_write(fs::path filename, std::string const& source);
 AGIS_API void agis_realloc(ExchangeView* allocation, double c);

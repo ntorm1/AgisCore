@@ -59,6 +59,11 @@ struct TimePoint {
 			return this->minute > rhs.minute;
 		return false;
 	}
+	bool operator==(TimePoint const& rhs) const {
+		if (this->hour == rhs.hour && this->minute == rhs.minute)
+			return true;
+		return false;
+	}
 };
 
 

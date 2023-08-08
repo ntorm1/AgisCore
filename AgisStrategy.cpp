@@ -82,6 +82,21 @@ std::unordered_map<std::string, TradingWindow> agis_trading_window_map = {
 };
 
 
+//============================================================================
+std::string trading_window_to_key_str(std::optional<TradingWindow> input_window_opt) {
+	if (!input_window_opt.has_value()) { return ""; }
+	auto input_window = input_window_opt.value();
+	for (const auto& entry : agis_trading_window_map) {
+		const TradingWindow& window = entry.second;
+		if (window.second == input_window.second)
+		{
+			return entry.first;
+		}
+	}
+	return ""; // Return an empty string if no match is found
+}
+
+
 TradingWindow us_equity_reg_hrs  = {
 	{9,30},
 	{16,0}
@@ -195,6 +210,7 @@ void AgisStrategy::to_json(json& j)
 {
 	j["strategy_id"] = this->strategy_id;
 	j["allocation"] = this->portfolio_allocation;
+	j["trading_window"] = trading_window_to_key_str(this->trading_window);
 }
 
 //============================================================================
@@ -213,6 +229,7 @@ bool AgisStrategy::__is_step()
 {
 	if (!this->is_live) { return false; }
 	if (!(*this->__exchange_step)) { return false; }
+	// TODO tw not found
 	if (this->trading_window.has_value())
 	{
 		auto& window = *this->trading_window;
@@ -336,6 +353,17 @@ AGIS_API void AgisStrategy::strategy_allocate(
 
 
 //============================================================================
+AgisResult<bool> AgisStrategy::set_trading_window(std::string const& window_name)
+{
+	if (!agis_trading_window_map.contains(window_name)) {
+		return AgisResult<bool>(AGIS_EXCEP("Invalid trading window: " + window_name));
+	}
+	TradingWindow window = agis_trading_window_map.at(window_name);
+	this->set_trading_window(window);
+	return  AgisResult<bool>(true);
+}
+
+//============================================================================
 void AgisStrategy::place_market_order(
 	size_t asset_index_,
 	double units_,
@@ -363,7 +391,6 @@ void AgisStrategy::place_market_order(
 }
 
 
-
 //============================================================================
 void AgisStrategyMap::register_strategy(AgisStrategyPtr strategy)
 {
@@ -377,6 +404,8 @@ void AgisStrategyMap::register_strategy(AgisStrategyPtr strategy)
 	);
 }
 
+
+//============================================================================
 const AgisStrategyRef AgisStrategyMap::get_strategy(std::string strategy_id)
 {
 	auto strategy_index = this->strategy_id_map.at(strategy_id);
@@ -438,7 +467,7 @@ void AgisStrategyMap::__build()
 
 
 //============================================================================
-void AgisStrategyMap::remove_strategy(std::string const& id)
+void AgisStrategyMap::__remove_strategy(std::string const& id)
 {
 	auto index = this->strategy_id_map.at(id);
 	this->strategies.erase(index);
@@ -624,6 +653,21 @@ void code_gen_write(fs::path filename, std::string const& source)
 	}
 }
 
+
+//============================================================================
+std::string trading_window_to_str(std::optional<TradingWindow> window_op) {
+	if (!window_op.has_value()) { return ""; }
+	std::ostringstream codeStream;
+	auto window = window_op.value();
+	codeStream << "TradingWindow(";
+	codeStream << "std::make_pair(TimePoint{" << window.first.hour << ", " << window.first.minute << "}, ";
+	codeStream << "TimePoint{" << window.second.hour << ", " << window.second.minute << "})";
+	codeStream << ")";
+
+	return codeStream.str();
+}
+
+
 //============================================================================
 void AbstractAgisStrategy::code_gen(fs::path strat_folder)
 {
@@ -674,6 +718,7 @@ private:
 	ExchangeViewOpp ev_opp_type = ExchangeViewOpp::{EV_OPP_TYPE};
 	ExchangePtr exchange = nullptr;
 	size_t warmup = {WARMUP};
+	std::optional<std::pair<TimePoint, TimePoint>> trading_window = {TRADING_WINDOW};
 };
 )";
 
@@ -688,6 +733,15 @@ private:
 	// Replace the warmup 
 	pos = strategy_header.find("{WARMUP}");
 	strategy_header.replace(pos, 8, std::to_string(warmup));
+
+	// Replace the trading_window
+	pos = strategy_header.find("{TRADING_WINDOW}");
+	if (this->trading_window.has_value()) {
+		strategy_header.replace(pos, 16, trading_window_to_str(this->trading_window.value()));
+	}
+	else {
+		strategy_header.replace(pos, 15, "std::nullopt");
+	}
 
 	// Replace strategy class name
 	std::string place_holder = "{STRATEGY_ID}";
