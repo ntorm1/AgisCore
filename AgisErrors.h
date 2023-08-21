@@ -53,7 +53,8 @@ public:
 
     AGIS_API inline T unwrap(bool panic = true)
     {
-        if (!this->is_exception()) {
+        if (!this->is_exception()) 
+        {
             return std::get<T>(this->value);
         }
         if (panic)
@@ -61,6 +62,18 @@ public:
             throw std::get<AgisException>(this->value);
         }
         return T();
+    }
+
+    AGIS_API inline T unwrap_or(T val)
+    {
+        if (!this->is_exception()) 
+        {
+            return std::get<T>(this->value);
+        }
+        else
+        {
+            return val;
+        }
     }
 
 private:

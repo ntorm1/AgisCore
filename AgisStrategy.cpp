@@ -229,7 +229,6 @@ bool AgisStrategy::__is_step()
 {
 	if (!this->is_live) { return false; }
 	if (!(*this->__exchange_step)) { return false; }
-	// TODO tw not found
 	if (this->trading_window.has_value())
 	{
 		auto& window = *this->trading_window;

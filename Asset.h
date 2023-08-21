@@ -10,14 +10,25 @@
 #include <filesystem>
 #include <unordered_map>
 
-#include <arrow/api.h>
+#define ARROW_API_H
+#define H5_HAVE_H5CPP
+#ifdef H5_HAVE_H5CPP
 #include <H5Cpp.h>
+#endif
+
+#ifdef ARROW_API_H
+#include <arrow/api.h>
+#endif
 
 #include "Utils.h"
 #include "AgisErrors.h"
 #include "AgisPointers.h"
 #include "json.hpp"
 
+
+/// <summary>
+/// Enum for the data frequency of an asset. 
+/// </summary>
 enum class AGIS_API Frequency {
     Tick,    // Tick data
     Min1,    // 1 minute data
@@ -29,6 +40,9 @@ enum class AGIS_API Frequency {
     Day1,    // 1 day data
 };
 
+/// <summary>
+/// Serialization mapping for an asset's frequency
+/// </summary>
 NLOHMANN_JSON_SERIALIZE_ENUM(Frequency, {
     {Frequency::Tick, "Tick"},
     {Frequency::Min1, "Min1"},
@@ -44,9 +58,64 @@ class Asset;
 
 AGIS_API typedef std::shared_ptr<Asset> AssetPtr;
 
+
+/**
+*   @par Usage
+* 
+*   Asset's are created directly from files and can take the form of csv, hdf5, or parquet.
+*   For csv files, the data should like the following, note the string datetime index: 
+*   
+*   | Index                | Open   | Close |
+*   |----------------------|--------|-------|
+*   |     2019-01-01       |   10.10|10.12  |
+*   |     2019-01-02       |   12.2 |10.13  |
+*   |     2019-01-03       |    9.8 |10.14  |
+*   
+* 
+*   To create an asset from hdf5 data, you need to datasets. One for the nanosecond epoch index,
+*   and one for the actual data. Note the index should be an int64 nanosecond epoch index, not string.
+*   Use the following python code as an example to see how to format the .h5 file so that we can read it.
+*   
+*   @code{.py}
+*   _path = os.path.join(path, "hdf5", "data.h5")
+*   with h5py.File(_path, "a") as file:
+*       # Convert the DataFrame to a NumPy array
+*       cols = ["open","high","low","close","volume"]
+*       data = df_mid[cols].to_numpy()
+
+*       # Create a new dataset and save the data
+*       file.create_dataset(f"{ticker}/datetime", data=df_mid["ts_event"].to_numpy())
+*       dataset = file.create_dataset(f"{ticker}/data", data=data)
+*
+*       # Store column names as attributes
+*       for col_name in cols:
+*           dataset.attrs[col_name] = col_name
+*   @endcode
+* 
+*   Assets should not be created directly but should instead be created by restoring 
+*   an exchange. That being said, if you want to create a new asset and load data you can 
+*   do the following to create an asset instance and load the data. Note the the file extension
+*   will automatically detect how to load the data, if it is invalid extension then you will get
+*   an error return code on the load:
+* 
+*   @code
+*   auto asset = std::make_shared<Asset>("asset_id", "exchange_id");
+*   auto status = asset->load("C:/user/data/spy_daily/aapl.csv", "%Y-%m-%d");
+*   @endcode
+* 
+*/
 class  Asset
 {
-public: 
+public:
+    /// <summary>
+    /// Asset constructor
+    /// </summary>
+    /// <param name="asset_id">unique id of the asset</param>
+    /// <param name="exchange_id">id of the exchange the asset is placed on</param>
+    /// <param name="warmup">number of rows of to skip before asset is visiable</param>
+    /// <param name="freq">the frequency of the asset's data</param>
+    /// <param name="time_zone">the time zone of the asset</param>
+    /// <returns></returns>
     AGIS_API Asset(
         std::string asset_id,
         std::string exchange_id,
@@ -56,18 +125,35 @@ public:
     );
     AGIS_API ~Asset();
 
+    /// <summary>
+    /// Load in a asset's data from a filepath. Supported types: csv, Parquet, HDF5.
+    /// </summary>
+    /// <param name="source">the file path of the data source</param>
+    /// <param name="dt_fmt">the format of the datetime index</param>
+    /// <param name="window">a range of valid times to load, in the form of seconds since midnight</param>
+    /// <returns></returns>
     AGIS_API NexusStatusCode load(
         std::string source,
         std::string dt_fmt,
         std::optional<std::pair<long long, long long>> window = std::nullopt
     );
-
+    
+#ifdef H5_HAVE_H5CPP
+    /// <summary>
+    /// Load a asset data from an H5 dataset and datetime index.
+    /// </summary>
+    /// <param name="dataset">H5 dataset for the asset data</param>
+    /// <param name="dataspace">H5 dataspace for the asset data matrix</param>
+    /// <param name="datasetIndex">H5 dataset for the asset index</param>
+    /// <param name="dataspaceIndex">H5 dataspace for the asset index</param>
+    /// <returns></returns>
     AGIS_API NexusStatusCode load(
         H5::DataSet& dataset,
         H5::DataSpace& dataspace,
         H5::DataSet& datasetIndex,
         H5::DataSpace& dataspaceIndex
     );
+#endif
 
 
     AGIS_API inline  std::string get_asset_id() const { return this->asset_id; }

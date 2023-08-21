@@ -3,13 +3,15 @@
 #include <fstream>
 #include <algorithm>
 
+#include "Asset.h"
+
+#ifdef ARROW_API_H
+#include <arrow/api.h>
 #include <arrow/io/file.h>
 #include <arrow/ipc/api.h>
 #include <parquet/arrow/reader.h>
 #include <arrow/filesystem/localfs.h>
-
-#include "Asset.h"
-
+#endif
 
 //============================================================================
 Asset::Asset(
@@ -95,6 +97,7 @@ NexusStatusCode Asset::load(
     return res;
 }
 
+#ifdef H5_HAVE_H5CPP
 AGIS_API NexusStatusCode Asset::load(
     H5::DataSet& dataset,
     H5::DataSpace& dataspace,
@@ -160,7 +163,7 @@ AGIS_API NexusStatusCode Asset::load(
 
     return NexusStatusCode::Ok;
 }
-
+#endif
 
 //============================================================================
 NexusStatusCode Asset::load_headers()
@@ -263,6 +266,7 @@ NexusStatusCode Asset::load_csv()
 
 
 //============================================================================
+#ifdef ARROW_API_H
 const arrow::Status Asset::load_parquet()
 {
     arrow::SetCpuThreadPoolCapacity(1);
@@ -345,7 +349,7 @@ const arrow::Status Asset::load_parquet()
 
     return arrow::Status::OK();
 }
-
+#endif
 
 //============================================================================
 StridedPointer<double> const Asset::__get_column(std::string const& column_name) const
