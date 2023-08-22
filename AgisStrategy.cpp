@@ -227,8 +227,13 @@ void AgisStrategy::exchange_subscribe(std::string const& exchange_id)
 //============================================================================
 bool AgisStrategy::__is_step()
 {
+	// allow for manual disable of a strategy
 	if (!this->is_live) { return false; }
-	if (!(*this->__exchange_step)) { return false; }
+
+	// check to see if the strategy has subsribed to an exchange and if the exchange took step
+	if (!this->__exchange_step || !(*this->__exchange_step)) { return false; }
+
+	// check to see if strategy is within it's trading window
 	if (this->trading_window.has_value())
 	{
 		auto& window = *this->trading_window;
@@ -266,14 +271,14 @@ AGIS_API ExchangePtr const AgisStrategy::get_exchange(std::string const& id) con
 
 //============================================================================
 AGIS_API void AgisStrategy::strategy_allocate(
-	ExchangeView const* exchange_view,
+	ExchangeView const& exchange_view,
 	double epsilon,
 	bool clear_missing,
 	std::optional<TradeExitPtr> exit,
 	AllocType alloc_type)
 {
 	auto position_ids = this->portfolio->get_strategy_positions(this->strategy_index);
-	auto& allocation = exchange_view->view;
+	auto& allocation = exchange_view.view;
 
 	// if clear_missing, clear and trades with asset index not in the allocation
 	if (clear_missing)
@@ -560,7 +565,7 @@ void AbstractAgisStrategy::next()
 		}
 	}
 	this->strategy_allocate(
-		&ev,
+		ev,
 		strat_alloc_ref.epsilon,
 		strat_alloc_ref.clear_missing,
 		std::nullopt,

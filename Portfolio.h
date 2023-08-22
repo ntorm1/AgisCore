@@ -24,7 +24,7 @@ struct Position;
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
 AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
 
-AGIS_API typedef std::unique_ptr<Portfolio> PortfolioPtr;
+AGIS_API typedef std::shared_ptr<Portfolio> PortfolioPtr;
 AGIS_API typedef std::reference_wrapper<const PortfolioPtr> PortfolioRef;
 AGIS_API typedef std::unique_ptr<Position> PositionPtr;
 AGIS_API typedef std::reference_wrapper<const PositionPtr> PositionRef;
@@ -93,7 +93,7 @@ private:
 class Portfolio
 {
 public:
-	Portfolio(std::string portfolio_id, double cash);
+    AGIS_API Portfolio(std::string const& portfolio_id, double cash);
 
 	/// <summary>
 	/// Function called from the order router when an order placed to this portfolio is filled
@@ -252,8 +252,8 @@ public:
     void __remove_strategy(size_t strategy_index);
     void __register_strategy(AgisStrategyRef strategy);
 
-    PortfolioPtr const& __get_portfolio(std::string const& id);
-    PortfolioPtr const& __get_portfolio(size_t index) { return this->portfolios.at(index); };
+    PortfolioPtr const __get_portfolio(std::string const& id);
+    PortfolioPtr const __get_portfolio(size_t index) { return this->portfolios.at(index); };
     bool __portfolio_exists(std::string const& id) const { return this->portfolio_map.count(id) > 0; }
 
     AGIS_API PortfolioRef get_portfolio(std::string const& id);

@@ -125,7 +125,7 @@ public:
 	AgisStrategy() = default;
 	AgisStrategy(
 		std::string id, 
-		PortfolioPtr const& portfolio_,
+		PortfolioPtr const portfolio_,
 		double portfolio_allocation
 	): portfolio(portfolio_) 
 	{
@@ -252,6 +252,13 @@ public:
 	std::string get_portfolio_id() { return this->portfolio->__get_portfolio_id(); }
 
 	/// <summary>
+	/// Get an exchange ptr by unique id 
+	/// </summary>
+	/// <param name="id">unique id of the exchange to get</param>
+	/// <returns>Shared pointer to the exchange</returns>
+	AGIS_API ExchangePtr const get_exchange(std::string const& id) const;
+
+	/// <summary>
 	/// Set the window in which a strategy can trade. Endpoints are included
 	/// </summary>
 	/// <param name="w"></param>
@@ -263,7 +270,6 @@ public:
 	/// </summary>
 	/// <param name="window_name"></param>
 	AgisResult<bool> set_trading_window(std::string const& window_name);
-
 
 	inline std::optional<TradingWindow> get_trading_window() { return this->trading_window; };
 
@@ -308,13 +314,6 @@ protected:
 	AGIS_API std::optional<TradeRef> get_trade(std::string const& asset_id);
 
 	/// <summary>
-	/// Get an exchange ptr by unique id 
-	/// </summary>
-	/// <param name="id">unique id of the exchange to get</param>
-	/// <returns></returns>
-	AGIS_API ExchangePtr const get_exchange(std::string const& id) const;
-
-	/// <summary>
 	/// Allocate a strategie's portfolio give a vector of pairs of <asset index, allocation>
 	/// </summary>
 	/// <param name="allocation">A vector of pairs representing the allocaitons</param>
@@ -324,7 +323,7 @@ protected:
 	/// <param name="alloc_type">Type of allocation represented</param>
 	/// <returns></returns>
 	AGIS_API void strategy_allocate(
-		ExchangeView const* allocation,
+		ExchangeView const& allocation,
 		double epsilon,
 		bool clear_missing = true,
 		std::optional<TradeExitPtr> exit = std::nullopt,
@@ -351,7 +350,7 @@ private:
 	/// <summary>
 	///	Parent portfolio of the Agis Strategy
 	/// </summary>
-	PortfolioPtr const& portfolio;
+	PortfolioPtr const portfolio;
 	
 	/// <summary>
 	/// Pointer to the main exchange map object

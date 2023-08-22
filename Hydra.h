@@ -156,7 +156,7 @@ public:
 	/// </summary>
 	/// <param name="portfolio_id">unique id of the portfolio to get</param>
 	/// <returns></returns>
-	AGIS_API PortfolioPtr const& get_portfolio(std::string const& portfolio_id);
+	AGIS_API PortfolioPtr const get_portfolio(std::string const& portfolio_id);
 
 	/// <summary>
 	/// Get const ref to a AgisStrategy registered to the hydra instance

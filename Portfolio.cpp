@@ -265,7 +265,7 @@ void PortfolioMap::__register_strategy(AgisStrategyRef strategy)
 
 
 //============================================================================
-PortfolioPtr const& PortfolioMap::__get_portfolio(std::string const& id)
+PortfolioPtr const PortfolioMap::__get_portfolio(std::string const& id)
 {
     auto portfolio_index = this->portfolio_map.at(id);
     return this->portfolios.at(portfolio_index);
@@ -341,7 +341,7 @@ AGIS_API json PortfolioMap::to_json() const
 
 
 //============================================================================
-Portfolio::Portfolio(std::string portfolio_id_, double cash_)
+Portfolio::Portfolio(std::string const & portfolio_id_, double cash_)
 {
     this->portfolio_id = portfolio_id_;
     this->cash = cash_;

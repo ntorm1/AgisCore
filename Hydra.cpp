@@ -111,7 +111,7 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
 
 
 //============================================================================
-AGIS_API PortfolioPtr const& Hydra::get_portfolio(std::string const& portfolio_id)
+AGIS_API PortfolioPtr const Hydra::get_portfolio(std::string const& portfolio_id)
 {
     return this->portfolios.__get_portfolio(portfolio_id);
 }
