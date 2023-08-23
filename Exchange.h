@@ -360,6 +360,7 @@ struct ExchangeView
 		if (type == "UNIFORM") this->uniform_weights(c);
 		else if (type == "LINEAR_DECREASE") this->linear_decreasing_weights(c);
 		else if (type == "LINEAR_INCREASE") this->linear_increasing_weights(c);
+		else AGIS_THROW("invalid weight function name");
 	};
 
 	void uniform_weights(double c)

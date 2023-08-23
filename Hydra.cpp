@@ -242,15 +242,18 @@ void Hydra::restore(json const& j)
             std::string trading_window = strategy_json["trading_window"];
 
             double allocation = strategy_json["allocation"];
-            auto strategy = std::make_unique<AbstractAgisStrategy>(
-                portfolio,
-                strategy_id,
-                allocation
-            );
+            AgisStrategyType strategy_type = strategy_json["strategy_type"];
 
-            strategy->set_trading_window(trading_window).unwrap();
-
-            this->register_strategy(std::move(strategy));
+            if (strategy_type == AgisStrategyType::FLOW)
+            {
+                auto strategy = std::make_unique<AbstractAgisStrategy>(
+                    portfolio,
+                    strategy_id,
+                    allocation
+                );
+                strategy->set_trading_window(trading_window).unwrap();
+                this->register_strategy(std::move(strategy));
+            }
         }
     }
 }

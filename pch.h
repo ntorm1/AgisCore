@@ -9,6 +9,10 @@
 #pragma warning(disable:4146)
 #pragma warning(disable:4251)
 
+#define ARROW_API_H
+#define H5_HAVE_H5CPP
+#define USE_TBB
+
 // add headers that you want to pre-compile here
 #include "framework.h"
 #include <memory>

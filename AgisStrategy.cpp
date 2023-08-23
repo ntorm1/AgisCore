@@ -102,6 +102,7 @@ TradingWindow us_equity_reg_hrs  = {
 	{16,0}
 };
 
+
 //============================================================================
 TradingWindow all_hrs  = {
 	{0,0},
@@ -209,6 +210,7 @@ void AgisStrategy::__evaluate(bool on_close)
 void AgisStrategy::to_json(json& j)
 {
 	j["strategy_id"] = this->strategy_id;
+	j["strategy_type"] = this->strategy_type;
 	j["allocation"] = this->portfolio_allocation;
 	j["trading_window"] = trading_window_to_key_str(this->trading_window);
 }
@@ -342,8 +344,7 @@ AGIS_API void AgisStrategy::strategy_allocate(
 
 		if (exit.has_value())
 		{
-			auto x_ptr = exit.value()->clone();
-			this->place_market_order(asset_index, size, std::move(x_ptr));
+			this->place_market_order(asset_index, size, exit.value());
 		}
 		else
 		{
@@ -359,6 +360,10 @@ AGIS_API void AgisStrategy::strategy_allocate(
 //============================================================================
 AgisResult<bool> AgisStrategy::set_trading_window(std::string const& window_name)
 {
+	if (window_name == "")
+	{
+		return AgisResult<bool>(true);
+	}
 	if (!agis_trading_window_map.contains(window_name)) {
 		return AgisResult<bool>(AGIS_EXCEP("Invalid trading window: " + window_name));
 	}
@@ -700,9 +705,10 @@ void AbstractAgisStrategy::code_gen(fs::path strat_folder)
 class {STRATEGY_ID}Class : public AgisStrategy {
 public:
 	AGIS_STRATEGY_API {STRATEGY_ID}Class (
-        PortfolioPtr const& portfolio_
+        PortfolioPtr const portfolio_
     ) : AgisStrategy("{STRATEGY_ID}Class", portfolio_, {ALLOC}) {
-		this->abstract_class = false;
+		this->strategy_type = AgisStrategyType::CPP;
+		this->trading_window = {TRADING_WINDOW};
 	};
 
     AGIS_STRATEGY_API inline static std::unique_ptr<AgisStrategy> create_instance(
@@ -722,7 +728,6 @@ private:
 	ExchangeViewOpp ev_opp_type = ExchangeViewOpp::{EV_OPP_TYPE};
 	ExchangePtr exchange = nullptr;
 	size_t warmup = {WARMUP};
-	std::optional<std::pair<TimePoint, TimePoint>> trading_window = {TRADING_WINDOW};
 };
 )";
 
@@ -744,7 +749,7 @@ private:
 		strategy_header.replace(pos, 16, trading_window_to_str(this->trading_window.value()));
 	}
 	else {
-		strategy_header.replace(pos, 15, "std::nullopt");
+		strategy_header.replace(pos, 16, "std::nullopt");
 	}
 
 	// Replace strategy class name
@@ -800,7 +805,7 @@ private:
 	{EV_TRANSFORM}
 
 	this->strategy_allocate(
-		&ev,
+		ev,
 		{EPSILON},
 		{CLEAR},
 		std::nullopt,

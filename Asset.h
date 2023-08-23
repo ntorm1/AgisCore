@@ -12,6 +12,7 @@
 
 #define ARROW_API_H
 #define H5_HAVE_H5CPP
+
 #ifdef H5_HAVE_H5CPP
 #include <H5Cpp.h>
 #endif

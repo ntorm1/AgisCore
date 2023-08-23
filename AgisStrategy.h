@@ -53,6 +53,21 @@ enum class AGIS_Function {
 	DIVIDE		// divide
 };
 
+
+enum class AGIS_API AgisStrategyType {
+	CPP,	// a c++ based strategy directly inheriting from AgisStrategy
+	FLOW,	// a flow strategy used by the Nexus Node Editor to create Abstract strategies
+	PY		// a python strategy tramploine off PyAgisStrategy from AgisCorePy
+};
+
+
+NLOHMANN_JSON_SERIALIZE_ENUM(AgisStrategyType, {
+	{AgisStrategyType::CPP, "CPP"},
+	{AgisStrategyType::FLOW, "FLOW"},
+	{AgisStrategyType::PY, "PY"},
+	})
+
+
 enum class AGIS_API AllocType
 {
 	UNITS,		// set strategy portfolio to have N units
@@ -183,6 +198,30 @@ public:
 	/// <returns></returns>
 	AGIS_API inline void set_is_live(bool _is_live) { this->is_live = _is_live; };
 
+	/// <summary>
+	/// Set the type of strategy, either c++, flow based (node editor), or py (pybind11)
+	/// </summary>
+	/// <param name="t">type of strategy</param>
+	/// <returns></returns>
+	AGIS_API inline void set_strategy_type(AgisStrategyType t) { this->strategy_type = t; }
+
+	/// <summary>
+	/// Allocate a strategie's portfolio give a vector of pairs of <asset index, allocation>
+	/// </summary>
+	/// <param name="allocation">A vector of pairs representing the allocaitons</param>
+	/// <param name="epsilon">Minimum % difference in units needed to trigger new order</param>
+	/// <param name="clear_missing">Clear existing positions not in the allocation</param>
+	/// <param name="exit">Optional trade exit pointer</param>
+	/// <param name="alloc_type">Type of allocation represented</param>
+	/// <returns></returns>
+	AGIS_API void strategy_allocate(
+		ExchangeView const& allocation,
+		double epsilon,
+		bool clear_missing = true,
+		std::optional<TradeExitPtr> exit = std::nullopt,
+		AllocType alloc_type = AllocType::UNITS
+	);
+
 	AGIS_API inline static void __reset_counter() { strategy_counter.store(0); }
 
 	/// <summary>
@@ -277,7 +316,7 @@ public:
 	/// Find out if the class is and Abstract Agis Class
 	/// </summary>
 	/// <returns></returns>
-	bool __is_abstract_class() const { return this->abstract_class; }
+	bool __is_abstract_class() const { return this->strategy_type == AgisStrategyType::FLOW; }
 
 	/// <summary>
 	/// Find out if the strategy is currently live in the hydra instance. Used for stepping and compiliing
@@ -286,7 +325,7 @@ public:
 	AGIS_API bool __is_live() const { return this->is_live; }
 
 protected:
-	bool abstract_class = false;
+	AgisStrategyType strategy_type = AgisStrategyType::CPP;
 
 	void AGIS_API place_market_order(
 		size_t asset_index,
@@ -312,23 +351,6 @@ protected:
 	/// <param name="asset_id">unique id of the asset to search for</param>
 	/// <returns></returns>
 	AGIS_API std::optional<TradeRef> get_trade(std::string const& asset_id);
-
-	/// <summary>
-	/// Allocate a strategie's portfolio give a vector of pairs of <asset index, allocation>
-	/// </summary>
-	/// <param name="allocation">A vector of pairs representing the allocaitons</param>
-	/// <param name="epsilon">Minimum % difference in units needed to trigger new order</param>
-	/// <param name="clear_missing">Clear existing positions not in the allocation</param>
-	/// <param name="exit">Optional trade exit pointer</param>
-	/// <param name="alloc_type">Type of allocation represented</param>
-	/// <returns></returns>
-	AGIS_API void strategy_allocate(
-		ExchangeView const& allocation,
-		double epsilon,
-		bool clear_missing = true,
-		std::optional<TradeExitPtr> exit = std::nullopt,
-		AllocType alloc_type = AllocType::UNITS
-	);
 
 	/// <summary>
 	/// Valid window in which the strategy next function is called
@@ -425,7 +447,7 @@ public:
 		std::string const& strategy_id,
 		double allocation
 	) : AgisStrategy(strategy_id, portfolio_, allocation) {
-		this->abstract_class = true;
+		this->strategy_type = AgisStrategyType::FLOW;
 	}
 
 	AGIS_API void next() override;
