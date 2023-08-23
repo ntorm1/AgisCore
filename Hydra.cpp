@@ -52,6 +52,7 @@ AGIS_API void Hydra::__run()
     {
         this->__step();
     }
+    auto x = 2;
 }
 
 
@@ -68,7 +69,7 @@ NexusStatusCode Hydra::new_exchange(
 
 
 //============================================================================
-AGIS_API PortfolioPtr const& Hydra::new_portfolio(std::string id, double cash)
+AGIS_API PortfolioPtr const Hydra::new_portfolio(std::string id, double cash)
 {
     if (this->portfolios.__portfolio_exists(id))
     {
@@ -240,6 +241,7 @@ void Hydra::restore(json const& j)
         {
             std::string strategy_id = strategy_json["strategy_id"];
             std::string trading_window = strategy_json["trading_window"];
+            bool is_live = strategy_json["is_live"];
 
             double allocation = strategy_json["allocation"];
             AgisStrategyType strategy_type = strategy_json["strategy_type"];

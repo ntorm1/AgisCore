@@ -363,6 +363,13 @@ NexusStatusCode Exchange::restore()
 
 
 
+bool Exchange::__is_valid_order(std::unique_ptr<Order>& order) const
+{
+	if (!this->assets[order->get_asset_index()]) return false;
+	if (order->get_order_type() != OrderType::MARKET_ORDER &&
+		!order->get_limit().has_value()) return false;
+}
+
 //============================================================================
 void Exchange::__place_order(std::unique_ptr<Order> order)
 {
@@ -383,7 +390,7 @@ void Exchange::__process_orders(AgisRouter& router, bool on_close)
 		auto& order = *orderIter;
 
 		// make sure it is a valid order
-		if (!this->assets[order->get_asset_index()])
+		if (!this->__is_valid_order(order))
 		{
 			order->reject(this->exchange_time);
 			router.place_order(std::move(*orderIter));
@@ -416,7 +423,7 @@ void Exchange::__process_order(bool on_close, OrderPtr& order) {
 		this->__process_market_order(order, on_close);
 		break;
 	case OrderType::LIMIT_ORDER:
-		break;
+		this->__process_limit_order(order, on_close);
 	case OrderType::STOP_LOSS_ORDER:
 		break;
 	case OrderType::TAKE_PROFIT_ORDER:
@@ -433,6 +440,28 @@ void Exchange::__process_market_order(std::unique_ptr<Order>& order, bool on_clo
 	auto market_price = this->__get_market_price(order->get_asset_index(), on_close);
 	if (market_price == 0.0f) return;
 	order->fill(market_price, this->exchange_time);
+}
+
+
+//============================================================================
+void Exchange::__process_limit_order(std::unique_ptr<Order>& order, bool on_close)
+{
+	// get the current market price
+	auto market_price = this->__get_market_price(order->get_asset_index(), on_close);
+	// if market price is 0 return	
+	if (market_price == 0.0f) return;
+	// if order is a buy order and the limit price is greater than the market price
+	// then fill the order
+	if (order->get_units() > 0 && order->get_limit().value() >= market_price)
+	{
+		order->fill(market_price, this->exchange_time);
+	}
+	// if order is a sell order and the limit price is less than the market price
+	// then fill the order
+	else if (order->get_units() < 0 && order->get_limit().value() <= market_price)
+	{
+		order->fill(market_price, this->exchange_time);
+	}
 }
 
 

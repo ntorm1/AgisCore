@@ -95,7 +95,8 @@ void Trade::evaluate(double market_price, bool on_close)
 
 
 OrderPtr Trade::generate_trade_inverse() {
-    return std::make_unique<MarketOrder>(
+    return std::make_unique<Order>(
+        OrderType::MARKET_ORDER,
         this->asset_id,
         -1 * this->units,
         this->strategy_id,

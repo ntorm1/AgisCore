@@ -155,7 +155,8 @@ void Position::adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vect
 //============================================================================
 OrderPtr Position::generate_position_inverse()
 {   
-    return std::make_unique<MarketOrder>(
+    return std::make_unique<Order>(
+        OrderType::MARKET_ORDER,
         this->asset_id,
         -1 * this->units,
         DEFAULT_STRAT_ID,
@@ -390,6 +391,7 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
 //============================================================================
 void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close)
 {
+    LOCK_GUARD
     this->nlv = this->cash;
     this->unrealized_pl = 0;
     ThreadSafeVector<OrderPtr> orders;
@@ -434,6 +436,7 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
     {
         strat.second.get()->__evaluate(on_close);
     }
+    UNLOCK_GUARD
 }
 
 
@@ -490,6 +493,7 @@ AGIS_API std::vector<std::string> Portfolio::get_strategy_ids() const
 //============================================================================
 AGIS_API void Portfolio::register_strategy(AgisStrategyRef strategy)
 {
+    LOCK_GUARD
     this->strategies.emplace(
         strategy.get()->get_strategy_index(),
         strategy
@@ -498,12 +502,14 @@ AGIS_API void Portfolio::register_strategy(AgisStrategyRef strategy)
         strategy.get()->get_strategy_id(),
         strategy.get()->get_strategy_index()
     );
+    UNLOCK_GUARD
 }
 
 
 //============================================================================
 void Portfolio::__reset()
 {
+    LOCK_GUARD
     this->nlv = this->starting_cash;
     this->cash = this->starting_cash;
     this->positions.clear();
@@ -513,12 +519,14 @@ void Portfolio::__reset()
     this->trade_history.clear();
     this->nlv_history.clear();
     this->cash_history.clear();
+    UNLOCK_GUARD
 }
 
 
 //============================================================================
 void Portfolio::__remove_strategy(size_t index)
 {
+    LOCK_GUARD
     auto it = std::find_if(strategy_ids.begin(), strategy_ids.end(),
         [index](const auto& pair) {
             return pair.second == index;
@@ -528,6 +536,7 @@ void Portfolio::__remove_strategy(size_t index)
         strategy_ids.erase(it);
     }
     this->strategies.erase(index);
+    UNLOCK_GUARD
 }
 
 

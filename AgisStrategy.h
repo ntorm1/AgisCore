@@ -337,6 +337,12 @@ protected:
 		double units,
 		std::optional<TradeExitPtr> exit = std::nullopt
 	);
+	void AGIS_API place_limit_order(
+		size_t asset_index,
+		double units,
+		double limit,
+		std::optional<TradeExitPtr> exit = std::nullopt
+	);
 
 	/// <summary>
 	/// Get current open position in a given asset by asset index

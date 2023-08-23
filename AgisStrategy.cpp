@@ -209,6 +209,7 @@ void AgisStrategy::__evaluate(bool on_close)
 //============================================================================
 void AgisStrategy::to_json(json& j)
 {
+	j["is_live"] = this->is_live;
 	j["strategy_id"] = this->strategy_id;
 	j["strategy_type"] = this->strategy_type;
 	j["allocation"] = this->portfolio_allocation;
@@ -378,13 +379,30 @@ void AgisStrategy::place_market_order(
 	double units_,
 	std::optional<TradeExitPtr> exit)
 {
-	this->router->place_order(std::make_unique<MarketOrder>(
+	this->router->place_order(std::make_unique<Order>(
+		OrderType::MARKET_ORDER,
 		asset_index_,
 		units_,
 		this->strategy_index,
 		this->get_portfolio_index(),
 		std::move(exit)
 	));
+}
+
+
+//============================================================================
+void AGIS_API AgisStrategy::place_limit_order(size_t asset_index_, double units_, double limit, std::optional<TradeExitPtr> exit)
+{
+	auto order = std::make_unique<Order>(
+		OrderType::LIMIT_ORDER,
+		asset_index_,
+		units_,
+		this->strategy_index,
+		this->get_portfolio_index(),
+		std::move(exit)
+	);
+	order->set_limit(limit);
+	this->router->place_order(std::move(order));
 }
 
 
@@ -398,6 +416,7 @@ void AgisStrategy::place_market_order(
 	auto asset_index = this->exchange_map->get_asset_index(asset_id);
 	this->place_market_order(asset_index, units, std::move(exit));
 }
+
 
 
 //============================================================================

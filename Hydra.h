@@ -123,7 +123,7 @@ public:
 	/// <param name="id">unique id of the portfolio</param>
 	/// <param name="cash">amount of cash held in the portfolio</param>
 	/// <returns></returns>
-	AGIS_API PortfolioPtr const& new_portfolio(std::string id, double cash);
+	AGIS_API PortfolioPtr const new_portfolio(std::string id, double cash);
 
 	/// <summary>
 	/// Register new strategy to hydra instance

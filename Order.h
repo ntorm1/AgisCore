@@ -87,6 +87,7 @@ protected:
 
     double units;       /// number of units in the order
     double avg_price;   /// average price the order was filled at
+    std::optional<double> limit = std::nullopt;       /// limit price of the order
 
     long long order_create_time;    /// time the order was created
     long long order_fill_time;      /// time hte order was filled
@@ -115,6 +116,7 @@ public:
         std::optional<TradeExitPtr> exit = std::nullopt
     );
 
+    [[nodiscard]] std::optional<double> get_limit() const { return this->limit; }
     [[nodiscard]] size_t get_order_id() const { return this->order_id; }
     [[nodiscard]] size_t get_asset_index() const { return this->asset_index; }
     [[nodiscard]] size_t get_strategy_index() const { return this->strategy_index; }
@@ -123,6 +125,7 @@ public:
     [[nodiscard]] OrderState get_order_state() const { return this->order_state; }
     [[nodiscard]] std::optional<TradeExitPtr> move_exit() { return std::move(this->exit); }
 
+    void set_limit(double limit_) { this->limit = limit_; }
     void set_create_time(long long t) { this->order_create_time = t; }
 
     [[nodiscard]] double get_average_price() const { return this->avg_price; }
@@ -136,22 +139,8 @@ public:
     void __set_state(OrderState state) { this->order_state = state; }
     void __set_force_close(bool force_close_) { this->force_close = force_close_; }
 
-    virtual void fill(double market_price, long long fill_time);
-    virtual void cancel(long long cancel_time);
-    virtual void reject(long long reject_time);
+    void fill(double market_price, long long fill_time);
+    void cancel(long long cancel_time);
+    void reject(long long reject_time);
 
 };
-
-
-class AGIS_API MarketOrder : public Order {
-public:
-
-    MarketOrder(size_t asset_index_,
-        double units_,
-        size_t strategy_index_,
-        size_t portfolio_index_,
-        std::optional<TradeExitPtr> exit = std::nullopt
-    );
-};
-
-

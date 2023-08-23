@@ -48,19 +48,3 @@ void Order::reject(long long reject_time)
     this->order_cancel_time = reject_time;
     this->order_state = OrderState::REJECTED;
 }
-
-MarketOrder::MarketOrder(
-    size_t asset_index_, 
-    double units_, 
-    size_t strategy_index_, 
-    size_t portfolio_index_,
-    std::optional<TradeExitPtr> exit_) :
-    Order(
-        OrderType::MARKET_ORDER, 
-        asset_index_, 
-        units_, 
-        strategy_index_, 
-        portfolio_index_,
-        std::move(exit_))
-{
-}
