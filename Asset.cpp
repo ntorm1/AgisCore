@@ -464,7 +464,7 @@ AGIS_API std::vector<std::string> Asset::get_column_names() const
 //============================================================================
 AgisResult<double> Asset::get_asset_feature(std::string const& col, int index) const
 {
-    if (index - 1 >= static_cast<int>(current_index)) 
+    if (abs(index) > static_cast<int>(current_index - 1) || index > 0) 
     {
         return AgisResult<double>(AGIS_EXCEP("Invalid row index: " + std::to_string(index)));
     }

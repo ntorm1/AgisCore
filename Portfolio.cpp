@@ -48,17 +48,17 @@ std::optional<TradeRef> Position::__get_trade(size_t strategy_index) const
 }
 
 //============================================================================
-void Position::__evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close)
+void Position::__evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close, bool is_reprice)
 {
     this->last_price = market_price;
     this->unrealized_pl = this->units*(market_price-this->average_price);
     this->nlv = market_price * this->units;
-    if (on_close) { this->bars_held++; }
+    if (on_close && !is_reprice) { this->bars_held++; }
 
     for (auto& trade_pair : this->trades) 
     {
         auto& trade = trade_pair.second;
-        trade->evaluate(market_price, on_close);
+        trade->evaluate(market_price, on_close, is_reprice);
 
         // test trade exit
         if (!trade->exit.has_value()) { continue; }
@@ -166,11 +166,11 @@ OrderPtr Position::generate_position_inverse()
 
 
 //============================================================================
-void PortfolioMap::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close)
+void PortfolioMap::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close, bool is_reprice)
 {
     // Define a lambda function that calls next for each strategy
     auto portfolio_evaluate = [&](auto& portfolio) {
-        portfolio.second->__evaluate(router, exchanges, on_close);
+        portfolio.second->__evaluate(router, exchanges, on_close, is_reprice);
     };
 
     std::for_each(
@@ -384,17 +384,31 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
     // adjust account levels
     auto amount = order->get_units() * order->get_average_price();
     this->cash -= amount;
+
+    // adjust the strategy's cash
+    AgisStrategyRef strategy = this->strategies.at(order->get_strategy_index());
+    strategy.get()->cash_adjust(-1*amount);
+
     UNLOCK_GUARD
 }
 
 
 //============================================================================
-void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close)
+void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close, bool is_reprice)
 {
     LOCK_GUARD
     this->nlv = this->cash;
     this->unrealized_pl = 0;
     ThreadSafeVector<OrderPtr> orders;
+
+    // set the strategy nlv equal to the strategies current cash amount 
+    for (auto& strategy : this->strategies)
+    {
+        auto cash = strategy.second.get()->get_cash();
+        strategy.second.get()->set_nlv(cash);
+    }
+
+    // evalute all open positions and their respective trades
     for (auto it = this->positions.begin(); it != positions.end(); ++it)
     {
         // attempt to get the current market price of the underlying asset of the position
@@ -408,9 +422,11 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
         
         // evaluate the indivual positions and allow for any orders that are generated
         // as a result of the new valuation
-        position->__evaluate(orders, market_price, on_close);
+        position->__evaluate(orders, market_price, on_close, is_reprice);
         this->nlv += position->nlv;
         this->unrealized_pl += position->unrealized_pl;
+
+        if (is_reprice) continue;
 
         // if asset expire next step clear from the portfolio
         if (!asset->__is_valid_next_time)
@@ -421,6 +437,13 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
             router.place_order(std::move(order));
         }
     }
+
+    if (is_reprice)
+    {
+        UNLOCK_GUARD
+        return;
+    }
+
     if (orders.size())
     {
         for (int i = 0; i < orders.size(); i++) {

@@ -143,7 +143,7 @@ public:
 	/// <param name="N">Number of assets to return</param>
 	/// <returns></returns>
 	AGIS_API ExchangeView get_exchange_view(
-		const std::function<double(std::shared_ptr<Asset> const&)>& func,
+		const std::function<AgisResult<double>(std::shared_ptr<Asset> const&)>& func,
 		ExchangeQueryType query_type = ExchangeQueryType::Default,
 		int N = -1,
 		bool panic = false,
@@ -277,7 +277,7 @@ public:
 	/// <returns>Does a asset with this id exist already</returns>
 	AGIS_API bool asset_exists(std::string const& asset_id) const;
 
-
+	AGIS_API bool exchange_exists(std::string const& id) const { return this->exchanges.count(id) > 0; };
 	AGIS_API std::vector<std::string> get_exchange_ids() const;
 	AGIS_API size_t get_candle_count() const { return this->candles; }
 	AGIS_API long long get_datetime() const;
@@ -344,8 +344,11 @@ enum class ExchangeViewOpp
 {
 	UNIFORM,
 	LINEAR_DECREASE,
-	LINEAR_INCREASE
+	LINEAR_INCREASE,
+	CONDITIONAL_SPLIT,
+	UNIFORM_SPLIT
 };
+AGIS_API extern std::vector<std::string> exchange_view_opps;
 
 AGIS_API std::string ev_opp_to_str(ExchangeViewOpp ev_opp);
 AGIS_API std::string ev_query_type(ExchangeQueryType ev_query);
@@ -384,22 +387,45 @@ struct ExchangeView
 		});
 	}
 	
-	void apply_weights(std::string const& type, double c) {
+	void apply_weights(
+		std::string const& type,
+		double c,
+		double x = 0)
+	{
 		if (type == "UNIFORM") this->uniform_weights(c);
 		else if (type == "LINEAR_DECREASE") this->linear_decreasing_weights(c);
 		else if (type == "LINEAR_INCREASE") this->linear_increasing_weights(c);
+		else if (type == "CONDITIONAL_SPLIT") this->conditional_split(c, x);
 		else AGIS_THROW("invalid weight function name");
 	};
 
 	/// <summary>
 	/// Apply a single weight to every value in the exchange view
 	/// </summary>
-	/// <param name="c"></param>
-	void uniform_weights(double c)
-	{
+	/// <param name="c">target leverage</param>
+	void uniform_weights(double c){
 		auto weight = c / static_cast<double>(view.size());
 		for (auto& pair : view) {
 			pair.second = weight;
+		}
+	}
+
+	/// <summary>
+	/// Apply a single weight to every value in the exchange view with the sign determined 
+	/// by wether the value is about the cutoff
+	/// </summary>
+	/// <param name="c"> target leverage</param>
+	/// <param name="cutoff">cutoff value</param>
+	void conditional_split(double c, double cutoff){
+		auto weight = c / static_cast<double>(view.size());
+		for (size_t i = 0; i < view.size(); ++i) {
+			// note the <= cutoff, this is to make sure that the cutoff value is included in the negative side
+			if(view[i].second <= cutoff) {
+				view[i].second = -weight;
+			}
+			else {
+				view[i].second = weight;
+			}
 		}
 	}
 

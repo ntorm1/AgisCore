@@ -52,7 +52,7 @@ struct AGIS_API Trade {
     void increase(OrderPtr const& filled_order);
     void reduce(OrderPtr const& filled_order);
     void adjust(OrderPtr const& filled_order);
-    void evaluate(double market_price, bool on_close);
+    void evaluate(double market_price, bool on_close, bool is_reprice = false);
 
     OrderPtr generate_trade_inverse();
 

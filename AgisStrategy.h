@@ -27,7 +27,7 @@ AGIS_API extern const AgisOperation agis_multiply;
 AGIS_API extern const AgisOperation agis_divide;
 AGIS_API std::string opp_to_str(const AgisOperation& func);
 
-AGIS_API typedef std::pair<AgisOperation, std::function<double(const std::shared_ptr<Asset>&)>> AssetLambda;
+AGIS_API typedef std::pair<AgisOperation, std::function<AgisResult<double>(const std::shared_ptr<Asset>&)>> AssetLambda;
 struct AGIS_API AssetLambdaScruct {
 	AssetLambda l;
 	std::string column;
@@ -92,10 +92,35 @@ extern AGIS_API std::unordered_map<std::string, TradingWindow> agis_trading_wind
 
 
 struct AGIS_API StrategyAllocLambdaStruct {
+	/// <summary>
+	/// The minimum % difference between target position size and current position size
+	/// needed to trigger a new order
+	/// </summary>
 	double epsilon;
+
+	/// <summary>
+	/// The targert portfolio leverage used to apply weights to the allocations
+	/// </summary>
 	double target_leverage;
+
+	/// <summary>
+	/// Optional extra param to pass to ev weight application function
+	/// </summary>
+	std::optional<double> ev_extra_opp = std::nullopt;
+
+	/// <summary>
+	/// Clear any positions that are currently open but not in the allocation
+	/// </summary>
 	bool clear_missing;
+
+	/// <summary>
+	/// Type of weights to apply to the exchange view
+	/// </summary>
 	std::string ev_opp_type;
+
+	/// <summary>
+	/// Type of allocation to use 
+	/// </summary>
 	AllocType alloc_type;
 };
 
@@ -124,10 +149,10 @@ AGIS_API typedef const std::function<AgisResult<double>(
 extern AGIS_API AssetFeatureLambda asset_feature_lambda;
 
 
-extern AGIS_API const std::function<double(
+extern AGIS_API const std::function<AgisResult<double>(
 	const std::shared_ptr<Asset>&,
 	const std::vector<AssetLambdaScruct>& operations)> asset_feature_lambda_chain;
-extern AGIS_API const std::function<double(
+extern AGIS_API const std::function<AgisResult<double>(
 	const std::shared_ptr<Asset>&,
 	const std::vector<AssetLambda>& operations)> concrete_lambda_chain;
 
@@ -185,7 +210,7 @@ public:
 	/// Subscribe to an exchange, next() will be called when that exchange steps
 	/// </summary>
 	/// <param name="exchange_id">Unique id of the exchange</param>
-	AGIS_API void exchange_subscribe(std::string const& exchange_id);
+	AGIS_API AgisResult<bool> exchange_subscribe(std::string const& exchange_id);
 
 	/// <summary>
 	/// Clear existing containers of all historical information
@@ -260,10 +285,12 @@ public:
 	
 	AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() const { return this->trade_history; }
 
+	void set_nlv(double nlv_) { this->nlv = nlv_; }
 	void nlv_adjust(double nlv_adjustment) { this->nlv += nlv_adjustment; };
 	void cash_adjust(double cash_adjustment) { this->cash += cash_adjustment; };
 	void unrealized_adjust(double unrealized_adjustment) { this->unrealized_pl += unrealized_adjustment; };
 	double get_nlv() { return this->nlv; }
+	double get_cash() { return this->cash; }
 	double get_allocation() { return this->portfolio_allocation; }
 
 	/// <summary>
@@ -462,7 +489,7 @@ public:
 
 	AGIS_API void build() override;
 
-	AGIS_API void extract_ev_lambda();
+	AGIS_API AgisResult<bool> extract_ev_lambda();
 
 	AGIS_API inline void set_abstract_ev_lambda(std::function<
 		std::optional<ExchangeViewLambdaStruct>
@@ -477,6 +504,7 @@ public:
 private:
 	AbstractExchangeViewLambda ev_lambda;
 	std::optional<ExchangeViewLambdaStruct> ev_lambda_struct = std::nullopt;
+	std::optional<double> ev_opp_param = std::nullopt;
 	ExchangeViewOpp ev_opp_type = ExchangeViewOpp::UNIFORM;
 
 	/// <summary>

@@ -22,7 +22,6 @@
 #include <atomic>
 #include <variant>
 #include <unordered_map>
- 
 #include "utils_gmp.h"
 
 typedef unsigned int uint;

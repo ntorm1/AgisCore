@@ -76,21 +76,21 @@ void Trade::adjust(OrderPtr const& filled_order)
 }
 
 
-void Trade::evaluate(double market_price, bool on_close)
+void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
 {
     // adjust the source strategy nlv and unrealized pl
     auto nlv_new = this->units * market_price;
     auto unrealized_pl_new = this->units*(market_price-this->average_price);
     
     auto& strat = this->strategy.get();
-    strat->nlv_adjust(nlv_new - this->nlv);
+    strat->nlv_adjust(nlv_new);
     strat->unrealized_adjust(unrealized_pl_new - this->unrealized_pl);
 
     this->nlv = nlv_new;
     this->unrealized_pl = unrealized_pl_new;
     this->last_price = market_price;
 
-    if (on_close) { this->bars_held++; }
+    if (on_close && !is_reprice) { this->bars_held++; }
 }
 
 

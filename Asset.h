@@ -9,6 +9,7 @@
 #include <string>
 #include <filesystem>
 #include <unordered_map>
+#include "AgisErrors.h"
 
 #define ARROW_API_H
 #define H5_HAVE_H5CPP
@@ -22,7 +23,6 @@
 #endif
 
 #include "Utils.h"
-#include "AgisErrors.h"
 #include "AgisPointers.h"
 #include "json.hpp"
 

@@ -25,6 +25,9 @@ void Hydra::__step()
     this->exchanges.step();
     auto& expired_index_list = this->exchanges.__get_expired_index_list();
     
+    // evaluate the portfolios at the current prices
+    this->portfolios.__evaluate(this->router, this->exchanges, true, true);
+
     // process strategy logic at end of each time step
     bool step = this->strategies.__next();
     if (step) { this->router.__process(); };

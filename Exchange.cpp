@@ -10,6 +10,10 @@
 
 
 std::atomic<size_t> Exchange::exchange_counter(0);
+std::vector<std::string> exchange_view_opps = {
+	"UNIFORM", "LINEAR_DECREASE", "LINEAR_INCREASE","CONDITIONAL_SPLIT","UNIFORM_SPLIT" 
+};
+
 
 //============================================================================
 Exchange::Exchange(
@@ -103,7 +107,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 
 //============================================================================
 AGIS_API ExchangeView Exchange::get_exchange_view(
-	const std::function<double(std::shared_ptr<Asset>const&)>& func,
+	const std::function<AgisResult<double>(std::shared_ptr<Asset>const&)>& func,
 	ExchangeQueryType query_type, 
 	int N,
 	bool panic,
@@ -112,20 +116,17 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 	auto number_assets = (N == -1) ? this->assets.size() : static_cast<size_t>(N);
 	ExchangeView exchange_view(this->exchange_index, number_assets);
 	auto& view = exchange_view.view;
-	for (auto& asset : this->assets)
+	for (auto const& asset : this->assets)
 	{
 		if (!asset) continue;								// asset not in view
 		if (!asset->__is_streaming) continue;				// asset is not streaming
-		if (asset->get_current_index() < warmup) continue;	// asset current index less than required warmup
-
-		double val;
-		try { val = func(asset); }
-		catch (const std::exception&e) {
-			if (panic) throw e;
+		AgisResult<double> val = func(asset);
+		if (val.is_exception()) {
+			if (panic) throw val.get_exception();
 			else continue;
 		}
 
-		view.push_back(std::make_pair(asset->get_asset_index(), val));
+		view.push_back(std::make_pair(asset->get_asset_index(), val.unwrap()));
 	}
 
 	exchange_view.sort(number_assets, query_type);
@@ -903,6 +904,7 @@ void ExchangeView::sort(size_t N, ExchangeQueryType sort_type)
 	if (view.size() <= N) { return; }
 	switch (sort_type) {
 		case(ExchangeQueryType::Default):
+			view.erase(view.begin() + N, view.end());
 			return;
 		case(ExchangeQueryType::NSmallest):
 			std::partial_sort(

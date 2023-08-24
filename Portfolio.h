@@ -67,7 +67,7 @@ struct Position
     /// <param name="orders">Reference to thread save vector of new orders to place</param>
     /// <param name="market_price">Current market price of the underlying asset</param>
     /// <param name="on_close">are we on close</param>
-    void __evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close);
+    void __evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close, bool is_reprice);
 
     void close(OrderPtr const& order, std::vector<std::shared_ptr<Trade>>& trade_history);
     void adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vector<SharedTradePtr>& trade_history);
@@ -110,8 +110,11 @@ public:
     /// <summary>
     /// Evaluate the portfolio using the current exchange map and assets
     /// </summary>
+    /// <param name="router">Reference to the order router</param>
     /// <param name="exchanges">Const ref to a Hydra's exchange map instance</param>
-    void __evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close);
+    /// <param name="on_close">Are we on close</param>
+    /// <param name="is_reprice">Is this a reprice, i.e. just evaluate the portfolio at current prices</param>
+    void __evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close, bool is_reprice = false);
 
     /// <summary>
     /// Get the unique id of the portfolio
@@ -239,7 +242,7 @@ class PortfolioMap
 public:
 	PortfolioMap() = default;
 
-    void __evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close);
+    void __evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close, bool is_reprice = false);
     void __clear();
     void __reset();
 

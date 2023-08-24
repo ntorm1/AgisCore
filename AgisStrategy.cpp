@@ -125,7 +125,7 @@ const std::function<AgisResult<double>(
 
 
 //============================================================================
-const std::function<double(
+const std::function<AgisResult<double>(
 	const std::shared_ptr<Asset>&,
 	const std::vector<AssetLambdaScruct>& operations)> asset_feature_lambda_chain = [](
 		const std::shared_ptr<Asset>& asset,
@@ -136,14 +136,15 @@ const std::function<double(
 	for (const auto& operation : operations) {
 		auto& lambda = operation.l;
 		const auto& op = lambda.first;
-		const auto& assetFeatureLambda = lambda.second;
-		result = op(result, assetFeatureLambda(asset));
+		AgisResult<double> val = lambda.second(asset);
+		if (val.is_exception()) return val;
+		result = op(result, val.unwrap());
 	}
-	return result;
+	return AgisResult<double>(result);
 };
 
 //============================================================================
-const std::function<double(
+const std::function<AgisResult<double>(
 	const std::shared_ptr<Asset>&,
 	const std::vector<AssetLambda>& operations)> concrete_lambda_chain = [](
 		const std::shared_ptr<Asset>& asset,
@@ -154,9 +155,11 @@ const std::function<double(
 	for (const auto& lambda : operations) {
 		const auto& op = lambda.first;
 		const auto& assetFeatureLambda = lambda.second;
-		result = op(result, assetFeatureLambda(asset));
+		AgisResult<double> val = lambda.second(asset);
+		if (val.is_exception()) return val;
+		result = op(result, val.unwrap());
 	}
-	return result;
+	return AgisResult<double>(result);
 };
 
 
@@ -217,13 +220,18 @@ void AgisStrategy::to_json(json& j)
 }
 
 //============================================================================
-void AgisStrategy::exchange_subscribe(std::string const& exchange_id)
+AgisResult<bool> AgisStrategy::exchange_subscribe(std::string const& exchange_id)
 {
+	if(!this->exchange_map->exchange_exists(exchange_id))
+	{
+		return AgisResult<bool>(AGIS_EXCEP("Invalid exchange id: " + exchange_id));
+	}
 	auto exchange = this->exchange_map->get_exchange(exchange_id);
 
 	this->exchange_subsrciption = exchange_id;
 	this->is_subsribed = true;
 	this->__exchange_step = &exchange->__took_step;
+	return AgisResult<bool>(true);
 }
 
 
@@ -492,7 +500,7 @@ AgisResult<bool> AgisStrategyMap::__build()
 			strategy.second->build();
 		}
 		catch (const std::exception& ex) {
-			return AgisResult<bool>(AgisException(std::string("C:\\Users\\natha\\OneDrive\\Desktop\\C++\\Nexus\\AgisCore\\AgisStrategy.cpp") + ":" + std::to_string(491) + " - " + std::string("Exception caught: ") + ex.what()));
+			return AgisResult<bool>(AgisException(AGIS_EXCEP(ex.what())));
 		}
 	}
 	return AgisResult<bool>(true);
@@ -593,6 +601,10 @@ void AbstractAgisStrategy::next()
 			ev.linear_decreasing_weights(strat_alloc_ref.target_leverage);
 			break;
 		}
+		case ExchangeViewOpp::CONDITIONAL_SPLIT: {
+			ev.conditional_split(strat_alloc_ref.target_leverage, this->ev_opp_param.value());
+			break;
+		}
 	}
 	this->strategy_allocate(
 		ev,
@@ -612,21 +624,28 @@ void AbstractAgisStrategy::build()
 	}
 
 	ExchangePtr exchange = ev_lambda_struct.value().exchange;
-	this->exchange_subscribe(exchange->get_exchange_id());
+	auto res = this->exchange_subscribe(exchange->get_exchange_id());
+	if (res.is_exception()) throw res.get_exception();
 
 	// set the strategy warmup period
 	this->warmup = this->ev_lambda_struct.value().warmup;
 }
 
-void AbstractAgisStrategy::extract_ev_lambda()
+
+//============================================================================
+AgisResult<bool> AbstractAgisStrategy::extract_ev_lambda()
 {
 	this->ev_lambda_struct = this->ev_lambda();
 
-	if (!this->ev_lambda_struct.has_value()) AGIS_THROW("missing ev lambda struct");
+	if (!this->ev_lambda_struct.has_value()) {
+		return AgisResult<bool>(AGIS_EXCEP("missing ev lambda struct"));
+	}
 
 	auto& ev_lambda_ref = *this->ev_lambda_struct;
 
-	if (!ev_lambda_ref.exchange) AGIS_THROW("missing exchange");
+	if (!ev_lambda_ref.exchange) {
+		return AgisResult<bool>(AGIS_EXCEP("missing exchange"));
+	}
 
 	// set ev alloc type
 	auto& strat_alloc_ref = *ev_lambda_ref.strat_alloc_struct;
@@ -636,6 +655,25 @@ void AbstractAgisStrategy::extract_ev_lambda()
 		this->ev_opp_type = ExchangeViewOpp::LINEAR_DECREASE;
 	else if (strat_alloc_ref.ev_opp_type == "LINEAR_INCREASE")
 		this->ev_opp_type = ExchangeViewOpp::LINEAR_INCREASE;
+	else if (strat_alloc_ref.ev_opp_type == "CONDITIONAL_SPLIT")
+		this->ev_opp_type = ExchangeViewOpp::CONDITIONAL_SPLIT;
+	else if (strat_alloc_ref.ev_opp_type == "UNIFORM_SPLIT")
+		this->ev_opp_type = ExchangeViewOpp::UNIFORM_SPLIT;
+	else AGIS_THROW("invalid exchange view opp type");
+
+	if (this->ev_opp_type == ExchangeViewOpp::CONDITIONAL_SPLIT)
+	{
+		std::optional<double> val = strat_alloc_ref.ev_extra_opp.value();
+		if (!val.has_value())
+		{
+			return AgisResult<bool>(AGIS_EXCEP("conditional split expected extrat ev parameters"));
+		}
+		else
+		{
+			this->ev_opp_param = val;
+		}
+	}
+	return AgisResult<bool>(true);
 }
 
 //============================================================================
