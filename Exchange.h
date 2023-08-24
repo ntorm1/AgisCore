@@ -256,6 +256,12 @@ public:
 	/// <returns></returns>
 	AGIS_API inline size_t get_asset_index(std::string const& id) const { return this->asset_map.at(id); }
 
+	/// <summary>
+	/// Get the unique id associated with an asset index
+	/// </summary>
+	/// <param name="index">index of the asset</param>
+	/// <returns>id of the asset</returns>
+	AGIS_API inline std::string get_asset_id(size_t index) const { return this->assets[index]->get_asset_id(); }
 
 	/// <summary>
 	/// Get a shared pointer to an existing exchange

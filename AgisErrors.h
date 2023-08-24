@@ -111,8 +111,22 @@ AgisResult<U> ExtractException(AgisResult<T>& result) {
         throw AgisException(std::string(__FILE__) + ":" + std::to_string(__LINE__) + " - " + e.what()); \
     }
 
-#define AGIS_UNWRAP(result, variable_name) \
-    T variable_name = result.unwrap(false)
+#define AGIS_TRY_RESULT(functionCall, AgisResultType) \
+    [&]() -> AgisResult<AgisResultType> { \
+        try { \
+            functionCall; \
+        } catch (const std::exception &ex) { \
+            return AgisResult<AgisResultType>(AGIS_EXCEP(std::string("Exception caught: ") + ex.what())); \
+        } \
+    }()
+
+#define AGIS_DO_OR_RETURN(functionCall, AgisResultType) \
+    do { \
+        AgisResult<AgisResultType> res = functionCall; \
+        if (res.is_exception()) { \
+            return res; \
+        } \
+    } while (false)
 
 #define AGIS_EXTRACT_OR_UNWRAP(result, NewType) \
     ((result).is_exception() ? \

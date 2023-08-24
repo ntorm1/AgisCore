@@ -72,7 +72,7 @@ public:
 	/// Build the hydra instance using the currently loaded objects
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API void build();
+	AGIS_API AgisResult<bool> build();
 	
 	/// <summary>
 	/// Reset the hydra instance to it's original state before any steps forward in time
@@ -97,7 +97,7 @@ public:
 	/// Run a complete Hydra simulation
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API void __run();
+	AGIS_API AgisResult<bool> __run();
 
 	AGIS_API void __run_to(long long datetime);
 

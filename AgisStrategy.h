@@ -430,7 +430,7 @@ public:
 	bool __next();
 	void __reset();
 	void __clear();
-	void __build();
+	AgisResult<bool> __build();
 
 	bool __strategy_exists(std::string const& id) const { return this->strategy_id_map.count(id) > 0; }
 

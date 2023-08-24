@@ -42,9 +42,13 @@ void Hydra::__step()
 
 
 //============================================================================
-AGIS_API void Hydra::__run()
+AGIS_API AgisResult<bool> Hydra::__run()
 {
-    if (!this->is_built) { this->build(); this->is_built = true; }
+    if (!this->is_built) 
+    {
+        AGIS_DO_OR_RETURN(this->build(), bool);
+        this->is_built = true; 
+    }
     this->__reset();
 
     size_t step_count = this->exchanges.__get_dt_index().size();
@@ -52,7 +56,7 @@ AGIS_API void Hydra::__run()
     {
         this->__step();
     }
-    auto x = 2;
+    return AgisResult<bool>(true);
 }
 
 
@@ -197,10 +201,11 @@ void Hydra::clear()
 
 
 //============================================================================
-AGIS_API void Hydra::build()
+AGIS_API AgisResult<bool> Hydra::build()
 {
     this->exchanges.__build();
-    this->strategies.__build();
+    AGIS_DO_OR_RETURN(this->strategies.__build(), bool);
+    return AgisResult<bool>(true);
 }
 
 

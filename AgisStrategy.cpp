@@ -484,12 +484,18 @@ void AgisStrategyMap::__clear()
 
 
 //============================================================================
-void AgisStrategyMap::__build()
+AgisResult<bool> AgisStrategyMap::__build()
 {
 	for (auto& strategy : this->strategies)
 	{
-		strategy.second->build();
+		try {
+			strategy.second->build();
+		}
+		catch (const std::exception& ex) {
+			return AgisResult<bool>(AgisException(std::string("C:\\Users\\natha\\OneDrive\\Desktop\\C++\\Nexus\\AgisCore\\AgisStrategy.cpp") + ":" + std::to_string(491) + " - " + std::string("Exception caught: ") + ex.what()));
+		}
 	}
+	return AgisResult<bool>(true);
 }
 
 
@@ -615,7 +621,12 @@ void AbstractAgisStrategy::build()
 void AbstractAgisStrategy::extract_ev_lambda()
 {
 	this->ev_lambda_struct = this->ev_lambda();
+
+	if (!this->ev_lambda_struct.has_value()) AGIS_THROW("missing ev lambda struct");
+
 	auto& ev_lambda_ref = *this->ev_lambda_struct;
+
+	if (!ev_lambda_ref.exchange) AGIS_THROW("missing exchange");
 
 	// set ev alloc type
 	auto& strat_alloc_ref = *ev_lambda_ref.strat_alloc_struct;
