@@ -76,9 +76,27 @@ public:
         }
     }
 
+    auto inline get_value(){return this->value;}
+    std::string inline get_exception(){
+        AgisException excep = std::get<AgisException>(this->value);
+        return excep.what();
+    }
+
 private:
     ValueType value;
 };
+
+
+template <typename T, typename U>
+AgisResult<U> ExtractException(AgisResult<T>& result) {
+    if (result.is_exception()) {
+        std::variant<T, AgisException> value = result->get_value();
+        AgisException excep = std::get<AgisException>(this->value);
+        return AgisResult<U>(excep.what());
+    }
+    return AgisResult<U>(result.unwrap(false));
+}
+
 
 #define AGIS_EXCEP(msg) \
     AgisException(std::string(__FILE__) + ":" + std::to_string(__LINE__) + " - " + msg)
@@ -95,3 +113,8 @@ private:
 
 #define AGIS_UNWRAP(result, variable_name) \
     T variable_name = result.unwrap(false)
+
+#define AGIS_EXTRACT_OR_UNWRAP(result, NewType) \
+    ((result).is_exception() ? \
+        return ExtractException<decltype(result)::ValueType, NewType>(result) : \
+        (result).unwrap(false))

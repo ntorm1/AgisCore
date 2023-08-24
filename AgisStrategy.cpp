@@ -280,14 +280,14 @@ AGIS_API void AgisStrategy::strategy_allocate(
 	std::optional<TradeExitPtr> exit,
 	AllocType alloc_type)
 {
-	auto position_ids = this->portfolio->get_strategy_positions(this->strategy_index);
+	auto trade_ids = this->portfolio->get_strategy_positions(this->strategy_index);
 	auto& allocation = exchange_view.view;
 
 	// if clear_missing, clear and trades with asset index not in the allocation
-	if (clear_missing)
+	if (clear_missing && trade_ids.size())
 	{
 		std::vector<size_t> results;
-		for (const auto& element : position_ids) {
+		for (const auto& element : trade_ids) {
 			auto it = std::find_if(allocation.begin(), allocation.end(),
 				[&element](const auto& pair) { return pair.first == element; });
 			if (it == allocation.end()) {
@@ -313,7 +313,6 @@ AGIS_API void AgisStrategy::strategy_allocate(
 		size_t asset_index = alloc.first;
 		double size = alloc.second;
 		auto trade_opt = this->get_trade(asset_index);
-
 		switch (alloc_type)
 		{
 			case AllocType::UNITS:
@@ -572,6 +571,7 @@ void AbstractAgisStrategy::next()
 			ev_lambda_ref.N
 		);
 	);
+
 	auto& strat_alloc_ref = *ev_lambda_ref.strat_alloc_struct;
 	switch (this->ev_opp_type)
 		{

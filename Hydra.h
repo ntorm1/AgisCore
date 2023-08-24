@@ -204,8 +204,9 @@ public:
 	AGIS_API std::optional<std::shared_ptr<Asset> const> get_asset(std::string const& asset_id) const;
 	
 
-	AGIS_API auto __get_dt_index() {return this->exchanges.__get_dt_index();}
 
+	AGIS_API auto __get_dt_index() {return this->exchanges.__get_dt_index();}
+	AGIS_API size_t get_candle_count() { return this->exchanges.get_candle_count(); };
 	AGIS_API bool asset_exists(std::string asset_id) const;
 	AGIS_API bool portfolio_exists(std::string const& portfolio_id) const;
 	AGIS_API bool strategy_exists(std::string const& strategy_id) const;

@@ -127,6 +127,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 
 		view.push_back(std::make_pair(asset->get_asset_index(), val));
 	}
+
 	exchange_view.sort(number_assets, query_type);
 	return exchange_view;
 }
@@ -330,6 +331,7 @@ AGIS_API NexusStatusCode Exchange::restore_h5()
 			datasetIndex,
 			dataspaceIndex
 		);
+		this->candles += asset->get_rows();
 	}
 	return NexusStatusCode::Ok;
 }
@@ -357,17 +359,23 @@ NexusStatusCode Exchange::restore()
 
 		this->assets.push_back(asset);
 		asset->load(file, this->dt_format);
+		this->candles += asset->get_rows();
 	}
 	return NexusStatusCode::Ok;
 }
 
 
-
+//============================================================================
 bool Exchange::__is_valid_order(std::unique_ptr<Order>& order) const
 {
 	if (!this->assets[order->get_asset_index()]) return false;
-	if (order->get_order_type() != OrderType::MARKET_ORDER &&
-		!order->get_limit().has_value()) return false;
+	if (order->get_order_type() != OrderType::MARKET_ORDER) {
+		if (!order->get_limit().has_value())
+		{
+			return false;
+		}
+	}
+	return true;
 }
 
 //============================================================================
@@ -544,8 +552,8 @@ NexusStatusCode ExchangeMap::new_exchange(
 		this->asset_map.emplace(asset->get_asset_id(), this->asset_counter);
 		this->asset_counter++;
 	}
+	this->candles += exchange->get_candle_count();
 	UNLOCK_GUARD
-
 	return NexusStatusCode::Ok;
 }
 

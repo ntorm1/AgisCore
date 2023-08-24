@@ -150,7 +150,7 @@ public:
 		size_t warmup = 0
 	);
 
-
+	AGIS_API size_t get_candle_count() { return this->candles; };
 	AGIS_API inline std::string get_exchange_id() const { return this->exchange_id; }
 	AGIS_API inline StridedPointer<long long> const __get_dt_index() const;
 	AGIS_API inline size_t const __get_size() const { return this->dt_index_size; }
@@ -191,7 +191,7 @@ private:
 	long long exchange_time;
 	size_t dt_index_size = 0;
 	size_t current_index = 0;
-	size_t warmup;
+	size_t warmup = 0;
 	size_t candles = 0;
 	bool is_built = false;
 };
@@ -273,7 +273,7 @@ public:
 
 
 	AGIS_API std::vector<std::string> get_exchange_ids() const;
-
+	AGIS_API size_t get_candle_count() const { return this->candles; }
 	AGIS_API long long get_datetime() const;
 	AGIS_API double __get_market_price(size_t asset_index, bool on_close) const;
 	AGIS_API double __get_market_price(std::string& asset_id, bool on_close) const;
@@ -285,7 +285,7 @@ public:
 	AGIS_API void __reset();
 	
 	/// <summary>
-	/// Convery a nanosecond epoch timestemp to Timpoint with hour and second for eastern tz
+	/// Convert a nanosecond epoch timestemp to Timpoint with hour and second for eastern tz
 	/// </summary>
 	/// <param name="epoch">Epoch to convert</param>
 	/// <returns></returns>
@@ -355,9 +355,28 @@ struct ExchangeView
 		this->view.reserve(count);
 	}
 
+	/// <summary>
+	/// Return the number of elements in the exchange view
+	/// </summary>
+	/// <returns></returns>
 	size_t size() const { return this->view.size(); }
+
+	/// <summary>
+	/// Take an exchange view, then sort and extract a subset of the view
+	/// </summary>
+	/// <param name="N">number of elements to retunr</param>
+	/// <param name="sort_type">type of sort to do</param>
 	void sort(size_t N, ExchangeQueryType sort_type);
 
+	/// <summary>
+	/// Take an exchange view, then sort the pairs based on the second element in the pair
+	/// </summary>
+	void sort_pairs() {
+		// sort the view based on the second argument in the pair
+		std::sort(this->view.begin(), this->view.end(), [](auto const& lhs, auto const& rhs) {
+			return lhs.second < rhs.second;
+		});
+	}
 	
 	void apply_weights(std::string const& type, double c) {
 		if (type == "UNIFORM") this->uniform_weights(c);
@@ -366,6 +385,10 @@ struct ExchangeView
 		else AGIS_THROW("invalid weight function name");
 	};
 
+	/// <summary>
+	/// Apply a single weight to every value in the exchange view
+	/// </summary>
+	/// <param name="c"></param>
 	void uniform_weights(double c)
 	{
 		auto weight = c / static_cast<double>(view.size());

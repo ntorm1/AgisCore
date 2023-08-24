@@ -400,13 +400,13 @@ private:
 	bool is_live = true;
 	bool is_subsribed = false; 
 	std::string exchange_subsrciption;
+
 	/// <summary>
 	/// Pointer to the exchange's step boolean telling us wether or not the subscribed 
 	/// exchange stepped forward in time
 	/// </summary>
 	bool* __exchange_step = nullptr;
-
-
+	
 	size_t strategy_index;
 	std::string strategy_id;
 
