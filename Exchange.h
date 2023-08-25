@@ -9,8 +9,6 @@
 #include <utility>
 #include <unordered_map>
 
-#include "json.hpp"
-
 #include "Asset.h"
 #include "Order.h"
 #include "AgisErrors.h"
@@ -261,7 +259,7 @@ public:
 	/// </summary>
 	/// <param name="index">index of the asset</param>
 	/// <returns>id of the asset</returns>
-	AGIS_API inline std::string get_asset_id(size_t index) const { return this->assets[index]->get_asset_id(); }
+	AGIS_API AgisResult<std::string> get_asset_id(size_t index) const;
 
 	/// <summary>
 	/// Get a shared pointer to an existing exchange

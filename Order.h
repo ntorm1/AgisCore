@@ -5,11 +5,13 @@
 #define AGIS_API __declspec(dllimport)
 #endif
 #include "pch.h"
-#include <string>
-#include "Trade.h"
+#include <string>   
 #include <atomic>
+#include "Trade.h"
+#include "Utils.h"
 
 class Order;
+class Hydra;
 
 AGIS_API typedef std::unique_ptr<Order> OrderPtr;
 AGIS_API typedef std::shared_ptr<Order> SharedOrderPtr;
@@ -29,6 +31,17 @@ enum class AGIS_API OrderType
 
 
 /// <summary>
+/// Serialization mapping for an order's type
+/// </summary>
+NLOHMANN_JSON_SERIALIZE_ENUM(OrderType, {
+    {OrderType::MARKET_ORDER, "MARKET_ORDER"},
+    {OrderType::LIMIT_ORDER, "LIMIT_ORDER"},
+    {OrderType::STOP_LOSS_ORDER, "STOP_LOSS_ORDER"},
+    {OrderType::TAKE_PROFIT_ORDER, "TAKE_PROFIT_ORDER"},
+    })
+
+
+/// <summary>
 /// brief An enumeration representing the current start of an order
 /// </summary>
 enum class AGIS_API OrderState
@@ -40,6 +53,19 @@ enum class AGIS_API OrderState
     REJECTED, /// order was rejected by the checker 
     CHEAT,    /// allows orders we know will fill to be filled and processed in single router call
 };
+
+
+/// <summary>
+/// Serialization mapping for an order's state
+/// </summary>
+NLOHMANN_JSON_SERIALIZE_ENUM(OrderState, {
+    {OrderState::PENDING, "PENDING"},
+    {OrderState::OPEN, "OPEN"},
+    {OrderState::FILLED, "FILLED"},
+    {OrderState::CANCELED, "CANCELED"},
+    {OrderState::REJECTED, "REJECTED"},
+    {OrderState::CHEAT, "CHEAT"},
+    })
 
 
 /// <summary>
@@ -78,32 +104,22 @@ enum class AGIS_API OrderParentType
 };
 
 
-/// <summary>
-/// List of column names used to serialize an order
-/// </summary>
-static std::vector<std::string> order_column_names = {
-"Order ID","Order Type","Order State","Units","Average Price","Limit",
-"Order Create Time", "Order Fill Time", "Order Cancel Time", "Asset ID",
-"Strategy ID","Portfolio ID"
-};
-
-
 class AGIS_API Order
 {
 protected: 
     static std::atomic<size_t> order_counter;
 
-    OrderType order_type;                       /// type of the order
-    OrderState order_state;                     /// state of the order
-    size_t order_id;                            /// unique id of the order
+    OrderType order_type;                           /// type of the order
+    OrderState order_state = OrderState::PENDING;   /// state of the order
+    size_t order_id;                                /// unique id of the order
 
-    double units;       /// number of units in the order
-    double avg_price;   /// average price the order was filled at
+    double units = 0;       /// number of units in the order
+    double avg_price = 0;   /// average price the order was filled at
     std::optional<double> limit = std::nullopt;       /// limit price of the order
 
-    long long order_create_time;    /// time the order was created
-    long long order_fill_time;      /// time hte order was filled
-    long long order_cancel_time;    /// time the order was canceled
+    long long order_create_time = 0;    /// time the order was created
+    long long order_fill_time = 0;      /// time hte order was filled
+    long long order_cancel_time = 0;    /// time the order was canceled
 
     size_t asset_index;             /// unique index of the asset
     size_t strategy_index;          /// unique id of the strategy that placed the order
@@ -155,5 +171,5 @@ public:
     void fill(double market_price, long long fill_time);
     void cancel(long long cancel_time);
     void reject(long long reject_time);
-
+    AgisResult<json> serialize(json& order, std::shared_ptr<Hydra> const hydra) const;
 };

@@ -36,22 +36,22 @@ public:
 };
 
 template <typename T>
-class AgisResult {
+class AGIS_API AgisResult {
 public:
     // Define the variant type with T and AgisException
     using ValueType = std::variant<T, AgisException>;
 
-    AGIS_API inline AgisResult(const ValueType& _value)
+    inline AgisResult(const ValueType& _value)
     {
         this->value = _value;
     }
 
-    AGIS_API inline bool is_exception()
+    inline bool is_exception()
     {
         return std::holds_alternative<AgisException>(this->value);
     }
 
-    AGIS_API inline T unwrap(bool panic = true)
+    inline T unwrap(bool panic = true)
     {
         if (!this->is_exception()) 
         {
@@ -64,7 +64,7 @@ public:
         return T();
     }
 
-    AGIS_API inline T unwrap_or(T val)
+    inline T unwrap_or(T val)
     {
         if (!this->is_exception()) 
         {
@@ -89,12 +89,16 @@ private:
 
 template <typename T, typename U>
 AgisResult<U> ExtractException(AgisResult<T>& result) {
-    if (result.is_exception()) {
-        std::variant<T, AgisException> value = result->get_value();
-        AgisException excep = std::get<AgisException>(this->value);
+    if (result.is_exception()) 
+    {
+        std::variant<T, AgisException> value = result.get_value();
+        AgisException excep = std::get<AgisException>(value);
         return AgisResult<U>(excep.what());
     }
-    return AgisResult<U>(result.unwrap(false));
+    else
+    {
+        throw std::runtime_error("Cannot extract exception from non-exception result");
+    }
 }
 
 
@@ -125,6 +129,17 @@ AgisResult<U> ExtractException(AgisResult<T>& result) {
         AgisResult<AgisResultType> res = functionCall; \
         if (res.is_exception()) { \
             return res;\
+        } \
+    } while (false)
+
+#define AGIS_ASSIGN_OR_RETURN(assignment, result, exceptionType, targetType) \
+    do { \
+        auto _result = (result); \
+        if (_result.is_exception()) { \
+            return ExtractException<exceptionType, targetType>(_result); \
+        } else { \
+            targetType _value = _result.unwrap(); \
+            assignment = _value; \
         } \
     } while (false)
 

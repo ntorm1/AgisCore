@@ -266,6 +266,8 @@ public:
     void __remove_strategy(size_t strategy_index);
     void __register_strategy(AgisStrategyRef strategy);
 
+    AgisResult<std::string> __get_portfolio_id(size_t const& index) const;
+    size_t const __get_portfolio_index(std::string const& id) const { return this->portfolio_map.at(id); }
     PortfolioPtr const __get_portfolio(std::string const& id);
     PortfolioPtr const __get_portfolio(size_t index) { return this->portfolios.at(index); };
     bool __portfolio_exists(std::string const& id) const { return this->portfolio_map.count(id) > 0; }

@@ -80,7 +80,8 @@ AgisResult<bool> Asset::load(
             dataset,
             dataspace,
             datasetIndex,
-            dataspaceIndex
+            dataspaceIndex,
+            this->dt_fmt
         ), bool);
         break;
     }
@@ -96,14 +97,19 @@ AgisResult<bool> Asset::load(
     return AgisResult<bool>(true);
 }
 
+
+//============================================================================
 #ifdef H5_HAVE_H5CPP
 AGIS_API AgisResult<bool> Asset::load(
     H5::DataSet& dataset,
     H5::DataSpace& dataspace,
     H5::DataSet& datasetIndex,
-    H5::DataSpace& dataspaceIndex
+    H5::DataSpace& dataspaceIndex,
+    std::string dt_fmt_
 )
 {
+    this->dt_fmt = dt_fmt_;
+
     // Get the number of attributes associated with the dataset
     int numAttrs = dataset.getNumAttrs();
     // Iterate through the attributes to find the column names
@@ -365,7 +371,7 @@ AGIS_API std::vector<std::string> Asset::__get_dt_index_str() const
     std::vector<std::string> dt_index_str;
     for (auto const& epoch : dt_index)
     {
-        dt_index_str.push_back(epoch_to_str(epoch, this->dt_fmt));
+        dt_index_str.push_back(epoch_to_str(epoch, this->dt_fmt).unwrap());
     }
     return dt_index_str;
 }

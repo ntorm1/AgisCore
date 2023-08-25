@@ -23,8 +23,11 @@
 #include <variant>
 #include <unordered_map>
 #include "utils_gmp.h"
-
+#include "json.hpp"
 typedef unsigned int uint;
+
+
+using json = nlohmann::json;
 
 
 constexpr auto DEFAULT_STRAT_ID = 0;

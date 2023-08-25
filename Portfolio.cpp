@@ -283,6 +283,26 @@ void PortfolioMap::__remove_strategy(size_t strategy_id)
 
 
 //============================================================================
+AgisResult<std::string> PortfolioMap::__get_portfolio_id(size_t const& index) const
+{
+    // find the strategy with the given index and return it's id
+    auto portfolio = std::find_if(
+        this->portfolio_map.begin(),
+        this->portfolio_map.end(),
+        [index](auto& portfolio) {
+            return portfolio.second == index;
+        }
+    );
+    // test to see if portfolio was found
+    if (portfolio == this->portfolio_map.end())
+    {
+            return AgisResult<std::string>(AGIS_EXCEP("failed to find strategy"));
+    }
+    // return the strategy id
+    return AgisResult<std::string>(portfolio->first);
+}
+
+//============================================================================
 void PortfolioMap::__register_strategy(AgisStrategyRef strategy)
 {
     auto& portfolio = this->portfolios.at(strategy.get()->get_portfolio_index());

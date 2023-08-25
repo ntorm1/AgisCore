@@ -449,6 +449,7 @@ public:
 	AgisStrategyMap() = default;
 
 	AGIS_API void __remove_strategy(std::string const& id);
+	AGIS_API AgisResult<std::string> __get_strategy_id(size_t index) const;
 	AGIS_API inline size_t __get_strategy_index(std::string const& id) { return this->strategy_id_map.at(id); }
 	AGIS_API void register_strategy(AgisStrategyPtr strategy);
 	const AgisStrategyRef get_strategy(std::string strategy_id);

@@ -38,25 +38,30 @@ long long str_to_epoch(
 
 
 //============================================================================
-std::string epoch_to_str(
+AgisResult<std::string> epoch_to_str(
     long long epochTime,
     const std::string& formatString)
 {
-    // Convert the epoch time from nanoseconds to seconds
-    std::chrono::nanoseconds duration(epochTime);
-    std::chrono::seconds epochSeconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
+    try {
+        // Convert the epoch time from nanoseconds to seconds
+        std::chrono::nanoseconds duration(epochTime);
+        std::chrono::seconds epochSeconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
 
-    // Convert the epoch time to std::time_t
-    std::time_t epoch = epochSeconds.count();
+        // Convert the epoch time to std::time_t
+        std::time_t epoch = epochSeconds.count();
 
-    // Convert std::time_t to std::tm
-    std::tm timeStruct;
-    gmtime_s(&timeStruct, &epoch); // Use gmtime_s for safer handling
+        // Convert std::time_t to std::tm
+        std::tm timeStruct;
+        gmtime_s(&timeStruct, &epoch); // Use gmtime_s for safer handling
 
-    // Format the time struct to a string
-    std::stringstream ss;
-    ss << std::put_time(&timeStruct, formatString.c_str());
-    return ss.str();
+        // Format the time struct to a string
+        std::stringstream ss;
+        ss << std::put_time(&timeStruct, formatString.c_str());
+        return AgisResult<std::string>(ss.str());
+    }
+    catch (std::exception& e) {
+		return AgisResult<std::string>(AGIS_EXCEP(e.what()));
+	}
 }
 
 

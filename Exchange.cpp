@@ -331,7 +331,8 @@ AGIS_API AgisResult<bool> Exchange::restore_h5()
 				dataset,
 				dataspace,
 				datasetIndex,
-				dataspaceIndex
+				dataspaceIndex,
+				this->dt_format
 			), bool);
 			this->candles += asset->get_rows();
 		}
@@ -666,6 +667,14 @@ AGIS_API double ExchangeMap::__get_market_price(size_t asset_index, bool on_clos
 	if (!asset) return 0.0f;
 	if (!asset->__is_streaming) return 0.0f;
 	return asset->__get_market_price(on_close);
+}
+
+
+//============================================================================
+AgisResult<std::string> ExchangeMap::get_asset_id(size_t index) const
+{
+	if (index >= this->assets.size()) return AgisResult<std::string>(AGIS_EXCEP("Index out of range"));
+	return AgisResult<std::string>(this->assets[index]->get_asset_id());
 }
 
 

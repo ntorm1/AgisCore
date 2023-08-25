@@ -24,7 +24,6 @@
 
 #include "Utils.h"
 #include "AgisPointers.h"
-#include "json.hpp"
 
 
 /// <summary>
@@ -152,7 +151,8 @@ public:
         H5::DataSet& dataset,
         H5::DataSpace& dataspace,
         H5::DataSet& datasetIndex,
-        H5::DataSpace& dataspaceIndex
+        H5::DataSpace& dataspaceIndex,
+        std::string dt_fmt
     );
 #endif
 

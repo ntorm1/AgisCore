@@ -60,9 +60,6 @@
     <ClInclude Include="AgisStrategy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgisCore.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Trade.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -517,6 +517,26 @@ void AgisStrategyMap::__remove_strategy(std::string const& id)
 
 
 //============================================================================
+AGIS_API AgisResult<std::string> AgisStrategyMap::__get_strategy_id(size_t index) const
+{
+	// find the strategy with the given index and return it's id
+	auto strategy = std::find_if(
+		this->strategies.begin(),
+		this->strategies.end(),
+		[index](auto& strategy) {
+			return strategy.second->get_strategy_index() == index;
+		}
+	);
+	if (strategy == this->strategies.end())
+	{
+		return AgisResult<std::string>(AGIS_EXCEP("failed to find strategy"));
+	}
+	// return the strategy id
+	return AgisResult<std::string>(strategy->second->get_strategy_id());
+}
+
+
+//============================================================================
 AGIS_API std::string opp_to_str(const AgisOperation& func)
 {
 	int a = 1; int b = 2;

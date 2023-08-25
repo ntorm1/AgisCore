@@ -4,11 +4,7 @@
 #else
 #define AGIS_API __declspec(dllimport)
 #endif
-
-#include <optional>
-
-#include "json.hpp"
-
+#include "pch.h"
 
 #include "AgisPointers.h"
 #include "AgisErrors.h"
@@ -17,8 +13,6 @@
 
 #include "Exchange.h"
 #include "Portfolio.h"
-
-using json = nlohmann::json;
 
 
 #ifdef __cplusplus
@@ -203,7 +197,9 @@ public:
 	/// <returns></returns>
 	AGIS_API std::optional<std::shared_ptr<Asset> const> get_asset(std::string const& asset_id) const;
 	
-
+	AGIS_API AgisResult<std::string> asset_index_to_id(size_t const& index) const;
+	AGIS_API AgisResult<std::string> strategy_index_to_id(size_t const& index) const;
+	AGIS_API AgisResult<std::string> portfolio_index_to_id(size_t const& index) const;
 
 	AGIS_API auto __get_dt_index() {return this->exchanges.__get_dt_index();}
 	AGIS_API size_t get_candle_count() { return this->exchanges.get_candle_count(); };

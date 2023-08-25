@@ -4,9 +4,10 @@
 #else
 #define AGIS_API __declspec(dllimport)
 #endif
+#include "pch.h"
+#include "AgisErrors.h"
 #include <filesystem>
 #include <string>
-#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -25,7 +26,7 @@ AGIS_API long long str_to_epoch(
 	const std::string& dateString,
 	const std::string& formatString);
 
-AGIS_API std::string epoch_to_str(
+AGIS_API AgisResult<std::string> epoch_to_str(
 	long long epochTime,
 	const std::string& formatString);
 

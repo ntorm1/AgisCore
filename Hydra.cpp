@@ -174,6 +174,26 @@ std::optional<std::shared_ptr<Asset> const> Hydra::get_asset(std::string const& 
 
 
 //============================================================================
+AGIS_API AgisResult<std::string> Hydra::asset_index_to_id(size_t const& index) const
+{
+    return this->exchanges.get_asset_id(index);
+}
+
+
+//============================================================================
+AGIS_API AgisResult<std::string> Hydra::strategy_index_to_id(size_t const& index) const
+{
+    return this->strategies.__get_strategy_id(index);
+}
+
+//============================================================================
+AGIS_API AgisResult<std::string> Hydra::portfolio_index_to_id(size_t const& index) const
+{
+    return this->portfolios.__get_portfolio_id(index);
+}
+
+
+//============================================================================
 bool Hydra::asset_exists(std::string asset_id) const
 {
     return this->exchanges.asset_exists(asset_id);
@@ -267,3 +287,7 @@ void Hydra::restore(json const& j)
         }
     }
 }
+
+template class AGIS_API AgisResult<bool>;
+template class AGIS_API AgisResult<json>;
+template class AGIS_API AgisResult<std::string>;
