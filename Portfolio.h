@@ -31,6 +31,16 @@ AGIS_API typedef std::shared_ptr<Position> SharedPositionPtr;
 AGIS_API typedef std::reference_wrapper<const PositionPtr> PositionRef;
 
 
+/// <summary>
+/// Vector of column names used to serialize the position data
+/// </summary>
+static std::vector<std::string> position_column_names = {
+    "Position ID","Asset ID","Portfolio ID","Units","Average Price",
+    "Position Open Time","Position Close Time","Close Price","Last Price", "NLV",
+    "Unrealized PL", "Realized PL", "Bars Held"
+};
+
+
 struct Position
 {
     size_t position_id;
@@ -38,7 +48,7 @@ struct Position
     size_t portfolio_id;
 
     double close_price = 0;
-    double average_price;
+    double average_price = 0;
     double last_price = 0;
 
     double unrealized_pl = 0;

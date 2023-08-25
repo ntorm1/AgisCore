@@ -309,8 +309,8 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 }
 
 
-//============================================================================
-AGIS_API NexusStatusCode Exchange::restore_h5()
+
+AGIS_API AgisResult<bool> Exchange::restore_h5()
 {
 	H5::H5File file(this->source_dir, H5F_ACC_RDONLY);
 	int numObjects = file.getNumObjs();
@@ -318,28 +318,39 @@ AGIS_API NexusStatusCode Exchange::restore_h5()
 	// Read data from each dataset
 	for (int i = 0; i < numObjects; i++) {
 		// Get the name of the dataset at index i
-		std::string asset_id = file.getObjnameByIdx(i);
-		H5::DataSet dataset = file.openDataSet(asset_id + "/data");
-		H5::DataSpace dataspace = dataset.getSpace();
-		H5::DataSet datasetIndex = file.openDataSet(asset_id + "/datetime");
-		H5::DataSpace dataspaceIndex = datasetIndex.getSpace();
-
-		auto asset = std::make_shared<Asset>(asset_id, this->exchange_id);
-		this->assets.push_back(asset);
-		asset->load(
-			dataset,
-			dataspace,
-			datasetIndex,
-			dataspaceIndex
-		);
-		this->candles += asset->get_rows();
+		try {
+			std::string asset_id = file.getObjnameByIdx(i);
+			H5::DataSet dataset = file.openDataSet(asset_id + "/data");
+			H5::DataSpace dataspace = dataset.getSpace();
+			H5::DataSet datasetIndex = file.openDataSet(asset_id + "/datetime");
+			H5::DataSpace dataspaceIndex = datasetIndex.getSpace();
+			
+			auto asset = std::make_shared<Asset>(asset_id, this->exchange_id);
+			this->assets.push_back(asset);
+			AGIS_DO_OR_RETURN(asset->load(
+				dataset,
+				dataspace,
+				datasetIndex,
+				dataspaceIndex
+			), bool);
+			this->candles += asset->get_rows();
+		}
+		catch (H5::Exception& e) {
+			return AgisResult<bool>(AGIS_EXCEP(e.getCDetailMsg()));
+		}
+		catch (const std::exception& e) {
+			return AgisResult<bool>(AGIS_EXCEP(e.what()));
+		}
+		catch (...) {
+			return AgisResult<bool>(AGIS_EXCEP("Unknown exception"));
+		}
 	}
-	return NexusStatusCode::Ok;
+	return AgisResult<bool>(true);
 }
 
 
 //============================================================================
-NexusStatusCode Exchange::restore()
+AgisResult<bool> Exchange::restore()
 {
 	if (!is_folder(this->source_dir))
 	{
@@ -347,7 +358,7 @@ NexusStatusCode Exchange::restore()
 		if(path.extension() == ".h5") {
 			return restore_h5();
 		}
-		return NexusStatusCode::InvalidArgument;
+		return AgisResult<bool>(AGIS_EXCEP("Invalid source directory"));
 	}
 	auto asset_files = files_in_folder(this->source_dir);
 
@@ -359,10 +370,10 @@ NexusStatusCode Exchange::restore()
 		auto asset = std::make_shared<Asset>(asset_id, this->exchange_id);
 
 		this->assets.push_back(asset);
-		asset->load(file, this->dt_format);
+		AGIS_DO_OR_RETURN(asset->load(file, this->dt_format),bool);
 		this->candles += asset->get_rows();
 	}
-	return NexusStatusCode::Ok;
+	return AgisResult<bool>(true);
 }
 
 
@@ -511,7 +522,7 @@ json ExchangeMap::to_json() const {
 
 
 //============================================================================
-NexusStatusCode ExchangeMap::new_exchange(
+AgisResult<bool> ExchangeMap::new_exchange(
 	std::string exchange_id_,
 	std::string source_dir_,
 	Frequency freq_,
@@ -519,7 +530,7 @@ NexusStatusCode ExchangeMap::new_exchange(
 {
 	if (this->exchanges.count(exchange_id_))
 	{
-		return NexusStatusCode::InvalidId;
+		return AgisResult<bool>(AGIS_EXCEP("exchange already exists"));
 	}
 	
 	// Build the new exchange object and add to the map
@@ -536,12 +547,7 @@ NexusStatusCode ExchangeMap::new_exchange(
 
 	// Load in the exchange's data
 	exchange = this->exchanges.at(exchange_id_);
-	auto res = exchange->restore();
-
-	if (res != NexusStatusCode::Ok)
-	{
-		return res;
-	}
+	AGIS_DO_OR_RETURN(exchange->restore(), bool);
 
 	// Copy shared pointers to the main asset map
 	LOCK_GUARD
@@ -555,7 +561,7 @@ NexusStatusCode ExchangeMap::new_exchange(
 	}
 	this->candles += exchange->get_candle_count();
 	UNLOCK_GUARD
-	return NexusStatusCode::Ok;
+	return AgisResult<bool>(true);
 }
 
 
@@ -959,4 +965,5 @@ AGIS_API std::string ev_query_type(ExchangeQueryType ev_query)
 	case ExchangeQueryType::NExtreme:
 		return "NExtreme";
 	}
+	return"";
 }

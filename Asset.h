@@ -133,7 +133,7 @@ public:
     /// <param name="dt_fmt">the format of the datetime index</param>
     /// <param name="window">a range of valid times to load, in the form of seconds since midnight</param>
     /// <returns></returns>
-    AGIS_API NexusStatusCode load(
+    AGIS_API AgisResult<bool> load(
         std::string source,
         std::string dt_fmt,
         std::optional<std::pair<long long, long long>> window = std::nullopt
@@ -148,7 +148,7 @@ public:
     /// <param name="datasetIndex">H5 dataset for the asset index</param>
     /// <param name="dataspaceIndex">H5 dataspace for the asset index</param>
     /// <returns></returns>
-    AGIS_API NexusStatusCode load(
+    AGIS_API AgisResult<bool> load(
         H5::DataSet& dataset,
         H5::DataSpace& dataspace,
         H5::DataSet& datasetIndex,
@@ -231,8 +231,8 @@ private:
 
     std::unordered_map<std::string, size_t> headers;
 
-    NexusStatusCode load_headers();
-    NexusStatusCode load_csv();
+    AgisResult<bool> load_headers();
+    AgisResult<bool> load_csv();
     const arrow::Status load_parquet();
 
 };

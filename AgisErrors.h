@@ -124,7 +124,7 @@ AgisResult<U> ExtractException(AgisResult<T>& result) {
     do { \
         AgisResult<AgisResultType> res = functionCall; \
         if (res.is_exception()) { \
-            return res; \
+            return res;\
         } \
     } while (false)
 

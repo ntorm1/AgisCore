@@ -16,18 +16,17 @@ AGIS_API typedef std::shared_ptr<Order> SharedOrderPtr;
 AGIS_API typedef std::reference_wrapper<const OrderPtr> OrderRef;
 
 
-using namespace std;
-
 /// <summary>
 /// An enumeration representing different order types
 /// </summary>
 enum class AGIS_API OrderType
 {
-    MARKET_ORDER,                   /**< market order*/
+    MARKET_ORDER,                  /**< market order*/
     LIMIT_ORDER,                   /**< limit order */
-    STOP_LOSS_ORDER,                   /**< stop loss order */
-    TAKE_PROFIT_ORDER                  /**< take profit order */
+    STOP_LOSS_ORDER,               /**< stop loss order */
+    TAKE_PROFIT_ORDER              /**< take profit order */
 };
+
 
 /// <summary>
 /// brief An enumeration representing the current start of an order
@@ -41,6 +40,7 @@ enum class AGIS_API OrderState
     REJECTED, /// order was rejected by the checker 
     CHEAT,    /// allows orders we know will fill to be filled and processed in single router call
 };
+
 
 /// <summary>
 /// brief An enumeration representning the execution type of the order. An order can either
@@ -66,6 +66,7 @@ enum class AGIS_API OrderTargetType
     PCT_BETA_DOLLARS    /// order target size is in pct of total nlv of the source potfolio normalized by beta
 };
 
+
 /// <summary>
 /// An enumeration representing the type of parent used for order's that require an order parent.
 /// Orders like take - profit or stop - loss require a parent, either an open order or an open trade.
@@ -74,6 +75,16 @@ enum class AGIS_API OrderParentType
 {
     TRADE, /// parent of the order is a smart pointer to a trade
     ORDER  /// parent of the order is a smart pointer to another open order
+};
+
+
+/// <summary>
+/// List of column names used to serialize an order
+/// </summary>
+static std::vector<std::string> order_column_names = {
+"Order ID","Order Type","Order State","Units","Average Price","Limit",
+"Order Create Time", "Order Fill Time", "Order Cancel Time", "Asset ID",
+"Strategy ID","Portfolio ID"
 };
 
 

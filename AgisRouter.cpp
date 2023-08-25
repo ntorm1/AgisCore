@@ -7,12 +7,16 @@
 #include "Portfolio.h"
 
 
+
+//============================================================================
 struct AgisRouterPrivate
 {
     tbb::concurrent_queue<OrderPtr> channel;
 };
 
 
+
+//============================================================================
 AgisRouter::AgisRouter(ExchangeMap& exchanges_, PortfolioMap* portfolios_) :
     exchanges(exchanges_),
     portfolios(portfolios_),
@@ -20,9 +24,12 @@ AgisRouter::AgisRouter(ExchangeMap& exchanges_, PortfolioMap* portfolios_) :
 {}
 
 
+
+//============================================================================
 AgisRouter::~AgisRouter() { delete p; }
 
 
+//============================================================================
 void AgisRouter::processOrder(OrderPtr order) {
     if (!order) { return; }
     switch (order->get_order_state())
@@ -51,6 +58,8 @@ void AgisRouter::processOrder(OrderPtr order) {
     
 }
 
+
+//============================================================================
 void AgisRouter::__process() {
     if (this->p->channel.unsafe_size() == 0) { return; }
     std::for_each(
@@ -64,10 +73,13 @@ void AgisRouter::__process() {
 }
 
 
+//============================================================================
 void AgisRouter::place_order(OrderPtr order) {
     p->channel.push(std::move(order));
 }
 
+
+//============================================================================
 void AgisRouter::__reset() {
     this->p->channel.clear();
     this->order_history.clear();

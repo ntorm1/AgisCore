@@ -15,7 +15,8 @@ enum class FileType
 {
 	CSV,
 	PARQUET,
-	HDF5
+	HDF5,
+	UNSUPPORTED
 };
 
 AGIS_API bool str_ins_cmp(const std::string& s1, const std::string& s2);

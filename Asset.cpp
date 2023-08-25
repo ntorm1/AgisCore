@@ -42,32 +42,30 @@ Asset::~Asset()
 
 
 //============================================================================
-NexusStatusCode Asset::load(
+AgisResult<bool> Asset::load(
     std::string source_,
     std::string dt_fmt_,
     std::optional<std::pair<long long, long long>> window_)
 {
     if (!is_file(source_))
     {
-        return NexusStatusCode::InvalidArgument;
+        return AgisResult<bool>(AGIS_EXCEP("file does not exist"));
     }
     this->source = source_;
     this->dt_fmt = dt_fmt_;
     this->window = window_;
 
     auto filetype = file_type(source);
-    NexusStatusCode res;
     switch (filetype)
     {
     case FileType::CSV:
-        res = this->load_csv();
+        AGIS_DO_OR_RETURN(this->load_csv(), bool);
         break;
     case FileType::PARQUET: {
         auto arrow_res = this->load_parquet();
         if (arrow_res.code() != arrow::StatusCode::OK) {
-            throw std::runtime_error("file load failed");
+            return AgisResult<bool>(AGIS_EXCEP("file load failed"));
         }
-        res = NexusStatusCode::Ok;
         break;
     }
     case FileType::HDF5: {
@@ -78,27 +76,28 @@ NexusStatusCode Asset::load(
         H5::DataSpace dataspace = dataset.getSpace();
         H5::DataSet datasetIndex = file.openDataSet(asset_id + "/datetime");
         H5::DataSpace dataspaceIndex = datasetIndex.getSpace();
-        res = this->load(
+        AGIS_DO_OR_RETURN(this->load(
             dataset,
             dataspace,
             datasetIndex,
             dataspaceIndex
-        );
+        ), bool);
         break;
     }
-    default:
-        throw std::runtime_error("Not implemented");
+    case FileType::UNSUPPORTED: {
+        return AgisResult<bool>(AGIS_EXCEP("file type not supported"));
     }
-
-    if (res != NexusStatusCode::Ok) { return res; }
+    default:
+        return AgisResult<bool>(AGIS_EXCEP("file type not supported"));
+    }
 
     this->close = this->data + (this->rows) * this->close_index;
     this->open = this->data + (this->rows) * this->open_index;
-    return res;
+    return AgisResult<bool>(true);
 }
 
 #ifdef H5_HAVE_H5CPP
-AGIS_API NexusStatusCode Asset::load(
+AGIS_API AgisResult<bool> Asset::load(
     H5::DataSet& dataset,
     H5::DataSpace& dataspace,
     H5::DataSet& datasetIndex,
@@ -122,10 +121,9 @@ AGIS_API NexusStatusCode Asset::load(
             this->headers[attrValue] = static_cast<size_t>(i);
         }
     }
-    if (this->load_headers() != NexusStatusCode::Ok)
-    {
-        return NexusStatusCode::InvalidColumns;
-    }
+    
+    AGIS_DO_OR_RETURN(this->load_headers(), bool);
+
     // Get the number of rows and columns from the dataspace
     int numDims = dataspace.getSimpleExtentNdims();
     std::vector<hsize_t> dims(numDims);
@@ -142,7 +140,7 @@ AGIS_API NexusStatusCode Asset::load(
     dataset.read(this->data, H5::PredType::NATIVE_DOUBLE, dataspace);
 
     // HDF5 stored in row major. Swap elements to get to col major. Maybe better way to do this
-    double* columnMajorData = (double*)malloc(rows * columns * sizeof(double));
+    double* columnMajorData = new double[rows * columns];
     // Copy elements from the row-major array to the column-major array
     for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < columns; ++j) {
@@ -161,12 +159,12 @@ AGIS_API NexusStatusCode Asset::load(
     this->close = this->data + (this->rows) * this->close_index;
     this->open = this->data + (this->rows) * this->open_index;
 
-    return NexusStatusCode::Ok;
+    return AgisResult<bool>(true);
 }
 #endif
 
 //============================================================================
-NexusStatusCode Asset::load_headers()
+AgisResult<bool> Asset::load_headers()
 {
     int success = 0;
     for (const auto& pair : this->headers)
@@ -184,21 +182,18 @@ NexusStatusCode Asset::load_headers()
     }
     if (success != 2)
     {
-        return NexusStatusCode::InvalidArgument;
+        return AgisResult<bool>(AGIS_EXCEP("failed to find open and close columns"));
     }
-    else
-    {
-        return NexusStatusCode::Ok;
-    }
+    return AgisResult<bool>(true);
 }
 
 
 //============================================================================
-NexusStatusCode Asset::load_csv()
+AgisResult<bool> Asset::load_csv()
 {
     std::ifstream file(this->source);
     if (!file) {
-        return NexusStatusCode::InvalidIO;
+        return AgisResult<bool>(AGIS_EXCEP("invalid source file"));
     }
 
     this->rows = 0;
@@ -225,12 +220,9 @@ NexusStatusCode Asset::load_csv()
         }
     }
     else {
-        return NexusStatusCode::InvalidIO;
+        return AgisResult<bool>(AGIS_EXCEP("failed to parse headers"));
     }
-    if (this->load_headers() != NexusStatusCode::Ok)
-    {
-        return NexusStatusCode::InvalidColumns;
-    }
+    AGIS_DO_OR_RETURN(this->load_headers(), bool);
     this->columns = this->headers.size();
 
     // Load in the actual data
@@ -261,7 +253,7 @@ NexusStatusCode Asset::load_csv()
         row_counter++;
     }
     this->is_loaded = true;
-    return NexusStatusCode::Ok;
+    return AgisResult<bool>(true);
 }
 
 
@@ -342,9 +334,9 @@ const arrow::Status Asset::load_parquet()
         this->headers[column_names[i]] = i;
     }
 
-    if (this->load_headers() != NexusStatusCode::Ok)
+    if (this->load_headers().is_exception())
     {
-        NexusStatusCode::InvalidColumns;
+        throw std::runtime_error("failed to load headers");
     }
 
     return arrow::Status::OK();

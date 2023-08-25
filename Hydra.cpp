@@ -64,7 +64,7 @@ AGIS_API AgisResult<bool> Hydra::__run()
 
 
 //============================================================================
-NexusStatusCode Hydra::new_exchange(
+AgisResult<bool> Hydra::new_exchange(
     std::string exchange_id_,
     std::string source_dir_,
     Frequency freq_,

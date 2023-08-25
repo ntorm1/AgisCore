@@ -106,7 +106,7 @@ FileType file_type(const std::string& filePath) {
     if (extension == ".csv")        return FileType::CSV;
     if (extension == ".parquet")    return FileType::PARQUET;
     if (extension == ".h5")         return FileType::HDF5;
-    throw std::runtime_error("not impl");
+    return FileType::UNSUPPORTED;
 }
 
 

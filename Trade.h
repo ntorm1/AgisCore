@@ -23,6 +23,14 @@ AGIS_API typedef std::shared_ptr<Trade> SharedTradePtr;
 AGIS_API typedef std::shared_ptr<TradeExit> TradeExitPtr;
 AGIS_API typedef std::reference_wrapper<const TradePtr> TradeRef;
 
+/// <summary>
+/// Vector of column names used to seriale trade data
+/// </summary>
+static std::vector<std::string> trade_column_names = {
+    "Trade ID","Asset ID","Strategy ID","Portfolio ID","Units","Average Price",
+    "Trade Open Time","Trade Close Time","Close Price","Last Price", "NLV", "Unrealized PL",
+    "Realized PL", "Bars Held"
+};
 
 struct AGIS_API Trade {
     double units;

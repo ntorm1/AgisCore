@@ -84,14 +84,14 @@ public:
 	/// Load in the all asset's found in the exchange's source directory
 	/// </summary>
 	/// <returns>status if the restore was succesful</returns>
-	AGIS_API NexusStatusCode restore();
+	AGIS_API AgisResult<bool> restore();
 
 	/// <summary>
 	/// Restore data from hdf5 file, assume each dataset is asset, dataset name is asset id
 	/// and that 1st column is nanosecond epoch index stored n int64
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API NexusStatusCode restore_h5();
+	AGIS_API AgisResult<bool> restore_h5();
 
 	/// <summary>
 	/// Serialize the exchange to json format so it can be saved
@@ -221,7 +221,7 @@ public:
 	/// <param name="freq_">frequency of the exchange data points</param>
 	/// <param name="dt_format">the format of the datetime index</param>
 	/// <returns>status if the new exchange was created succesfully</returns>
-	AGIS_API NexusStatusCode new_exchange(
+	AGIS_API AgisResult<bool> new_exchange(
 		std::string exchange_id_,
 		std::string source_dir_,
 		Frequency freq_,

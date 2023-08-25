@@ -110,7 +110,7 @@ public:
 	/// <param name="freq_">frequency of the asset data</param>
 	/// <param name="dt_format">format of the datetime index</param>
 	/// <returns></returns>
-	AGIS_API NexusStatusCode new_exchange(
+	AGIS_API AgisResult<bool> new_exchange(
 		std::string exchange_id_,
 		std::string source_dir_,
 		Frequency freq_,
