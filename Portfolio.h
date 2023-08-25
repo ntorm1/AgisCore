@@ -27,6 +27,7 @@ AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
 AGIS_API typedef std::shared_ptr<Portfolio> PortfolioPtr;
 AGIS_API typedef std::reference_wrapper<const PortfolioPtr> PortfolioRef;
 AGIS_API typedef std::unique_ptr<Position> PositionPtr;
+AGIS_API typedef std::shared_ptr<Position> SharedPositionPtr;
 AGIS_API typedef std::reference_wrapper<const PositionPtr> PositionRef;
 
 
@@ -159,7 +160,7 @@ public:
     double inline get_nlv() const { return this->nlv; }
     double inline get_unrealized_pl() const { return this->unrealized_pl; }
 
-    AGIS_API inline std::vector<PositionPtr> const& get_position_history() { return this->position_history; }
+    AGIS_API inline std::vector<SharedPositionPtr> const& get_position_history() { return this->position_history; }
     AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() { return this->trade_history; }
     AGIS_API inline std::vector<double> const& get_nlv_history() { return this->nlv_history; }
 
@@ -169,7 +170,7 @@ public:
     void __remove_strategy(size_t index);
     inline bool __strategy_exists(size_t index) { return this->strategies.contains(index); }
     static void __reset_counter() { Portfolio::portfolio_counter = 0; }
-    void __remember_order(OrderRef order);
+    void __remember_order(SharedOrderPtr order);
     void __on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids);
 
 
@@ -230,7 +231,7 @@ private:
     std::unordered_map<std::string, size_t> strategy_ids;
 
 
-    std::vector<PositionPtr> position_history;
+    std::vector<SharedPositionPtr> position_history;
     std::vector<SharedTradePtr> trade_history;
     std::vector<double> nlv_history;
     std::vector<double> cash_history;
@@ -247,7 +248,7 @@ public:
     void __reset();
 
 	void __on_order_fill(OrderPtr const& order);
-    void __remember_order(OrderRef order);
+    void __remember_order(SharedOrderPtr order);
     void __on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids);
 
     void __register_portfolio(PortfolioPtr portfolio);
@@ -259,7 +260,7 @@ public:
     PortfolioPtr const __get_portfolio(size_t index) { return this->portfolios.at(index); };
     bool __portfolio_exists(std::string const& id) const { return this->portfolio_map.count(id) > 0; }
 
-    AGIS_API PortfolioRef get_portfolio(std::string const& id);
+    AGIS_API PortfolioRef get_portfolio(std::string const& id) const;
     AGIS_API std::vector<std::string> get_portfolio_ids() const;
     AGIS_API json to_json() const;
     AGIS_API void restore(json const& j);

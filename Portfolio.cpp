@@ -146,7 +146,32 @@ void Position::adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vect
         }
         else
         {
-            trade_ptr->adjust(order);
+            // test to see if the trade is being reversed
+            if(units_ * trade_ptr->units < 0 && abs(units_) > abs(trade_ptr->units))
+			{
+                // get the number of units left over after reversing the trade
+                auto units_left = trade_ptr->units + units_;
+
+				trade_ptr->close(order);
+				TradePtr extracted_trade = std::move(this->trades.at(strategy_id));
+				this->trades.erase(strategy_id);
+				SharedTradePtr ptr = std::move(extracted_trade);
+				trade_history.push_back(ptr);
+
+                // open a new trade with the new order minus the units needed to close out 
+                // the previous trade
+                order->set_units(units_left);
+                auto trade = std::make_unique<Trade>(
+                    strategy,
+                    order
+                );
+                this->trades.insert({ strategy_id,std::move(trade) });
+                order->set_units(units_);
+			}
+            else
+            {
+                trade_ptr->adjust(order);
+            }
         }
     }
 }
@@ -208,10 +233,10 @@ void PortfolioMap::__on_order_fill(OrderPtr const& order)
 
 
 //============================================================================
-void PortfolioMap::__remember_order(OrderRef order)
+void PortfolioMap::__remember_order(SharedOrderPtr order)
 {
     auto& portfolio = this->portfolios.at(order.get()->get_portfolio_index());
-    portfolio->__remember_order(std::move(order));
+    portfolio->__remember_order(order);
 }
 
 
@@ -313,7 +338,7 @@ void PortfolioMap::restore(json const& j)
 
 
 //============================================================================
-AGIS_API PortfolioRef PortfolioMap::get_portfolio(std::string const& id)
+AGIS_API PortfolioRef PortfolioMap::get_portfolio(std::string const& id) const
 {
     auto index = this->portfolio_map.at(id);
     auto p = std::cref(this->portfolios.at(index));
@@ -564,7 +589,7 @@ void Portfolio::__remove_strategy(size_t index)
 
 
 //============================================================================
-void Portfolio::__remember_order(OrderRef order)
+void Portfolio::__remember_order(SharedOrderPtr order)
 {
     LOCK_GUARD
     auto& strategy = this->strategies.at(order.get()->get_strategy_index());

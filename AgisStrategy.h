@@ -267,7 +267,7 @@ public:
 	/// Remember a historical order that the strategy placed
 	/// </summary>
 	/// <param name="order"></param>
-	void __remember_order(OrderRef order) { this->order_history.push_back(order); }
+	void __remember_order(SharedOrderPtr order) { this->order_history.push_back(order); }
 
 	void __remember_trade(SharedTradePtr trade) { this->trade_history.push_back(trade); }
 
@@ -281,7 +281,7 @@ public:
 	/// Get all orders that have been  placed by the strategy
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API inline std::vector<OrderRef> const& get_order_history() const { return this->order_history; }
+	AGIS_API inline std::vector<SharedOrderPtr> const& get_order_history() const { return this->order_history; }
 	
 	AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() const { return this->trade_history; }
 
@@ -415,7 +415,7 @@ private:
 	/// <summary>
 	/// All historical orders placed by the strategy
 	/// </summary>
-	std::vector<OrderRef> order_history;
+	std::vector<SharedOrderPtr> order_history;
 
 	double unrealized_pl = 0;
 	double realized_pl = 0;

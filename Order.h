@@ -12,6 +12,7 @@
 class Order;
 
 AGIS_API typedef std::unique_ptr<Order> OrderPtr;
+AGIS_API typedef std::shared_ptr<Order> SharedOrderPtr;
 AGIS_API typedef std::reference_wrapper<const OrderPtr> OrderRef;
 
 
@@ -127,6 +128,7 @@ public:
 
     void set_limit(double limit_) { this->limit = limit_; }
     void set_create_time(long long t) { this->order_create_time = t; }
+    void set_units(double units) { this->units = units; }
 
     [[nodiscard]] double get_average_price() const { return this->avg_price; }
     [[nodiscard]] double get_units() const { return this->units; }

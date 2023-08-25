@@ -26,7 +26,7 @@ private:
     /// </summary>
     PortfolioMap* portfolios;
 
-    std::vector<OrderPtr> order_history;
+    std::vector<SharedOrderPtr> order_history;
 
     void processOrder(OrderPtr order);
 
@@ -40,5 +40,5 @@ public:
 
     void __process();
 
-    std::vector<OrderPtr> const& get_order_history() { return this->order_history; }
+    std::vector<SharedOrderPtr> const& get_order_history() { return this->order_history; }
 };

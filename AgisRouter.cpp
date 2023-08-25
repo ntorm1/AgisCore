@@ -44,9 +44,9 @@ void AgisRouter::processOrder(OrderPtr order) {
     }
 
     LOCK_GUARD
-    this->order_history.push_back(std::move(order));
-    auto order_ref = std::ref(this->order_history.back());
-    this->portfolios->__remember_order(std::move(order_ref));
+    SharedOrderPtr order_ptr = std::move(order);
+    this->order_history.push_back(order_ptr);
+    this->portfolios->__remember_order(order_ptr);
     UNLOCK_GUARD
     
 }

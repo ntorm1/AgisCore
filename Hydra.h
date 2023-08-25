@@ -166,7 +166,7 @@ public:
 	AGIS_API const AgisStrategyRef get_strategy(std::string strategy_id);
 
 	
-	AGIS_API std::vector<OrderPtr> const& get_order_history() { return this->router.get_order_history(); }
+	AGIS_API std::vector<SharedOrderPtr> const& get_order_history() { return this->router.get_order_history(); }
 
 	/// <summary>
 	/// Remove exchange from the hydra instance by exchange id
