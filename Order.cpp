@@ -46,7 +46,6 @@ AgisResult<json> Order::serialize(json& order, std::shared_ptr<Hydra> const hydr
     AGIS_ASSIGN_OR_RETURN(order["Portfolio Identifier"], hydra->portfolio_index_to_id(this->portfolio_index), std::string, json);
 
     return AgisResult<json>(order);
-
 }
 
 //============================================================================

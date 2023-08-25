@@ -6,7 +6,9 @@
 #endif
 
 #include "pch.h"
+#include "AgisErrors.h"
 
+class Hydra;
 class Order;
 typedef std::unique_ptr<Order> OrderPtr;
 
@@ -23,18 +25,11 @@ AGIS_API typedef std::shared_ptr<Trade> SharedTradePtr;
 AGIS_API typedef std::shared_ptr<TradeExit> TradeExitPtr;
 AGIS_API typedef std::reference_wrapper<const TradePtr> TradeRef;
 
-/// <summary>
-/// Vector of column names used to seriale trade data
-/// </summary>
-static std::vector<std::string> trade_column_names = {
-    "Trade ID","Asset ID","Strategy ID","Portfolio ID","Units","Average Price",
-    "Trade Open Time","Trade Close Time","Close Price","Last Price", "NLV", "Unrealized PL",
-    "Realized PL", "Bars Held"
-};
 
 struct AGIS_API Trade {
     double units;
     double average_price;
+    double open_price;
     double close_price;
     double last_price;
     double nlv;
@@ -47,9 +42,9 @@ struct AGIS_API Trade {
     size_t bars_held;
 
     size_t trade_id;
-    size_t asset_id;
-    size_t strategy_id;
-    size_t portfolio_id;
+    size_t asset_index;
+    size_t strategy_index;
+    size_t portfolio_index;
     AgisStrategyRef strategy;
 
     std::optional<TradeExitPtr> exit = std::nullopt;
@@ -61,8 +56,12 @@ struct AGIS_API Trade {
     void reduce(OrderPtr const& filled_order);
     void adjust(OrderPtr const& filled_order);
     void evaluate(double market_price, bool on_close, bool is_reprice = false);
-
     OrderPtr generate_trade_inverse();
+    AgisResult<json> serialize(json& _json, std::shared_ptr<Hydra> const hydra) const;
+
+    [[nodiscard]] size_t get_asset_index() const { return this->asset_index; }
+    [[nodiscard]] size_t get_strategy_index() const { return this->strategy_index; }
+    [[nodiscard]] size_t get_portfolio_index() const { return this->portfolio_index; }
 
 private:
     static std::atomic<size_t> trade_counter;

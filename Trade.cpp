@@ -2,6 +2,8 @@
 #include "Trade.h"
 #include "Order.h"
 #include "AgisStrategy.h"
+#include "Hydra.h"
+
 
 std::atomic<size_t> Trade::trade_counter(0);
 
@@ -9,13 +11,14 @@ std::atomic<size_t> Trade::trade_counter(0);
 Trade::Trade(AgisStrategyRef strategy_, OrderPtr const& filled_order):
     strategy(strategy_)
 {
-    this->asset_id = filled_order->get_asset_index();
-    this->strategy_id = filled_order->get_strategy_index();
-    this->portfolio_id = filled_order->get_portfolio_index();
+    this->asset_index = filled_order->get_asset_index();
+    this->strategy_index = filled_order->get_strategy_index();
+    this->portfolio_index = filled_order->get_portfolio_index();
 
     // set the trade member variables
     this->units = filled_order->get_units();
     this->average_price = filled_order->get_average_price();
+    this->open_price = this->average_price;
     this->nlv = this->units * this->average_price;
     this->unrealized_pl = 0;
     this->realized_pl = 0;
@@ -76,6 +79,7 @@ void Trade::adjust(OrderPtr const& filled_order)
 }
 
 
+//============================================================================
 void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
 {
     // adjust the source strategy nlv and unrealized pl
@@ -94,12 +98,36 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
 }
 
 
+//============================================================================
+AgisResult<json> Trade::serialize(json& _json, std::shared_ptr<Hydra> const hydra) const
+{
+    if (_json.size()) { _json.clear(); }
+
+    _json["Trade Open Time"] = this->trade_open_time;
+    _json["Trade Close Time"] = this->trade_close_time;
+    _json["Bars Held"] = this->bars_held;
+    _json["Units"] = this->units;
+    _json["Average Price"] = this->average_price;
+    _json["Close Price"] = this->close_price;
+    _json["Unrealized PL"] = this->unrealized_pl;
+    _json["Realized PL"] = this->realized_pl;
+    _json["Trade Identifier"] = this->trade_id;
+    _json["NLV"] = this->nlv;
+    _json["Last Price"] = this->last_price;
+    AGIS_ASSIGN_OR_RETURN(_json["Asset Identifier"], hydra->asset_index_to_id(this->asset_index), std::string, json);
+    AGIS_ASSIGN_OR_RETURN(_json["Strategy Identifier"], hydra->strategy_index_to_id(this->strategy_index), std::string, json);
+    AGIS_ASSIGN_OR_RETURN(_json["Portfolio Identifier"], hydra->portfolio_index_to_id(this->portfolio_index), std::string, json);
+
+    return AgisResult<json>(_json);
+}
+
+
 OrderPtr Trade::generate_trade_inverse() {
     return std::make_unique<Order>(
         OrderType::MARKET_ORDER,
-        this->asset_id,
+        this->asset_index,
         -1 * this->units,
-        this->strategy_id,
-        this->portfolio_id
+        this->strategy_index,
+        this->portfolio_index
     );
 }

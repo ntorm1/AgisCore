@@ -28,7 +28,7 @@ Position::Position(AgisStrategyRef strategy, OrderPtr const& filled_order_)
         strategy,
         filled_order_
     );
-    this->trades.insert({trade->strategy_id,std::move(trade)});
+    this->trades.insert({trade->strategy_index,std::move(trade)});
     this->position_id = position_counter++;
 
 }
@@ -270,13 +270,13 @@ void PortfolioMap::__remove_portfolio(std::string const& portfolio_id)
 
 
 //============================================================================
-void PortfolioMap::__remove_strategy(size_t strategy_id)
+void PortfolioMap::__remove_strategy(size_t strategy_index)
 {
     for (auto& p : this->portfolios)
     {
-        if (p.second->__strategy_exists(strategy_id))
+        if (p.second->__strategy_exists(strategy_index))
         {
-            p.second->__remove_strategy(strategy_id);
+            p.second->__remove_strategy(strategy_index);
         }
     }
 }
@@ -649,7 +649,7 @@ void Portfolio::__on_trade_closed(size_t start_index)
     for (auto i = start_index; i < this->trade_history.size(); i++)
     {
         SharedTradePtr trade = this->trade_history[i];
-        auto& strategy = this->strategies.at(trade->strategy_id);
+        auto& strategy = this->strategies.at(trade->strategy_index);
         strategy.get()->__remember_trade(trade);
     }
 }
