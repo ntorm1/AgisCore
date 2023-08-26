@@ -1,7 +1,11 @@
 #include "pch.h"
 
+#undef USE_TBB
+#ifdef USE_TBB
 #include <tbb/concurrent_queue.h>
 #include <tbb/parallel_for_each.h>
+#endif
+
 
 #include "AgisRouter.h"
 #include "Portfolio.h"
@@ -11,7 +15,11 @@
 //============================================================================
 struct AgisRouterPrivate
 {
+#ifdef USE_TBB
     tbb::concurrent_queue<OrderPtr> channel;
+#else
+    ThreadSafeVector<OrderPtr> channel;
+#endif
 };
 
 
@@ -61,6 +69,7 @@ void AgisRouter::processOrder(OrderPtr order) {
 
 //============================================================================
 void AgisRouter::__process() {
+#ifdef USE_TBB
     if (this->p->channel.unsafe_size() == 0) { return; }
     std::for_each(
         this->p->channel.unsafe_begin(),
@@ -70,12 +79,27 @@ void AgisRouter::__process() {
         }
     );
     this->p->channel.clear();
+#else
+    if (this->p->channel.size() == 0) { return; }
+	    std::for_each(
+		    this->p->channel.begin(),
+		    this->p->channel.end(),
+		    [this](OrderPtr& order) {
+			    processOrder(std::move(order));
+		    }
+	);
+	this->p->channel.clear();
+#endif
 }
 
 
 //============================================================================
 void AgisRouter::place_order(OrderPtr order) {
+#ifdef USE_TBB
     p->channel.push(std::move(order));
+#else
+    p->channel.push_back(std::move(order));
+#endif
 }
 
 

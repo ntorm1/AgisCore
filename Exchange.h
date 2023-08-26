@@ -108,7 +108,7 @@ public:
 	/// </summary>
 	/// <param name="asset_id">unique id to search for</param>
 	/// <returns>Does the id already exists</returns>
-	AGIS_API bool asset_exists(std::string asset_id);
+	AGIS_API bool asset_exists(std::string const& asset_id);
 	
 	/// <summary>
 	/// Get all assets currently registered to the exchange
@@ -148,15 +148,30 @@ public:
 		size_t warmup = 0
 	);
 
+	/// <summary>
+	/// Remove an asset from an exchange, do not call directly, got through exchange map
+	/// </summary>
+	/// <param name="asset_id">unique id of the asset to remove</param>
+	/// <returns></returns>
+	AgisResult<AssetPtr> __remove_asset(size_t asset_index);
+
+	/// <summary>
+	/// Set an asset on the exchange as the market asset, used for beta hedging and benchamrking
+	/// </summary>
+	/// <param name="asset_id">unique id of the market asset</param>
+	/// <param name="disable_asset">disable the asset from being used in the exchange view</param>
+	/// <returns></returns>
+	AgisResult<bool> __set_market_asset(std::string const& asset_id, bool disable_asset);
+
 	AGIS_API size_t get_candle_count() { return this->candles; };
 	AGIS_API inline std::string get_exchange_id() const { return this->exchange_id; }
 	AGIS_API inline StridedPointer<long long> const __get_dt_index() const;
 	AGIS_API inline size_t const __get_size() const { return this->dt_index_size; }
 	AGIS_API inline double __get_market_price(size_t asset_index, bool on_close) const;
 	AGIS_API inline long long __get_market_time() { return this->dt_index[this->current_index]; }
+	size_t __get_exchange_index() const { return this->current_index - 1; };
 
 	void __goto(long long datetime);
-	size_t __get_exchange_index() const { return this->current_index - 1; };
 	bool __is_valid_order(std::unique_ptr<Order>& order) const;
 	void __place_order(std::unique_ptr<Order> order);
 	void __process_orders(AgisRouter& router, bool on_close);
@@ -175,15 +190,17 @@ private:
 	static std::atomic<size_t> exchange_counter;
 
 	std::string exchange_id;
-	size_t exchange_index;
 	std::string source_dir;
-	Frequency freq;
 	std::string dt_format;
+	size_t exchange_index;
+	Frequency freq;
 
 	std::vector<std::unique_ptr<Order>> orders;
 	std::vector<std::unique_ptr<Order>> filled_orders;
 	std::vector<std::shared_ptr<Asset>> assets;
 	ExchangeMap* exchanges;
+
+	std::optional<AssetPtr> market_asset = std::nullopt;
 
 	long long* dt_index = nullptr;
 	long long exchange_time;
@@ -246,6 +263,13 @@ public:
 	/// <returns>shared pointer to asset if it is found</returns>
 	AGIS_API inline std::optional<std::shared_ptr<Asset> const> get_asset(std::string const& asset_id) const;
 	AGIS_API inline std::shared_ptr<Asset> get_asset(size_t index) const { return this->assets[index]; }
+
+	/// <summary>
+	/// Remove an asset from the exchange map by asset id
+	/// </summary>
+	/// <param name="asset_id">unique id of the asset to remove</param>
+	/// <returns>the asset if it was removed succsefully</returns>
+	AGIS_API AgisResult<AssetPtr> remove_asset(std::string const& asset_id);
 
 	/// <summary>
 	/// Get the unique index associated with a asset id

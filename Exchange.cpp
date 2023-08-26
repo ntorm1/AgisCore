@@ -85,7 +85,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 
 	for (auto& asset : this->assets)
 	{
-		if (!asset) continue;
+		if (!asset || !asset->__in_exchange_view) continue;
 		if (!asset->__is_streaming)
 		{
 			if (panic) throw std::runtime_error("invalid asset found"); 
@@ -118,7 +118,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 	auto& view = exchange_view.view;
 	for (auto const& asset : this->assets)
 	{
-		if (!asset) continue;								// asset not in view
+		if (!asset || !asset->__in_exchange_view) continue;		// asset not in view, or disabled
 		if (!asset->__is_streaming) continue;				// asset is not streaming
 		AgisResult<double> val = func(asset);
 		if (val.is_exception()) {
@@ -134,6 +134,39 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 }
 
 
+
+AgisResult<bool> Exchange::__set_market_asset(std::string const& asset_id, bool disable)
+{
+	if(!this->asset_exists(asset_id)) return AgisResult<bool>(AGIS_EXCEP("asset does not exists"));
+
+	// search in the assets vector for asset with asset_id
+	AssetPtr market_asset_ = nullptr;
+	for (auto& asset_mid : this->assets)
+	{
+		if (asset_mid->get_asset_id() == asset_id)
+		{
+			break;
+		}
+	}
+
+	if(!market_asset_) return AgisResult<bool>(AGIS_EXCEP("asset does not exists"));
+	
+	// check to see if asset encloses all assets listed on the exchange
+	for (AssetPtr asset_mid : this->assets)
+	{
+		if (!market_asset_->encloses(asset_mid))
+		{
+			return AgisResult<bool>(AGIS_EXCEP("asset does not enclose: " + asset_mid->get_asset_id()));
+		}
+	}
+
+	// set the market asset and disable it from the exchange view
+	market_asset_->__in_exchange_view = false;
+	this->market_asset = market_asset_;
+
+	return AgisResult<bool>(true);
+}
+
 //============================================================================
 StridedPointer<long long> const Exchange::__get_dt_index() const
 {
@@ -142,7 +175,7 @@ StridedPointer<long long> const Exchange::__get_dt_index() const
 
 
 //============================================================================
-AGIS_API bool Exchange::asset_exists(std::string asset_id)
+AGIS_API bool Exchange::asset_exists(std::string const& asset_id)
 {
 	for (const auto& asset : this->assets)
 	{
@@ -577,13 +610,66 @@ std::vector<std::string> ExchangeMap::get_asset_ids(std::string const& exchange_
 std::optional<std::shared_ptr<Asset> const> ExchangeMap::get_asset(std::string const&  asset_id) const
 {
 #ifndef AGIS_SLOW
-	if (this->asset_exists(asset_id))
+	if (!this->asset_exists(asset_id))
 	{
 		return std::nullopt;
 	}
 #endif
 	auto index = this->asset_map.at(asset_id);
 	return this->assets[index];
+}
+
+
+//============================================================================
+AgisResult<AssetPtr> Exchange::__remove_asset(size_t asset_index)
+{
+	AssetPtr asset = this->assets[asset_index];
+
+	// delete the asset at this index from the assets vector
+	this->assets.erase(this->assets.begin() + asset_index);
+
+	return AgisResult<AssetPtr>(asset);
+}
+
+//============================================================================
+AGIS_API AgisResult<AssetPtr> ExchangeMap::remove_asset(std::string const& asset_id)
+{
+	if (this->current_index != 0) {
+		return AgisResult<AssetPtr>(AGIS_EXCEP("asset can only be removed before run"));
+	}
+	if (!this->asset_exists(asset_id)) {
+		return AgisResult<AssetPtr>(AGIS_EXCEP("asset does not exist"));
+	}
+
+	// for all asset's with index greater than the extracted asset, decrement their index
+	AssetPtr asset = this->get_asset(asset_id).value();
+	auto asset_index = asset->__get_index();
+
+	// remove from the asset map 
+	this->asset_map.erase(asset_id);
+
+	// delete the asset at this index from the assets vector
+	this->assets.erase(this->assets.begin() + asset_index);
+
+	// for all assets at this index or more, decrease their index by one
+	for (auto& asset : this->assets)
+	{
+		if (asset->__get_index() >= asset_index)
+		{
+			asset->__set_index(asset->__get_index() - 1);
+			this->asset_map.at(asset->get_asset_id()) = asset->__get_index();
+		}
+	}
+
+	// remove the asset from the exchange
+	ExchangePtr exchange = this->exchanges.at(asset->get_exchange_id());
+	AGIS_DO_OR_RETURN(exchange->__remove_asset(asset->__get_index(true)), AssetPtr);
+
+	// decrease the asset counter by 1
+	this->asset_counter--;
+	
+	// return the extracted asset
+	return AgisResult<AssetPtr>(asset);
 }
 
 

@@ -156,6 +156,15 @@ public:
     );
 #endif
 
+    /// <summary>
+    /// Does the asset enclose another asset. This is used to determine if an asset is a valid asset
+    /// for calculating beta. Enclose means that, if t0,t1 is first and last datetime of asset_b,
+    /// then the two asset's datetime index's are the same.
+    /// </summary>
+    /// <param name="asset_b">the asset encloses asset_b</param>
+    /// <returns></returns>
+    bool encloses(AssetPtr asset_b);
+
 
     AGIS_API inline  std::string get_asset_id() const { return this->asset_id; }
     AGIS_API inline  size_t get_asset_index() const { return this->asset_index; }
@@ -191,15 +200,36 @@ public:
     AGIS_API inline void __set_alignment(bool is_aligned_) { this->__is_aligned = is_aligned_; }
     bool __in_warmup() { return (this->current_index - 1) < this->warmup; }
     void __set_warmup(size_t warmup_) { if (this->warmup < warmup_) this->warmup = warmup_;}
+    
+    /// <summary>
+    /// Does the asset's datetime index match the exchange's datetime index
+    /// </summary>
     bool __is_aligned = false;
+
+    /// <summary>
+    /// Is the asset currently streaming //TODO: remove?
+    /// </summary>
     bool __is_streaming = false;
+
+    /// <summary>
+    /// Has the asset finished streaming
+    /// </summary>
     bool __is_expired = false;
+
+    /// <summary>
+    /// Will the asset be included in the exchange view
+    /// </summary>
+    bool __in_exchange_view = true;
+
+    /// <summary>
+    /// Is the current time step of the asset that last available time step.
+    /// </summary>
     bool __is_valid_next_time = true;
+    
     void __step();
     bool __is_valid_time(long long& datetime);
     long long __get_asset_time() const { return this->dt_index[this->current_index];}
     bool __is_last_view() const { return this->current_index - 1 == this->rows; }
-
 
     void __goto(long long datetime);
     void __reset();
@@ -227,7 +257,8 @@ private:
     double* data;
     double* close;
     double* open;
-    std::optional<std::pair<long long, long long>> window;
+
+    std::optional<std::pair<long long, long long>> window = std::nullopt;
 
     std::unordered_map<std::string, size_t> headers;
 

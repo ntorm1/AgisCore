@@ -170,6 +170,32 @@ AGIS_API AgisResult<bool> Asset::load(
 #endif
 
 //============================================================================
+bool Asset::encloses(AssetPtr asset_b)
+{
+    if (!this->is_loaded) return false;
+    if(this->rows < asset_b->rows) return false;
+
+    auto asset_b_index = asset_b->__get_dt_index();
+    auto asset_b_start = asset_b_index[0];
+
+    // find the index location of asset_b_start in this->dt_index if it exists
+    auto it = std::find(this->dt_index, this->dt_index + this->rows, asset_b_start);
+	if (it == this->dt_index + this->rows) return false;
+	auto asset_b_start_index = std::distance(this->dt_index, it);
+
+	// check if asset_b is contained in this
+	for (size_t i = 0; i < asset_b->rows; i++)
+	{
+		if (this->dt_index[asset_b_start_index + i] != asset_b_index[i])
+		{
+			return false;
+		}
+	}
+	return true;
+    
+}
+
+//============================================================================
 AgisResult<bool> Asset::load_headers()
 {
     int success = 0;
