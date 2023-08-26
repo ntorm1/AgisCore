@@ -132,7 +132,7 @@ public:
     /// <param name="dt_fmt">the format of the datetime index</param>
     /// <param name="window">a range of valid times to load, in the form of seconds since midnight</param>
     /// <returns></returns>
-    AGIS_API AgisResult<bool> load(
+    AGIS_API [[nodiscard]] AgisResult<bool> load(
         std::string source,
         std::string dt_fmt,
         std::optional<std::pair<long long, long long>> window = std::nullopt
@@ -147,7 +147,7 @@ public:
     /// <param name="datasetIndex">H5 dataset for the asset index</param>
     /// <param name="dataspaceIndex">H5 dataspace for the asset index</param>
     /// <returns></returns>
-    AGIS_API AgisResult<bool> load(
+    AGIS_API [[nodiscard]] AgisResult<bool> load(
         H5::DataSet& dataset,
         H5::DataSpace& dataspace,
         H5::DataSet& datasetIndex,
@@ -184,22 +184,25 @@ public:
     AGIS_API inline size_t __get_close_index() const { return this->close_index; }
     
     AGIS_API double __get_market_price(bool on_close) const;
+    AGIS_API AgisResult<double> __get_beta() const;
     AGIS_API AgisMatrix<double> const __get__data() const;
-    AGIS_API StridedPointer<double> const __get_column(std::string const& column_name) const;
-    AGIS_API StridedPointer<long long> const __get_dt_index() const;
+    AGIS_API std::span<double> const __get_column(size_t column_index) const;
+    AGIS_API std::span<double> const __get_column(std::string const& column_name) const;
+    AGIS_API std::span<long long> const __get_dt_index() const;
     AGIS_API std::vector<std::string> __get_dt_index_str() const;
+    size_t __get_index(bool offset = true) const { return offset ? this->asset_index : this->asset_index - this->exchange_offset; }
 
     bool __contains_column(std::string const& col) { return this->headers.count(col) > 0; }
     bool __valid_row(int n)const { return abs(n) <= (this->current_index - 1); }
 
+    bool __set_beta(AssetPtr market_asset, size_t lookback);
+    void __set_warmup(size_t warmup_) { if (this->warmup < warmup_) this->warmup = warmup_; }
     void __set_index(size_t index_) { this->asset_index = index_; }
     void __set_exchange_offset(size_t offset) { this->exchange_offset = offset; }
-    size_t __get_index(bool offset = true) const { return offset ? this->asset_index : this->asset_index - this->exchange_offset; }
 
 
     AGIS_API inline void __set_alignment(bool is_aligned_) { this->__is_aligned = is_aligned_; }
-    bool __in_warmup() { return (this->current_index - 1) < this->warmup; }
-    void __set_warmup(size_t warmup_) { if (this->warmup < warmup_) this->warmup = warmup_;}
+    bool __in_warmup() const { return (this->current_index - 1) < this->warmup; }
     
     /// <summary>
     /// Does the asset's datetime index match the exchange's datetime index
@@ -257,13 +260,14 @@ private:
     double* data;
     double* close;
     double* open;
+    std::vector<double> beta_vector;
 
     std::optional<std::pair<long long, long long>> window = std::nullopt;
 
     std::unordered_map<std::string, size_t> headers;
 
-    AgisResult<bool> load_headers();
-    AgisResult<bool> load_csv();
+    [[nodiscard]] AgisResult<bool> load_headers();
+    [[nodiscard]] AgisResult<bool> load_csv();
     const arrow::Status load_parquet();
 
 };

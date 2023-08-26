@@ -66,7 +66,7 @@ public:
 	/// Build the hydra instance using the currently loaded objects
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API AgisResult<bool> build();
+	AGIS_API [[nodiscard]] AgisResult<bool> build();
 	
 	/// <summary>
 	/// Reset the hydra instance to it's original state before any steps forward in time
@@ -91,7 +91,7 @@ public:
 	/// Run a complete Hydra simulation
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API AgisResult<bool> __run();
+	AGIS_API [[nodiscard]] AgisResult<bool> __run();
 
 	AGIS_API void __run_to(long long datetime);
 
@@ -104,7 +104,7 @@ public:
 	/// <param name="freq_">frequency of the asset data</param>
 	/// <param name="dt_format">format of the datetime index</param>
 	/// <returns></returns>
-	AGIS_API AgisResult<bool> new_exchange(
+	AGIS_API [[nodiscard]] AgisResult<bool> new_exchange(
 		std::string exchange_id_,
 		std::string source_dir_,
 		Frequency freq_,

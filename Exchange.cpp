@@ -1,7 +1,6 @@
 #include "pch.h" 
 #include <execution>
 #include <tbb/parallel_for_each.h>
-#include <future>
 #include <chrono>
 #include <Windows.h>
 #include "utils_array.h"
@@ -134,8 +133,11 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 }
 
 
-
-AgisResult<bool> Exchange::__set_market_asset(std::string const& asset_id, bool disable)
+//============================================================================
+AgisResult<bool> Exchange::__set_market_asset(
+	std::string const& asset_id,
+	bool disable,
+	std::optional<size_t> beta_lookback)
 {
 	if(!this->asset_exists(asset_id)) return AgisResult<bool>(AGIS_EXCEP("asset does not exists"));
 
@@ -145,11 +147,10 @@ AgisResult<bool> Exchange::__set_market_asset(std::string const& asset_id, bool 
 	{
 		if (asset_mid->get_asset_id() == asset_id)
 		{
+			market_asset_ = asset_mid;
 			break;
 		}
 	}
-
-	if(!market_asset_) return AgisResult<bool>(AGIS_EXCEP("asset does not exists"));
 	
 	// check to see if asset encloses all assets listed on the exchange
 	for (AssetPtr asset_mid : this->assets)
@@ -164,6 +165,14 @@ AgisResult<bool> Exchange::__set_market_asset(std::string const& asset_id, bool 
 	market_asset_->__in_exchange_view = false;
 	this->market_asset = market_asset_;
 
+	if(!beta_lookback.has_value()) return AgisResult<bool>(true);
+
+	// load the beta columns in for each asset
+	std::for_each(this->assets.begin(), this->assets.end(), [&](const auto& asset_mid) {
+		if (asset_mid->get_asset_id() != asset_id) {
+			asset_mid->__set_beta(market_asset_, beta_lookback.value());
+		}
+		});
 	return AgisResult<bool>(true);
 }
 
@@ -238,7 +247,7 @@ void Exchange::build(size_t exchange_offset)
 		this->assets,
 		[](std::shared_ptr<Asset> const obj)
 		{ 
-			return obj->__get_dt_index().get();
+			return obj->__get_dt_index().data();
 		},
 		[](std::shared_ptr<Asset> const obj)
 		{ 
@@ -310,7 +319,8 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 		// get the asset's current time
 		if (asset->__get_asset_time() == this->exchange_time)
 		{
-			// add asset to market view, step the asset forward in time
+			// add asset to market view, step the asset forward in time. Note if the asset
+			// is in warmup it will step forward but __is_streaming is false
 			asset->__step();
 		}
 		else
@@ -729,9 +739,9 @@ NexusStatusCode ExchangeMap::remove_exchange(std::string const& exchange_id_)
 
 
 //============================================================================
-StridedPointer<long long> const ExchangeMap::__get_dt_index() const
+std::span<long long> const ExchangeMap::__get_dt_index() const
 {
-	return StridedPointer(this->dt_index, this->dt_index_size, 1);
+	return std::span(this->dt_index, this->dt_index_size);
 }
 
 
@@ -930,7 +940,8 @@ AGIS_API bool ExchangeMap::step()
 	expired_asset_index.clear();
 	// Define a lambda function that processes each asset
 	auto process_exchange = [&](auto& exchange_pair) {
-		if (exchange_pair.second->__get_market_time() != current_time) { return; }
+		auto exchange_time = exchange_pair.second->__get_market_time();
+		if (exchange_time != current_time) { return; }
 		exchange_pair.second->step(expired_asset_index);
 		exchange_pair.second->__took_step = true;
 	};

@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include "Asset.h"
+#include "AgisRisk.h"
 
 #ifdef ARROW_API_H
 #include <arrow/api.h>
@@ -164,7 +165,7 @@ AGIS_API AgisResult<bool> Asset::load(
 
     this->close = this->data + (this->rows) * this->close_index;
     this->open = this->data + (this->rows) * this->open_index;
-
+    this->is_loaded = true;
     return AgisResult<bool>(true);
 }
 #endif
@@ -370,23 +371,28 @@ const arrow::Status Asset::load_parquet()
     {
         throw std::runtime_error("failed to load headers");
     }
-
+    this->is_loaded = true;
     return arrow::Status::OK();
 }
 #endif
 
+std::span<double> const Asset::__get_column(size_t column_index) const
+{
+    return std::span<double>(this->data + (column_index * this->rows), this->rows);
+}
+
 //============================================================================
-StridedPointer<double> const Asset::__get_column(std::string const& column_name) const
+std::span<double> const Asset::__get_column(std::string const& column_name) const
 {
     auto col_offset = this->headers.at(column_name);
-    return StridedPointer(this->data + (col_offset*this->rows), this->rows, 1);
+    return std::span<double>(this->data + (col_offset*this->rows), this->rows);
 }
 
 
 //============================================================================
-StridedPointer<long long> const Asset::__get_dt_index() const
+std::span<long long> const Asset::__get_dt_index() const
 {
-    return StridedPointer(this->dt_index,this->rows,1);
+    return std::span(this->dt_index,this->rows);
 }
 
 
@@ -400,6 +406,49 @@ AGIS_API std::vector<std::string> Asset::__get_dt_index_str() const
         dt_index_str.push_back(epoch_to_str(epoch, this->dt_fmt).unwrap());
     }
     return dt_index_str;
+}
+
+bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
+{
+    auto market_close_col_index = market_asset->__get_close_index();
+    std::span<double> market_close_col = market_asset->__get_column(market_close_col_index);
+    std::span<double> close_column = this->__get_column(this->close_index);
+
+    if (lookback >= close_column.size())
+    {
+        return false;
+    }   
+    
+    std::span<long long> market_datetime_index = market_asset->__get_dt_index();
+    std::span<long long> datetime_index = this->__get_dt_index();
+    long long first_datetime = datetime_index[0];
+    
+    // find the first datetime in the market asset that is equal to the first datetime in this asset
+    auto first_datetime_index = std::find(market_datetime_index.begin(), market_datetime_index.end(), first_datetime);
+    // get this index location
+    auto first_datetime_index_loc = std::distance(market_datetime_index.begin(), first_datetime_index);
+ 
+    std::vector<double> returns_this, returns_market;
+
+    // Calculate the daily returns for both this asset and the market asset
+    for (size_t i = 1; i < this->rows; i++)
+    {
+        double return_this = (close_column[i] - close_column[i - 1]) / close_column[i - 1];
+        double return_market = (market_close_col[i + first_datetime_index_loc] - market_close_col[i + first_datetime_index_loc - 1]) /
+            market_close_col[i + first_datetime_index_loc - 1];
+
+        returns_this.push_back(return_this);
+        returns_market.push_back(return_market);
+    }
+
+    // Calculate the rolling n-period beta
+    this->beta_vector = rolling_beta(returns_this, returns_market, lookback);
+
+
+    // adjust the warmup to account for the lookback period
+    this->__set_warmup(lookback);
+
+    return true;
 }
 
 
@@ -468,10 +517,25 @@ AGIS_API double Asset::__get_market_price(bool on_close) const
 
 
 //============================================================================
+AGIS_API AgisResult<double> Asset::__get_beta() const
+{
+    if (this->beta_vector.size() > 0 && !this->__in_warmup())
+	{
+		return AgisResult<double>(this->beta_vector[this->current_index - 1]);
+	}
+	else
+	{
+		return AgisResult<double>(AGIS_EXCEP("beta not available"));
+	}
+}
+
+
+//============================================================================
 AgisMatrix<double> const Asset::__get__data() const
 {
     return AgisMatrix(this->data, this->rows, this->columns);
 }
+
 
 
 //============================================================================
@@ -496,6 +560,12 @@ AgisResult<double> Asset::get_asset_feature(std::string const& col, int index) c
     {
         return AgisResult<double>(AGIS_EXCEP("Invalid column name: " + col));
     }
+    if (!__is_streaming)
+    {
+		return AgisResult<double>(AGIS_EXCEP("Asset is not streaming"));
+	}
+
+
     size_t col_offset = this->headers.at(col) * this->rows;
     size_t row_offset = this->current_index + index - 1;
     return AgisResult<double> (*(this->data + row_offset + col_offset));

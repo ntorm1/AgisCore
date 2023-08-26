@@ -66,6 +66,9 @@
     <ClInclude Include="AgisStrategyRegistry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AgisRisk.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -99,6 +102,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AgisRouter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AgisRisk.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

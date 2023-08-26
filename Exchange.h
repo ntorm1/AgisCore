@@ -82,14 +82,14 @@ public:
 	/// Load in the all asset's found in the exchange's source directory
 	/// </summary>
 	/// <returns>status if the restore was succesful</returns>
-	AGIS_API AgisResult<bool> restore();
+	AGIS_API [[nodiscard]] AgisResult<bool> restore();
 
 	/// <summary>
 	/// Restore data from hdf5 file, assume each dataset is asset, dataset name is asset id
 	/// and that 1st column is nanosecond epoch index stored n int64
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API AgisResult<bool> restore_h5();
+	AGIS_API [[nodiscard]] AgisResult<bool> restore_h5();
 
 	/// <summary>
 	/// Serialize the exchange to json format so it can be saved
@@ -101,7 +101,7 @@ public:
 	/// Get a vector of ids for all assets listed on the exchange
 	/// </summary>
 	/// <returns>vector of asset ids</returns>
-	std::vector<std::string> get_asset_ids() const;
+	AGIS_API std::vector<std::string> get_asset_ids() const;
 	
 	/// <summary>
 	/// Does an asset with this id exist on the exchange
@@ -160,8 +160,13 @@ public:
 	/// </summary>
 	/// <param name="asset_id">unique id of the market asset</param>
 	/// <param name="disable_asset">disable the asset from being used in the exchange view</param>
+	/// <param name="beta_lookback">calculate the beta of all assets against the market asset, note adjusts assets warmup</param>
 	/// <returns></returns>
-	AgisResult<bool> __set_market_asset(std::string const& asset_id, bool disable_asset);
+	AGIS_API [[nodiscard]] AgisResult<bool> __set_market_asset(
+		std::string const& asset_id,
+		bool disable_asset,
+		std::optional<size_t> beta_lookback
+	);
 
 	AGIS_API size_t get_candle_count() { return this->candles; };
 	AGIS_API inline std::string get_exchange_id() const { return this->exchange_id; }
@@ -236,7 +241,7 @@ public:
 	/// <param name="freq_">frequency of the exchange data points</param>
 	/// <param name="dt_format">the format of the datetime index</param>
 	/// <returns>status if the new exchange was created succesfully</returns>
-	AGIS_API AgisResult<bool> new_exchange(
+	AGIS_API [[nodiscard]] AgisResult<bool> new_exchange(
 		std::string exchange_id_,
 		std::string source_dir_,
 		Frequency freq_,
@@ -306,7 +311,7 @@ public:
 	AGIS_API double __get_market_price(size_t asset_index, bool on_close) const;
 	AGIS_API double __get_market_price(std::string& asset_id, bool on_close) const;
 	
-	AGIS_API StridedPointer<long long> const __get_dt_index() const;
+	AGIS_API std::span<long long> const __get_dt_index() const;
 	AGIS_API inline long long __get_market_time() { return this->dt_index[this->current_index]; }
 
 	AGIS_API void __goto(long long datetime);

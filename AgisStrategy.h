@@ -210,7 +210,7 @@ public:
 	/// Subscribe to an exchange, next() will be called when that exchange steps
 	/// </summary>
 	/// <param name="exchange_id">Unique id of the exchange</param>
-	AGIS_API AgisResult<bool> exchange_subscribe(std::string const& exchange_id);
+	AGIS_API [[nodiscard]] AgisResult<bool> exchange_subscribe(std::string const& exchange_id);
 
 	/// <summary>
 	/// Clear existing containers of all historical information
@@ -335,7 +335,7 @@ public:
 	/// Set the trading window from prefined string 
 	/// </summary>
 	/// <param name="window_name"></param>
-	AgisResult<bool> set_trading_window(std::string const& window_name);
+	[[nodiscard]] AgisResult<bool> set_trading_window(std::string const& window_name);
 
 	inline std::optional<TradingWindow> get_trading_window() { return this->trading_window; };
 
@@ -458,7 +458,7 @@ public:
 	bool __next();
 	void __reset();
 	void __clear();
-	AgisResult<bool> __build();
+	[[nodiscard]] AgisResult<bool> __build();
 
 	bool __strategy_exists(std::string const& id) const { return this->strategy_id_map.count(id) > 0; }
 
@@ -490,7 +490,7 @@ public:
 
 	AGIS_API void build() override;
 
-	AGIS_API AgisResult<bool> extract_ev_lambda();
+	AGIS_API [[nodiscard]] AgisResult<bool> extract_ev_lambda();
 
 	AGIS_API inline void set_abstract_ev_lambda(std::function<
 		std::optional<ExchangeViewLambdaStruct>
