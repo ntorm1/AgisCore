@@ -67,6 +67,7 @@ struct TimePoint {
 
 class  Exchange
 {
+	friend class ExchangeMap;
 public:
 	AGIS_API Exchange(
 		std::string exchange_id,
@@ -155,19 +156,6 @@ public:
 	/// <returns></returns>
 	AgisResult<AssetPtr> __remove_asset(size_t asset_index);
 
-	/// <summary>
-	/// Set an asset on the exchange as the market asset, used for beta hedging and benchamrking
-	/// </summary>
-	/// <param name="asset_id">unique id of the market asset</param>
-	/// <param name="disable_asset">disable the asset from being used in the exchange view</param>
-	/// <param name="beta_lookback">calculate the beta of all assets against the market asset, note adjusts assets warmup</param>
-	/// <returns></returns>
-	AGIS_API [[nodiscard]] AgisResult<bool> __set_market_asset(
-		std::string const& asset_id,
-		bool disable_asset,
-		std::optional<size_t> beta_lookback
-	);
-
 	AGIS_API size_t get_candle_count() { return this->candles; };
 	AGIS_API inline std::string get_exchange_id() const { return this->exchange_id; }
 	AGIS_API inline StridedPointer<long long> const __get_dt_index() const;
@@ -189,6 +177,20 @@ public:
 	void build(size_t exchange_offset);
 	bool step(ThreadSafeVector<size_t>& expired_assets);
 	bool __took_step = false;
+
+	protected:
+	/// <summary>
+	/// Set an asset on the exchange as the market asset, used for beta hedging and benchamrking
+	/// </summary>
+	/// <param name="asset_id">unique id of the market asset</param>
+	/// <param name="disable_asset">disable the asset from being used in the exchange view</param>
+	/// <param name="beta_lookback">calculate the beta of all assets against the market asset, note adjusts assets warmup</param>
+	/// <returns></returns>
+	AGIS_API [[nodiscard]] AgisResult<bool> __set_market_asset(
+		std::string const& asset_id,
+		bool disable_asset,
+		std::optional<size_t> beta_lookback
+	);
 
 private:
 	std::mutex _mutex;
@@ -266,8 +268,8 @@ public:
 	/// </summary>
 	/// <param name="asset_id">id of the asset to search for</param>
 	/// <returns>shared pointer to asset if it is found</returns>
-	AGIS_API inline std::optional<std::shared_ptr<Asset> const> get_asset(std::string const& asset_id) const;
-	AGIS_API inline std::shared_ptr<Asset> get_asset(size_t index) const { return this->assets[index]; }
+	AGIS_API AgisResult<AssetPtr> get_asset(std::string const& asset_id) const;
+	AGIS_API AgisResult<AssetPtr> get_asset(size_t index) const;
 
 	/// <summary>
 	/// Remove an asset from the exchange map by asset id
@@ -303,6 +305,21 @@ public:
 	/// <param name="asset_id">id of the asset to search for</param>
 	/// <returns>Does a asset with this id exist already</returns>
 	AGIS_API bool asset_exists(std::string const& asset_id) const;
+
+	/// <summary>
+	/// Set an asset on the exchange as the market asset, used for beta hedging and benchamrking
+	/// </summary>
+	/// <param name="asset_id">unique id of the exchange to set</param>
+	/// <param name="asset_id">unique id of the market asset</param>
+	/// <param name="disable_asset">disable the asset from being used in the exchange view</param>
+	/// <param name="beta_lookback">calculate the beta of all assets against the market asset, note adjusts assets warmup</param>
+	/// <returns></returns>
+	AGIS_API [[nodiscard]] AgisResult<bool> set_market_asset(
+		std::string const& exchange_id,
+		std::string const& asset_id,
+		bool disable_asset,
+		std::optional<size_t> beta_lookback
+	);
 
 	AGIS_API bool exchange_exists(std::string const& id) const { return this->exchanges.count(id) > 0; };
 	AGIS_API std::vector<std::string> get_exchange_ids() const;

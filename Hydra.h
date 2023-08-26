@@ -195,7 +195,7 @@ public:
 	/// </summary>
 	/// <param name="asset_id">Unique id of the asset to search for</param>
 	/// <returns></returns>
-	AGIS_API std::optional<std::shared_ptr<Asset> const> get_asset(std::string const& asset_id) const;
+	AGIS_API AgisResult<AssetPtr> get_asset(std::string const& asset_id) const;
 	
 	AGIS_API AgisResult<std::string> asset_index_to_id(size_t const& index) const;
 	AGIS_API AgisResult<std::string> strategy_index_to_id(size_t const& index) const;

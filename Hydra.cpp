@@ -167,7 +167,7 @@ std::vector<std::string> Hydra::get_asset_ids(std::string exchange_id_)
 
 
 //============================================================================
-std::optional<std::shared_ptr<Asset> const> Hydra::get_asset(std::string const& asset_id) const
+AgisResult<AssetPtr> Hydra::get_asset(std::string const& asset_id) const
 {
     return this->exchanges.get_asset(asset_id);
 }

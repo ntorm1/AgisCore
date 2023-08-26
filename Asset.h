@@ -104,8 +104,15 @@ AGIS_API typedef std::shared_ptr<Asset> AssetPtr;
 *   @endcode
 * 
 */
+
+class Exchange;
+class ExchangeMap;
+
 class  Asset
 {
+    friend class Exchange;
+    friend class ExchangeMap;
+
 public:
     /// <summary>
     /// Asset constructor
@@ -126,37 +133,6 @@ public:
     AGIS_API ~Asset();
 
     /// <summary>
-    /// Load in a asset's data from a filepath. Supported types: csv, Parquet, HDF5.
-    /// </summary>
-    /// <param name="source">the file path of the data source</param>
-    /// <param name="dt_fmt">the format of the datetime index</param>
-    /// <param name="window">a range of valid times to load, in the form of seconds since midnight</param>
-    /// <returns></returns>
-    AGIS_API [[nodiscard]] AgisResult<bool> load(
-        std::string source,
-        std::string dt_fmt,
-        std::optional<std::pair<long long, long long>> window = std::nullopt
-    );
-    
-#ifdef H5_HAVE_H5CPP
-    /// <summary>
-    /// Load a asset data from an H5 dataset and datetime index.
-    /// </summary>
-    /// <param name="dataset">H5 dataset for the asset data</param>
-    /// <param name="dataspace">H5 dataspace for the asset data matrix</param>
-    /// <param name="datasetIndex">H5 dataset for the asset index</param>
-    /// <param name="dataspaceIndex">H5 dataspace for the asset index</param>
-    /// <returns></returns>
-    AGIS_API [[nodiscard]] AgisResult<bool> load(
-        H5::DataSet& dataset,
-        H5::DataSpace& dataspace,
-        H5::DataSet& datasetIndex,
-        H5::DataSpace& dataspaceIndex,
-        std::string dt_fmt
-    );
-#endif
-
-    /// <summary>
     /// Does the asset enclose another asset. This is used to determine if an asset is a valid asset
     /// for calculating beta. Enclose means that, if t0,t1 is first and last datetime of asset_b,
     /// then the two asset's datetime index's are the same.
@@ -164,7 +140,6 @@ public:
     /// <param name="asset_b">the asset encloses asset_b</param>
     /// <returns></returns>
     bool encloses(AssetPtr asset_b);
-
 
     AGIS_API inline  std::string get_asset_id() const { return this->asset_id; }
     AGIS_API inline  size_t get_asset_index() const { return this->asset_index; }
@@ -177,33 +152,70 @@ public:
     AGIS_API std::vector<std::string> get_column_names() const;
     AGIS_API inline std::unordered_map<std::string, size_t> const& get_headers() { return this->headers; };
     AGIS_API AgisResult<double> get_asset_feature(std::string const& col, int index) const;
+    AGIS_API AgisResult<double> get_beta() const;
 
+    AGIS_API bool __get_is_valid_next_time() const { return __is_valid_next_time; }
     AGIS_API double __get(std::string col, size_t row) const;
     AGIS_API inline long long __get_dt(size_t row) const { return *(this->dt_index + row); };
     AGIS_API inline size_t __get_open_index() const {return this->open_index;}
     AGIS_API inline size_t __get_close_index() const { return this->close_index; }
     
     AGIS_API double __get_market_price(bool on_close) const;
-    AGIS_API AgisResult<double> __get_beta() const;
     AGIS_API AgisMatrix<double> const __get__data() const;
     AGIS_API std::span<double> const __get_column(size_t column_index) const;
     AGIS_API std::span<double> const __get_column(std::string const& column_name) const;
-    AGIS_API std::span<long long> const __get_dt_index() const;
-    AGIS_API std::vector<std::string> __get_dt_index_str() const;
+    AGIS_API std::span<long long> const __get_dt_index(bool adjust_for_warmup = true) const;
+    AGIS_API std::vector<std::string> __get_dt_index_str(bool adjust_for_warmup = true) const;
     size_t __get_index(bool offset = true) const { return offset ? this->asset_index : this->asset_index - this->exchange_offset; }
 
     bool __contains_column(std::string const& col) { return this->headers.count(col) > 0; }
     bool __valid_row(int n)const { return abs(n) <= (this->current_index - 1); }
+    
+    bool __is_valid_time(long long& datetime);
+    long long __get_asset_time() const { return this->dt_index[this->current_index];}
 
+protected:
+    /// <summary>
+    /// Load in a asset's data from a filepath. Supported types: csv, Parquet, HDF5.
+    /// </summary>
+    /// <param name="source">the file path of the data source</param>
+    /// <param name="dt_fmt">the format of the datetime index</param>
+    /// <param name="window">a range of valid times to load, in the form of seconds since midnight</param>
+    /// <returns></returns>
+        AGIS_API [[nodiscard]] AgisResult<bool> load(
+            std::string source,
+            std::string dt_fmt,
+            std::optional<std::pair<long long, long long>> window = std::nullopt
+        );
+
+    #ifdef H5_HAVE_H5CPP
+        /// <summary>
+        /// Load a asset data from an H5 dataset and datetime index.
+        /// </summary>
+        /// <param name="dataset">H5 dataset for the asset data</param>
+        /// <param name="dataspace">H5 dataspace for the asset data matrix</param>
+        /// <param name="datasetIndex">H5 dataset for the asset index</param>
+        /// <param name="dataspaceIndex">H5 dataspace for the asset index</param>
+        /// <returns></returns>
+        AGIS_API [[nodiscard]] AgisResult<bool> load(
+            H5::DataSet& dataset,
+            H5::DataSpace& dataspace,
+            H5::DataSet& datasetIndex,
+            H5::DataSpace& dataspaceIndex,
+            std::string dt_fmt
+        );
+    #endif
+
+    void __goto(long long datetime);
+    void __reset();
+    void __step();
+
+    AGIS_API inline void __set_alignment(bool is_aligned_) { this->__is_aligned = is_aligned_; }
     bool __set_beta(AssetPtr market_asset, size_t lookback);
     void __set_warmup(size_t warmup_) { if (this->warmup < warmup_) this->warmup = warmup_; }
     void __set_index(size_t index_) { this->asset_index = index_; }
     void __set_exchange_offset(size_t offset) { this->exchange_offset = offset; }
 
-
-    AGIS_API inline void __set_alignment(bool is_aligned_) { this->__is_aligned = is_aligned_; }
-    bool __in_warmup() const { return (this->current_index - 1) < this->warmup; }
-    
     /// <summary>
     /// Does the asset's datetime index match the exchange's datetime index
     /// </summary>
@@ -228,14 +240,10 @@ public:
     /// Is the current time step of the asset that last available time step.
     /// </summary>
     bool __is_valid_next_time = true;
-    
-    void __step();
-    bool __is_valid_time(long long& datetime);
-    long long __get_asset_time() const { return this->dt_index[this->current_index];}
-    bool __is_last_view() const { return this->current_index - 1 == this->rows; }
 
-    void __goto(long long datetime);
-    void __reset();
+    bool __is_last_view() const { return this->current_index - 1 == this->rows; }
+    bool __in_warmup() const { return (this->current_index - 1) < this->warmup; }
+
 
 private:
     bool is_loaded = false;

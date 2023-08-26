@@ -169,12 +169,37 @@ AgisResult<bool> Exchange::__set_market_asset(
 
 	// load the beta columns in for each asset
 	std::for_each(this->assets.begin(), this->assets.end(), [&](const auto& asset_mid) {
+		// calculate rolling beta column
 		if (asset_mid->get_asset_id() != asset_id) {
 			asset_mid->__set_beta(market_asset_, beta_lookback.value());
 		}
+		// adjust the lookback of the market asset to line up with the others
+		else {
+			asset_mid->__set_warmup(beta_lookback.value());
+		}
 		});
+	
+	// once market asset has been added rebuild the exchange to account for the new
+	// asset warmup period needed
+	this->is_built = false;
+
 	return AgisResult<bool>(true);
 }
+
+
+//============================================================================
+AgisResult<bool> ExchangeMap::set_market_asset(
+	std::string const& exchange_id,
+	std::string const& asset_id,
+	bool disable_asset,
+	std::optional<size_t> beta_lookback)
+{
+	if(!this->exchange_exists(exchange_id)) return AgisResult<bool>(AGIS_EXCEP("exchange does not exists"));
+	auto res = this->exchanges[exchange_id]->__set_market_asset(asset_id, disable_asset, beta_lookback);
+	if (!res.is_exception()) this->is_built = false;
+	return res;
+}
+
 
 //============================================================================
 StridedPointer<long long> const Exchange::__get_dt_index() const
@@ -260,6 +285,7 @@ void Exchange::build(size_t exchange_offset)
 	for (auto& asset : this->assets) {
 		// test to see if asset is alligned with the exchage's datetime index
 		// makes updating market view faster
+		asset->__reset();
 		if (asset->get_rows() == this->dt_index_size) 
 		{
 			asset->__set_alignment(true);
@@ -269,6 +295,7 @@ void Exchange::build(size_t exchange_offset)
 		{
 			asset->__set_alignment(false);
 		}
+
 
 		//set the asset's exchange offset so indexing into the exchange's asset vector works
 		asset->__set_exchange_offset(exchange_offset);
@@ -617,18 +644,26 @@ std::vector<std::string> ExchangeMap::get_asset_ids(std::string const& exchange_
  
 
 //============================================================================
-std::optional<std::shared_ptr<Asset> const> ExchangeMap::get_asset(std::string const&  asset_id) const
+AgisResult<AssetPtr> ExchangeMap::get_asset(std::string const&  asset_id) const
 {
-#ifndef AGIS_SLOW
 	if (!this->asset_exists(asset_id))
 	{
-		return std::nullopt;
+		return AgisResult<AssetPtr>(AGIS_EXCEP("asset was not found"));
 	}
-#endif
 	auto index = this->asset_map.at(asset_id);
-	return this->assets[index];
+	return AgisResult<AssetPtr>(this->assets[index]);
 }
 
+
+//============================================================================
+AgisResult<AssetPtr> ExchangeMap::get_asset(size_t index) const
+{
+	if (index > this->assets.size())
+	{
+		return AgisResult<AssetPtr>(AGIS_EXCEP("asset was not found"));
+	}
+	return AgisResult<AssetPtr>(this->assets[index]);
+}
 
 //============================================================================
 AgisResult<AssetPtr> Exchange::__remove_asset(size_t asset_index)
@@ -652,7 +687,9 @@ AGIS_API AgisResult<AssetPtr> ExchangeMap::remove_asset(std::string const& asset
 	}
 
 	// for all asset's with index greater than the extracted asset, decrement their index
-	AssetPtr asset = this->get_asset(asset_id).value();
+	AgisResult<AssetPtr> asset_res = this->get_asset(asset_id);
+	if(asset_res.is_exception()) return AgisResult<AssetPtr>(asset_res.get_exception());
+	auto asset = asset_res.unwrap();
 	auto asset_index = asset->__get_index();
 
 	// remove from the asset map 

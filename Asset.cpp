@@ -390,16 +390,21 @@ std::span<double> const Asset::__get_column(std::string const& column_name) cons
 
 
 //============================================================================
-std::span<long long> const Asset::__get_dt_index() const
+std::span<long long> const Asset::__get_dt_index(bool adjust_for_warmup) const
 {
-    return std::span(this->dt_index,this->rows);
+    // return the dt index without the warmup period moving the pointer 
+    // forward so that the final union index will be adjusted to all warmups
+    if(adjust_for_warmup)
+        return std::span(this->dt_index + this->warmup,this->rows - this->warmup);
+    else
+        return std::span(this->dt_index, this->rows);
 }
 
 
 //============================================================================
-AGIS_API std::vector<std::string> Asset::__get_dt_index_str() const
+AGIS_API std::vector<std::string> Asset::__get_dt_index_str(bool adjust_for_warmup) const
 {
-    auto dt_index = this->__get_dt_index();
+    auto dt_index = this->__get_dt_index(adjust_for_warmup);
     std::vector<std::string> dt_index_str;
     for (auto const& epoch : dt_index)
     {
@@ -410,6 +415,7 @@ AGIS_API std::vector<std::string> Asset::__get_dt_index_str() const
 
 bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
 {
+    // TODO fix
     auto market_close_col_index = market_asset->__get_close_index();
     std::span<double> market_close_col = market_asset->__get_column(market_close_col_index);
     std::span<double> close_column = this->__get_column(this->close_index);
@@ -418,17 +424,29 @@ bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
     {
         return false;
     }   
+
+    // adjust the warmup to account for the lookback period
+    this->__set_warmup(lookback);
     
-    std::span<long long> market_datetime_index = market_asset->__get_dt_index();
-    std::span<long long> datetime_index = this->__get_dt_index();
+    std::span<long long> market_datetime_index = market_asset->__get_dt_index(false);
+    std::span<long long> datetime_index = this->__get_dt_index(false);
     long long first_datetime = datetime_index[0];
     
     // find the first datetime in the market asset that is equal to the first datetime in this asset
-    auto first_datetime_index = std::find(market_datetime_index.begin(), market_datetime_index.end(), first_datetime);
+    auto first_datetime_index = std::find(
+        market_datetime_index.begin(),
+        market_datetime_index.end(),
+        first_datetime
+    );
     // get this index location
-    auto first_datetime_index_loc = std::distance(market_datetime_index.begin(), first_datetime_index);
+    auto first_datetime_index_loc = std::distance(
+        market_datetime_index.begin(),
+        first_datetime_index
+    );
  
     std::vector<double> returns_this, returns_market;
+    returns_this.resize(this->rows - 1);
+    returns_market.resize(this->rows - 1);
 
     // Calculate the daily returns for both this asset and the market asset
     for (size_t i = 1; i < this->rows; i++)
@@ -437,18 +455,31 @@ bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
         double return_market = (market_close_col[i + first_datetime_index_loc] - market_close_col[i + first_datetime_index_loc - 1]) /
             market_close_col[i + first_datetime_index_loc - 1];
 
-        returns_this.push_back(return_this);
-        returns_market.push_back(return_market);
+        returns_this[i-1] = return_this;
+        returns_market[i-1] = return_market;
     }
-
     // Calculate the rolling n-period beta
+    if (asset_id == "MSFT")
+    {
+        auto x = 2;
+    }
     this->beta_vector = rolling_beta(returns_this, returns_market, lookback);
-
-
-    // adjust the warmup to account for the lookback period
-    this->__set_warmup(lookback);
-
+    assert(this->beta_vector.size() == this->rows);
     return true;
+}
+
+
+//============================================================================
+AGIS_API AgisResult<double> Asset::get_beta() const
+{
+    if (this->beta_vector.size() > 0 && !this->__in_warmup())
+    {
+        return AgisResult<double>(this->beta_vector[this->current_index - 1]);
+    }
+    else
+    {
+        return AgisResult<double>(AGIS_EXCEP("beta not available"));
+    }
 }
 
 
@@ -503,8 +534,8 @@ void Asset::__reset()
     this->current_index = this->warmup;
     this->__is_expired = false;
     if(!__is_aligned) this->__is_streaming = false;
-    this->close = this->data + (this->rows) * this->close_index;
-    this->open = this->data + (this->rows) * this->open_index;
+    this->close = (this->data + (this->rows) * this->close_index) + this->current_index;
+    this->open = (this->data + (this->rows) * this->open_index) + this->current_index;
 }
 
 
@@ -517,25 +548,10 @@ AGIS_API double Asset::__get_market_price(bool on_close) const
 
 
 //============================================================================
-AGIS_API AgisResult<double> Asset::__get_beta() const
-{
-    if (this->beta_vector.size() > 0 && !this->__in_warmup())
-	{
-		return AgisResult<double>(this->beta_vector[this->current_index - 1]);
-	}
-	else
-	{
-		return AgisResult<double>(AGIS_EXCEP("beta not available"));
-	}
-}
-
-
-//============================================================================
 AgisMatrix<double> const Asset::__get__data() const
 {
     return AgisMatrix(this->data, this->rows, this->columns);
 }
-
 
 
 //============================================================================
