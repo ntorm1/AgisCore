@@ -152,6 +152,7 @@ public:
     [[nodiscard]] OrderType get_order_type() const { return this->order_type; }
     [[nodiscard]] OrderState get_order_state() const { return this->order_state; }
     [[nodiscard]] std::optional<TradeExitPtr> move_exit() { return std::move(this->exit); }
+    [[nodiscard]] bool has_exit() const { return this->exit.has_value(); }
 
     void set_limit(double limit_) { this->limit = limit_; }
     void set_create_time(long long t) { this->order_create_time = t; }

@@ -47,6 +47,7 @@ std::optional<TradeRef> Position::__get_trade(size_t strategy_index) const
     }
 }
 
+
 //============================================================================
 void Position::__evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close, bool is_reprice)
 {

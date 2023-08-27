@@ -247,6 +247,7 @@ public:
 		AllocType alloc_type = AllocType::UNITS
 	);
 
+
 	AGIS_API inline static void __reset_counter() { strategy_counter.store(0); }
 
 	/// <summary>
@@ -390,6 +391,12 @@ protected:
 	/// </summary>
 	std::optional<std::pair<TimePoint, TimePoint>> trading_window = std::nullopt;
 
+	bool apply_beta_hedge = false;
+
+	/// <summary>
+	/// Pointer to the main exchange map object
+	/// </summary>
+	ExchangeMap const* exchange_map = nullptr;
 
 private:
 	/// <summary>
@@ -407,10 +414,7 @@ private:
 	/// </summary>
 	PortfolioPtr const portfolio;
 	
-	/// <summary>
-	/// Pointer to the main exchange map object
-	/// </summary>
-	ExchangeMap const* exchange_map = nullptr;
+
 
 	/// <summary>
 	/// All historical orders placed by the strategy
@@ -453,7 +457,7 @@ public:
 	AGIS_API inline size_t __get_strategy_index(std::string const& id) { return this->strategy_id_map.at(id); }
 	AGIS_API void register_strategy(AgisStrategyPtr strategy);
 	const AgisStrategyRef get_strategy(std::string strategy_id);
-	std::unordered_map<size_t, AgisStrategyPtr>& __get_strategies() { return this->strategies; }
+	ankerl::unordered_dense::map<size_t, AgisStrategyPtr>& __get_strategies() { return this->strategies; }
 	
 	bool __next();
 	void __reset();
@@ -463,8 +467,8 @@ public:
 	bool __strategy_exists(std::string const& id) const { return this->strategy_id_map.count(id) > 0; }
 
 private:
-	std::unordered_map<std::string, size_t> strategy_id_map;
-	std::unordered_map<size_t, AgisStrategyPtr> strategies;
+	ankerl::unordered_dense::map<std::string, size_t> strategy_id_map;
+	ankerl::unordered_dense::map<size_t, AgisStrategyPtr> strategies;
 
 };
 
@@ -518,4 +522,3 @@ private:
 AGIS_API std::string trading_window_to_key_str(std::optional<TradingWindow> input_window_opt);
 AGIS_API void str_replace_all(std::string& source, const std::string& oldStr, const std::string& newStr);
 AGIS_API void code_gen_write(fs::path filename, std::string const& source);
-AGIS_API void agis_realloc(ExchangeView* allocation, double c);

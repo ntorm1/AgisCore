@@ -44,13 +44,25 @@ Exchange::~Exchange()
 //============================================================================
 json Exchange::to_json() const
 {
-	return json{ 
+	auto j = json{
 		{"exchange_id", this->exchange_id},
 		{"source_dir", this->source_dir},
 		{"freq", this->freq},
 		{"dt_format", this->dt_format}
 	};
+	if (this->market_asset.has_value())
+	{
+		j["market_asset"] = this->market_asset.value().asset->get_asset_id();
+		j["market_warmup"] = this->market_asset.value().beta_lookback.value();
+	}
+	else
+	{
+		j["market_asset"] = "";
+		j["market_warmup"] = 0;
+	}
+	return j;
 }
+
 
 
 //============================================================================
@@ -79,7 +91,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 	if (row > 0) { throw std::runtime_error("Row must be <= 0"); }
 	auto number_assets = (N == -1) ? this->assets.size() : static_cast<size_t>(N);
 
-	ExchangeView exchange_view(this->exchange_index, number_assets);
+	ExchangeView exchange_view(this, number_assets);
 	auto& view = exchange_view.view;
 
 	for (auto& asset : this->assets)
@@ -113,7 +125,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 	size_t warmup)
 {
 	auto number_assets = (N == -1) ? this->assets.size() : static_cast<size_t>(N);
-	ExchangeView exchange_view(this->exchange_index, number_assets);
+	ExchangeView exchange_view(this, number_assets);
 	auto& view = exchange_view.view;
 	for (auto const& asset : this->assets)
 	{
@@ -131,6 +143,8 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 	exchange_view.sort(number_assets, query_type);
 	return exchange_view;
 }
+
+
 
 
 //============================================================================
@@ -163,7 +177,7 @@ AgisResult<bool> Exchange::__set_market_asset(
 
 	// set the market asset and disable it from the exchange view
 	market_asset_->__in_exchange_view = false;
-	this->market_asset = market_asset_;
+	this->market_asset = { market_asset_ , beta_lookback};
 
 	if(!beta_lookback.has_value()) return AgisResult<bool>(true);
 
@@ -188,6 +202,14 @@ AgisResult<bool> Exchange::__set_market_asset(
 
 
 //============================================================================
+AGIS_API [[nodiscard]] AgisResult<AssetPtr> Exchange::__get_market_asset()
+{
+	if(!this->market_asset.has_value()) return AgisResult<AssetPtr>(AGIS_EXCEP("market asset not set"));
+	return AgisResult<AssetPtr>(this->market_asset.value().asset);
+}
+
+
+//============================================================================
 AgisResult<bool> ExchangeMap::set_market_asset(
 	std::string const& exchange_id,
 	std::string const& asset_id,
@@ -202,6 +224,15 @@ AgisResult<bool> ExchangeMap::set_market_asset(
 
 
 //============================================================================
+AgisResult<AssetPtr> Exchange::get_asset(size_t index) const
+{
+	auto scaled_index = index - this->exchange_offset;
+	if (scaled_index >= this->assets.size()) return AgisResult<AssetPtr>(AGIS_EXCEP("index out of range"));
+	return AgisResult<AssetPtr>(this->assets[scaled_index]);
+}
+
+
+//============================================================================
 StridedPointer<long long> const Exchange::__get_dt_index() const
 {
 	return StridedPointer(this->dt_index, this->dt_index_size, 1);
@@ -209,7 +240,7 @@ StridedPointer<long long> const Exchange::__get_dt_index() const
 
 
 //============================================================================
-AGIS_API bool Exchange::asset_exists(std::string const& asset_id)
+bool Exchange::asset_exists(std::string const& asset_id)
 {
 	for (const auto& asset : this->assets)
 	{
@@ -260,7 +291,7 @@ void Exchange::reset()
 
 
 //============================================================================
-void Exchange::build(size_t exchange_offset)
+void Exchange::build(size_t exchange_offset_)
 {
 	if (this->is_built)
 	{
@@ -298,11 +329,11 @@ void Exchange::build(size_t exchange_offset)
 
 
 		//set the asset's exchange offset so indexing into the exchange's asset vector works
-		asset->__set_exchange_offset(exchange_offset);
+		asset->__set_exchange_offset(exchange_offset_);
 
 		this->candles += asset->get_rows();
 	}
-
+	this->exchange_offset = exchange_offset_;
 	this->is_built = true;
 }
 
@@ -380,7 +411,7 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 
 
 
-AGIS_API AgisResult<bool> Exchange::restore_h5()
+AGIS_API AgisResult<bool> Exchange::restore_h5(std::optional<std::vector<std::string>> asset_ids)
 {
 	H5::H5File file(this->source_dir, H5F_ACC_RDONLY);
 	int numObjects = file.getNumObjs();
@@ -390,6 +421,13 @@ AGIS_API AgisResult<bool> Exchange::restore_h5()
 		// Get the name of the dataset at index i
 		try {
 			std::string asset_id = file.getObjnameByIdx(i);
+
+			// if asset_ids is not empty and asset_id is not in asset_ids skip
+			if (asset_ids.has_value() && std::find(asset_ids.value().begin(), asset_ids.value().end(), asset_id) == asset_ids.value().end())
+			{
+				continue;
+			}
+
 			H5::DataSet dataset = file.openDataSet(asset_id + "/data");
 			H5::DataSpace dataspace = dataset.getSpace();
 			H5::DataSet datasetIndex = file.openDataSet(asset_id + "/datetime");
@@ -421,13 +459,13 @@ AGIS_API AgisResult<bool> Exchange::restore_h5()
 
 
 //============================================================================
-AgisResult<bool> Exchange::restore()
+AgisResult<bool> Exchange::restore(std::optional<std::vector<std::string>> asset_ids)
 {
 	if (!is_folder(this->source_dir))
 	{
 		std::filesystem::path path(this->source_dir);
 		if(path.extension() == ".h5") {
-			return restore_h5();
+			return restore_h5(asset_ids);
 		}
 		return AgisResult<bool>(AGIS_EXCEP("Invalid source directory"));
 	}
@@ -438,6 +476,13 @@ AgisResult<bool> Exchange::restore()
 	{
 		std::filesystem::path path(file);
 		std::string asset_id = path.stem().string();
+
+		// if asset_ids is not empty and asset_id is not in asset_ids skip
+		if (asset_ids.has_value() && std::find(asset_ids.value().begin(), asset_ids.value().end(), asset_id) == asset_ids.value().end())
+		{
+			continue;
+		}
+
 		auto asset = std::make_shared<Asset>(asset_id, this->exchange_id);
 
 		this->assets.push_back(asset);
@@ -597,7 +642,9 @@ AgisResult<bool> ExchangeMap::new_exchange(
 	std::string exchange_id_,
 	std::string source_dir_,
 	Frequency freq_,
-	std::string dt_format_)
+	std::string dt_format_,
+	std::optional<std::vector<std::string>> asset_ids
+)
 {
 	if (this->exchanges.count(exchange_id_))
 	{
@@ -618,7 +665,7 @@ AgisResult<bool> ExchangeMap::new_exchange(
 
 	// Load in the exchange's data
 	exchange = this->exchanges.at(exchange_id_);
-	AGIS_DO_OR_RETURN(exchange->restore(), bool);
+	AGIS_DO_OR_RETURN(exchange->restore(asset_ids), bool);
 
 	// Copy shared pointers to the main asset map
 	LOCK_GUARD
@@ -641,7 +688,25 @@ std::vector<std::string> ExchangeMap::get_asset_ids(std::string const& exchange_
 {
 	return this->exchanges.at(exchange_id_)->get_asset_ids();
 }
+
+
+//============================================================================
+AGIS_API AgisResult<double> ExchangeMap::get_asset_beta(size_t index) const
+{
+	auto asset = this->get_asset(index);
+	if (asset.is_exception()) return AgisResult<double>(asset.get_exception());
+	return asset.unwrap()->get_beta();
+}
  
+
+//============================================================================
+AGIS_API AgisResult<double> Exchange::get_asset_beta(size_t index) const
+{
+	auto asset = this->get_asset(index);
+	if (asset.is_exception()) return AgisResult<double>(asset.get_exception());
+	return asset.unwrap()->get_beta();
+}
+
 
 //============================================================================
 AgisResult<AssetPtr> ExchangeMap::get_asset(std::string const&  asset_id) const
@@ -658,7 +723,7 @@ AgisResult<AssetPtr> ExchangeMap::get_asset(std::string const&  asset_id) const
 //============================================================================
 AgisResult<AssetPtr> ExchangeMap::get_asset(size_t index) const
 {
-	if (index > this->assets.size())
+	if (index >= this->assets.size())
 	{
 		return AgisResult<AssetPtr>(AGIS_EXCEP("asset was not found"));
 	}
@@ -1080,6 +1145,7 @@ void ExchangeView::sort(size_t N, ExchangeQueryType sort_type)
 		}
 	}
 }
+
 
 AGIS_API std::string ev_opp_to_str(ExchangeViewOpp ev_opp)
 {

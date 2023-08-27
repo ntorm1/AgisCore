@@ -108,12 +108,6 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
     // register the strategy to the strategy map
     std::string id = strategy->get_strategy_id();
     this->strategies.register_strategy(std::move(strategy));
-
-    // register the strategy to the portfolio
-    auto strat_ref = std::ref(
-        this->strategies.get_strategy(id)
-    );
-    this->portfolios.__register_strategy(strat_ref);
     this->is_built = false;
 }
 
@@ -228,6 +222,14 @@ AGIS_API AgisResult<bool> Hydra::build()
 {
     this->exchanges.__build();
     AGIS_DO_OR_RETURN(this->strategies.__build(), bool);
+
+    auto& strats = this->strategies.__get_strategies();
+    for (auto& strat : strats)
+    {
+        auto strat_ref = std::ref(strat.second);
+        this->portfolios.__register_strategy(strat_ref);
+    }
+
     return AgisResult<bool>(true);
 }
 

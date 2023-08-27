@@ -458,11 +458,6 @@ bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
         returns_this[i-1] = return_this;
         returns_market[i-1] = return_market;
     }
-    // Calculate the rolling n-period beta
-    if (asset_id == "MSFT")
-    {
-        auto x = 2;
-    }
     this->beta_vector = rolling_beta(returns_this, returns_market, lookback);
     assert(this->beta_vector.size() == this->rows);
     return true;

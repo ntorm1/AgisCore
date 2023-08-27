@@ -25,8 +25,10 @@ Trade::Trade(AgisStrategyRef strategy_, OrderPtr const& filled_order):
     this->close_price = 0;
     this->last_price = filled_order->get_average_price();
 
-    this->exit = filled_order->move_exit();
-    if (this->exit.has_value()) { this->exit.value()->build(this); }
+    if (filled_order->has_exit()) {
+        this->exit = filled_order->move_exit();
+        this->exit.value()->build(this); 
+    }
 
     // set the times
     this->trade_close_time = 0;

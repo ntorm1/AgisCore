@@ -350,17 +350,8 @@ AGIS_API void AgisStrategy::strategy_allocate(
 		// minimum required units in order to place an order
 		if (abs(size) < 1e-10) { continue; }
 
-		if (exit.has_value())
-		{
-			this->place_market_order(asset_index, size, exit.value());
-		}
-		else
-		{
-			this->place_market_order(
-				asset_index,
-				size
-			);
-		}
+		if (exit.has_value()) this->place_market_order(asset_index, size, exit.value());
+		else this->place_market_order(asset_index,size);
 	}
 }
 
@@ -392,7 +383,7 @@ void AgisStrategy::place_market_order(
 		units_,
 		this->strategy_index,
 		this->get_portfolio_index(),
-		std::move(exit)
+		exit
 	));
 }
 
@@ -576,15 +567,6 @@ AGIS_API std::string alloc_to_str(AllocType alloc_type)
 	auto it = typeStrings.find(alloc_type);
 	if (it != typeStrings.end()) return it->second;
 	return "UNKNOWN";
-}
-
-
-//============================================================================
-AGIS_API void agis_realloc(ExchangeView* allocation, double c)
-{
-	for (auto& pair : allocation->view) {
-		pair.second = c;
-	}
 }
 
 

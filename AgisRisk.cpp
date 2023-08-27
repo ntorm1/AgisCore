@@ -64,6 +64,7 @@ std::vector<double> rolling_beta(const std::vector<double>& stock_returns, const
     // matches python: 
     //cov = sum(df_mid["returns_SPY"].head(252) * df_mid[f"returns_{ticker}"].head(252))
     //var = sum(df_mid["returns_SPY"].head(252) * df_mid["returns_SPY"].head(252))
+    //beta= cov/var
 
     size_t data_size = stock_returns.size();
 

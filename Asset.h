@@ -8,7 +8,6 @@
 
 #include <string>
 #include <filesystem>
-#include <unordered_map>
 #include "AgisErrors.h"
 
 #define ARROW_API_H
@@ -21,6 +20,11 @@
 #ifdef ARROW_API_H
 #include <arrow/api.h>
 #endif
+
+#ifndef USER_ANKERL
+#include <ankerl/unordered_dense.h>
+#endif // !USER_ANKERL
+
 
 #include "Utils.h"
 #include "AgisPointers.h"
@@ -150,7 +154,7 @@ public:
     AGIS_API inline  size_t const get_current_index() const { return this->current_index - 1; }
     AGIS_API inline  std::string const& get_exchange_id() { return this->exchange_id; }
     AGIS_API std::vector<std::string> get_column_names() const;
-    AGIS_API inline std::unordered_map<std::string, size_t> const& get_headers() { return this->headers; };
+    AGIS_API inline ankerl::unordered_dense::map<std::string, size_t> const& get_headers() { return this->headers; };
     AGIS_API AgisResult<double> get_asset_feature(std::string const& col, int index) const;
     AGIS_API AgisResult<double> get_beta() const;
 
@@ -272,12 +276,27 @@ private:
 
     std::optional<std::pair<long long, long long>> window = std::nullopt;
 
-    std::unordered_map<std::string, size_t> headers;
+    ankerl::unordered_dense::map<std::string, size_t> headers;
 
     [[nodiscard]] AgisResult<bool> load_headers();
     [[nodiscard]] AgisResult<bool> load_csv();
     const arrow::Status load_parquet();
 
+};
+
+
+struct MarketAsset
+{
+    // constructor
+    MarketAsset(AssetPtr asset_, std::optional<size_t> beta_lookback_ = std::nullopt) 
+    : asset(asset_), beta_lookback(beta_lookback_) 
+    {
+        this->market_index = asset->get_asset_index();
+    }
+    
+    size_t market_index;
+    AssetPtr asset;
+    std::optional<size_t> beta_lookback;
 };
 
 // Function to convert a string to Frequency enum

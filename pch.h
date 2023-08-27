@@ -12,6 +12,7 @@
 #define ARROW_API_H
 #define H5_HAVE_H5CPP
 #define USE_TBB
+#define USER_ANKERL
 
 // add headers that you want to pre-compile here
 #include "framework.h"
@@ -21,7 +22,7 @@
 #include <mutex>
 #include <atomic>
 #include <variant>
-#include <unordered_map>
+#include <ankerl/unordered_dense.h>
 #include "utils_gmp.h"
 #include "json.hpp"
 typedef unsigned int uint;

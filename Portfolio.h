@@ -10,7 +10,7 @@
 #include <functional>
 #include <limits>
 
-
+#include <ankerl/unordered_dense.h>
 #include "AgisPointers.h"
 #include "AgisRouter.h"
 #include "Exchange.h"
@@ -97,7 +97,7 @@ private:
     /// <summary>
     /// Map between strategy id and a trade
     /// </summary>
-    std::unordered_map<size_t, std::unique_ptr<Trade>> trades;
+    ankerl::unordered_dense::map<size_t, std::unique_ptr<Trade>> trades;
 };
 
 
@@ -232,13 +232,13 @@ private:
     /// <summary>
     /// Map between asset index and a position
     /// </summary>
-    std::unordered_map<size_t, PositionPtr> positions;
+    ankerl::unordered_dense::map<size_t, PositionPtr> positions;
 
     /// <summary>
     /// Map between strategy index and ref to AgisStrategy
     /// </summary>
-    std::unordered_map<size_t, AgisStrategyRef> strategies;
-    std::unordered_map<std::string, size_t> strategy_ids;
+    ankerl::unordered_dense::map<size_t, AgisStrategyRef> strategies;
+    ankerl::unordered_dense::map<std::string, size_t> strategy_ids;
 
 
     std::vector<SharedPositionPtr> position_history;
@@ -278,6 +278,6 @@ public:
     AGIS_API void restore(json const& j);
 
 private:
-	std::unordered_map<size_t, PortfolioPtr> portfolios;
-    std::unordered_map<std::string, size_t> portfolio_map;
+    ankerl::unordered_dense::map<size_t, PortfolioPtr> portfolios;
+    ankerl::unordered_dense::map<std::string, size_t> portfolio_map;
 };

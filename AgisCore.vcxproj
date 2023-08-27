@@ -75,7 +75,10 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(oneTBBLibDir)\vc_mt;$(LibraryPath);</LibraryPath>
-    <IncludePath>$(oneTBBdpstdDir);$(IncludePath);</IncludePath>
+    <IncludePath>$(oneTBBdpstdDir);$(IncludePath);$(SolutionDir)AgisCore\external\include</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>$(oneTBBdpstdDir);$(IncludePath);$(SolutionDir)AgisCore\external\include</IncludePath>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <VcpkgConfiguration>Debug</VcpkgConfiguration>
@@ -165,12 +168,12 @@
     <ClInclude Include="AgisStrategyRegistry.h" />
     <ClInclude Include="Asset.h" />
     <ClInclude Include="Exchange.h" />
+    <ClInclude Include="ExchangeView.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Portfolio.h" />
     <ClInclude Include="Trade.h" />
     <ClInclude Include="utils_gmp.h" />
     <ClInclude Include="Hydra.h" />
-    <ClInclude Include="json.hpp" />
     <ClInclude Include="Order.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Utils.h" />
@@ -183,6 +186,7 @@
     <ClCompile Include="Asset.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="Exchange.cpp" />
+    <ClCompile Include="ExchangeView.cpp" />
     <ClCompile Include="Hydra.cpp" />
     <ClCompile Include="Order.cpp" />
     <ClCompile Include="pch.cpp">
