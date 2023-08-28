@@ -223,6 +223,8 @@ AGIS_API AgisResult<bool> Hydra::build()
     this->exchanges.__build();
     AGIS_DO_OR_RETURN(this->strategies.__build(), bool);
 
+    // register the strategies to the portfolio after they have all been added to prevent
+    // references from being invalidated when a new strategy is added
     auto& strats = this->strategies.__get_strategies();
     for (auto& strat : strats)
     {
@@ -293,3 +295,4 @@ void Hydra::restore(json const& j)
 template class AGIS_API AgisResult<bool>;
 template class AGIS_API AgisResult<json>;
 template class AGIS_API AgisResult<std::string>;
+template class AGIS_API AgisResult<size_t>;

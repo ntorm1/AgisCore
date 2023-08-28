@@ -151,6 +151,7 @@ public:
 	/// <returns></returns>
 	AGIS_API AgisResult<AssetPtr> get_asset(size_t index) const;
 	AGIS_API AgisResult<double> get_asset_beta(size_t index) const;
+	AGIS_API AgisResult<size_t> get_column_index(std::string const& col) const;
 
 
 	AGIS_API size_t get_candle_count() { return this->candles; };
@@ -171,7 +172,7 @@ public:
 	void __process_market_order(std::unique_ptr<Order>& order, bool on_close);
 	void __process_limit_order(std::unique_ptr<Order>& order, bool on_close);
 
-
+	AgisResult<bool> validate();
 	void reset();
 	void build(size_t exchange_offset);
 	bool step(ThreadSafeVector<size_t>& expired_assets);
@@ -205,6 +206,7 @@ private:
 	std::vector<std::unique_ptr<Order>> orders;
 	std::vector<std::unique_ptr<Order>> filled_orders;
 	std::vector<std::shared_ptr<Asset>> assets;
+	ankerl::unordered_dense::map<std::string, size_t> headers;
 	ExchangeMap* exchanges;
 
 	std::optional<MarketAsset> market_asset = std::nullopt;

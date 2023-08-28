@@ -283,6 +283,30 @@ void Exchange::__goto(long long datetime)
 }
 
 
+AgisResult<bool> Exchange::validate()
+{
+	// loop over all assets in the exchange and make sure the have all have the same
+	// column mapping
+	bool _first = true;
+	for (auto& asset : this->assets)
+	{
+		if (_first)
+		{
+			this->headers = asset->get_headers();
+			_first = false;
+		}
+		auto& other_headers = asset->get_headers();
+		for(auto& header : this->headers)
+		{
+			if (other_headers.find(header.first) == other_headers.end())
+			{
+				return AgisResult<bool>(AGIS_EXCEP("asset headers do not match"));
+			}
+		}
+	}
+	return AgisResult<bool>(true);
+}
+
 //============================================================================
 void Exchange::reset()
 {
@@ -496,7 +520,8 @@ AgisResult<bool> Exchange::restore(std::optional<std::vector<std::string>> asset
 //============================================================================
 bool Exchange::__is_valid_order(std::unique_ptr<Order>& order) const
 {
-	if (!this->assets[order->get_asset_index()]) return false;
+	AssetPtr asset = this->assets[order->get_asset_index()];
+	if (!asset->__is_streaming) return false;
 	if (order->get_order_type() != OrderType::MARKET_ORDER) {
 		if (!order->get_limit().has_value())
 		{
@@ -666,6 +691,7 @@ AgisResult<bool> ExchangeMap::new_exchange(
 	// Load in the exchange's data
 	exchange = this->exchanges.at(exchange_id_);
 	AGIS_DO_OR_RETURN(exchange->restore(asset_ids), bool);
+	AGIS_DO_OR_RETURN(exchange->validate(), bool);
 
 	// Copy shared pointers to the main asset map
 	LOCK_GUARD
@@ -705,6 +731,14 @@ AGIS_API AgisResult<double> Exchange::get_asset_beta(size_t index) const
 	auto asset = this->get_asset(index);
 	if (asset.is_exception()) return AgisResult<double>(asset.get_exception());
 	return asset.unwrap()->get_beta();
+}
+
+
+//============================================================================
+AgisResult<size_t> Exchange::get_column_index(std::string const& col) const
+{
+	if (!this->headers.contains(col)) return AgisResult<size_t>(AGIS_EXCEP("missing col"));
+	return AgisResult<size_t>(this->headers.at(col));
 }
 
 

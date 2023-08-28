@@ -567,21 +567,33 @@ AgisResult<double> Asset::get_asset_feature(std::string const& col, int index) c
     {
         return AgisResult<double>(AGIS_EXCEP("Invalid row index: " + std::to_string(index)));
     }
-    if (this->headers.find(col) == this->headers.end())
-    {
-        return AgisResult<double>(AGIS_EXCEP("Invalid column name: " + col));
-    }
     if (!__is_streaming)
     {
 		return AgisResult<double>(AGIS_EXCEP("Asset is not streaming"));
 	}
-
 
     size_t col_offset = this->headers.at(col) * this->rows;
     size_t row_offset = this->current_index + index - 1;
     return AgisResult<double> (*(this->data + row_offset + col_offset));
 }
 
+
+//============================================================================
+AgisResult<double> Asset::get_asset_feature(size_t col, int index) const
+{
+    if (abs(index) > static_cast<int>(current_index - 1) || index > 0)
+    {
+        return AgisResult<double>(AGIS_EXCEP("Invalid row index: " + std::to_string(index)));
+    }
+    if (!__is_streaming)
+    {
+        return AgisResult<double>(AGIS_EXCEP("Asset is not streaming"));
+    }
+
+    size_t col_offset = col * this->rows;
+    size_t row_offset = this->current_index + index - 1;
+    return AgisResult<double>(*(this->data + row_offset + col_offset));
+}
 
 //============================================================================
 double Asset::__get(std::string col, size_t row) const

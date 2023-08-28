@@ -112,20 +112,6 @@ TradingWindow all_hrs  = {
 
 //============================================================================
 const std::function<AgisResult<double>(
-	const std::shared_ptr<Asset>& asset,
-	const std::string& col,
-	int offset
-	)> asset_feature_lambda = [](
-		const std::shared_ptr<Asset>& asset,
-		const std::string& col,
-		int offset
-		) { 
-	return asset->get_asset_feature(col, offset); 
-};
-
-
-//============================================================================
-const std::function<AgisResult<double>(
 	const std::shared_ptr<Asset>&,
 	const std::vector<AssetLambdaScruct>& operations)> asset_feature_lambda_chain = [](
 		const std::shared_ptr<Asset>& asset,
@@ -176,6 +162,7 @@ void AgisStrategy::__reset()
 	this->order_history.clear();
 	this->cash_history.clear();
 	this->nlv_history.clear();
+	this->trades.clear();
 	this->cash = this->starting_cash;
 	this->nlv = this->cash;
 	this->reset();
@@ -257,9 +244,8 @@ bool AgisStrategy::__is_step()
 //============================================================================
 std::optional<TradeRef> AgisStrategy::get_trade(size_t asset_index)
 {
-	auto position = this->portfolio->get_position(asset_index);
-	if (!position.has_value()) { return std::nullopt; }
-	return position->get()->__get_trade(this->strategy_index);
+	if (!this->trades.contains(asset_index)) { return std::nullopt; }
+	return this->trades.at(asset_index);
 }
 
 
@@ -267,9 +253,8 @@ std::optional<TradeRef> AgisStrategy::get_trade(size_t asset_index)
 std::optional<TradeRef> AgisStrategy::get_trade(std::string const& asset_id)
 {
 	auto asset_index = this->exchange_map->get_asset_index(asset_id);
-	auto position = this->portfolio->get_position(asset_index);
-	if (!position.has_value()) { return std::nullopt; }
-	return position->get()->__get_trade(this->strategy_index);
+	if (!this->trades.contains(asset_index)) { return std::nullopt; }
+	return this->trades.at(asset_index);
 }
 
 
@@ -288,30 +273,28 @@ AGIS_API void AgisStrategy::strategy_allocate(
 	std::optional<TradeExitPtr> exit,
 	AllocType alloc_type)
 {
-	auto trade_ids = this->portfolio->get_strategy_positions(this->strategy_index);
 	auto& allocation = exchange_view.view;
 
 	// if clear_missing, clear and trades with asset index not in the allocation
-	if (clear_missing && trade_ids.size())
+	if (clear_missing && this->trades.size())
 	{
-		std::vector<size_t> results;
-		for (const auto& element : trade_ids) {
+		std::vector<std::pair<size_t, double>> trade_closes;
+		for (const auto& element : this->trades) {
 			auto it = std::find_if(allocation.begin(), allocation.end(),
-				[&element](const auto& pair) { return pair.first == element; });
+				[&element](const auto& pair) { return pair.first == element.first; });
 			if (it == allocation.end()) {
-				results.push_back(element);
+				trade_closes.emplace_back(element.first, element.second->units);
+
 			}
 			else {
 				continue;
 			}
 		}
-		for (auto asset_index : results)
+		for (auto& trade_close : trade_closes)
 		{
-			auto trade_opt = this->get_trade(asset_index);
-			auto units = trade_opt.value().get()->units;
 			this->place_market_order(
-				asset_index,
-				-1 * units
+				trade_close.first,
+				-1 * trade_close.second
 			);
 		}
 	}

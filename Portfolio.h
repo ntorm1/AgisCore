@@ -44,7 +44,7 @@ static std::vector<std::string> position_column_names = {
 struct Position
 {
     size_t position_id;
-    size_t asset_id;
+    size_t asset_index;
     size_t portfolio_id;
 
     double close_price = 0;
@@ -97,7 +97,7 @@ private:
     /// <summary>
     /// Map between strategy id and a trade
     /// </summary>
-    ankerl::unordered_dense::map<size_t, std::unique_ptr<Trade>> trades;
+    ankerl::unordered_dense::map<size_t, SharedTradePtr> trades;
 };
 
 

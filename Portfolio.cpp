@@ -13,7 +13,7 @@ std::atomic<size_t> Portfolio::portfolio_counter(0);
 Position::Position(AgisStrategyRef strategy, OrderPtr const& filled_order_)
 {
     //populate common position values
-    this->asset_id = filled_order_->get_asset_index();
+    this->asset_index = filled_order_->get_asset_index();
     this->portfolio_id = filled_order_->get_portfolio_index();
     this->units = filled_order_->get_units();
 
@@ -24,11 +24,12 @@ Position::Position(AgisStrategyRef strategy, OrderPtr const& filled_order_)
     this->position_open_time = filled_order_->get_fill_time();
 
     // insert the new trade
-    auto trade = std::make_unique<Trade>(
+    auto trade = std::make_shared<Trade>(
         strategy,
         filled_order_
     );
-    this->trades.insert({trade->strategy_index,std::move(trade)});
+    this->trades.insert({trade->strategy_index,trade});
+    strategy.get()->__add_trade(trade);
     this->position_id = position_counter++;
 
 }
@@ -87,12 +88,12 @@ void Position::close(OrderPtr const& order, std::vector<SharedTradePtr>& trade_h
 
     for (auto& element : trades) {
         // Retrieve the unique pointer
-        auto trade = std::move(element.second);
+        SharedTradePtr trade = element.second;
         trade->close(order);
+        trade->strategy.get()->__remove_trade(trade->asset_index);
 
         // Add the unique pointer to the vector
-        SharedTradePtr ptr = std::move(trade);
-        trade_history.push_back(ptr);
+        trade_history.push_back(trade);
     }
 }
 
@@ -128,11 +129,12 @@ void Position::adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vect
     auto trade_opt = this->__get_trade(strategy_id);
     if (!trade_opt)
     {
-        auto trade = std::make_unique<Trade>(
+        auto trade = std::make_shared<Trade>(
             strategy,
             order
         );
-        this->trades.insert({ strategy_id,std::move(trade) });
+        this->trades.insert({ strategy_id,trade });
+        strategy.get()->__add_trade(trade);
     }
     else
     {
@@ -140,10 +142,10 @@ void Position::adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vect
         if (abs(trade_ptr->units + units_) < 1e-10)
         {
             trade_ptr->close(order);
-            TradePtr extracted_trade = std::move(this->trades.at(strategy_id));
+            SharedTradePtr extracted_trade = this->trades.at(strategy_id);
             this->trades.erase(strategy_id);
-            SharedTradePtr ptr = std::move(extracted_trade);
-            trade_history.push_back(ptr);
+            strategy.get()->__remove_trade(order->get_asset_index());
+            trade_history.push_back(extracted_trade);
         }
         else
         {
@@ -154,19 +156,20 @@ void Position::adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vect
                 auto units_left = trade_ptr->units + units_;
 
 				trade_ptr->close(order);
-				TradePtr extracted_trade = std::move(this->trades.at(strategy_id));
+                SharedTradePtr extracted_trade = this->trades.at(strategy_id);
 				this->trades.erase(strategy_id);
-				SharedTradePtr ptr = std::move(extracted_trade);
-				trade_history.push_back(ptr);
+                strategy.get()->__remove_trade(order->get_asset_index());
+				trade_history.push_back(extracted_trade);
 
                 // open a new trade with the new order minus the units needed to close out 
                 // the previous trade
                 order->set_units(units_left);
-                auto trade = std::make_unique<Trade>(
+                auto trade = std::make_shared<Trade>(
                     strategy,
                     order
                 );
-                this->trades.insert({ strategy_id,std::move(trade) });
+                this->trades.insert({ strategy_id,trade });
+                strategy.get()->__add_trade(trade);
                 order->set_units(units_);
 			}
             else
@@ -183,7 +186,7 @@ OrderPtr Position::generate_position_inverse()
 {   
     return std::make_unique<Order>(
         OrderType::MARKET_ORDER,
-        this->asset_id,
+        this->asset_index,
         -1 * this->units,
         DEFAULT_STRAT_ID,
         this->portfolio_id
@@ -459,7 +462,7 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
     {
         // attempt to get the current market price of the underlying asset of the position
         auto& position = it->second;
-        auto asset = exchanges.get_asset(position->asset_id).unwrap();
+        auto asset = exchanges.get_asset(position->asset_index).unwrap();
         auto market_price = asset->__get_market_price(on_close);
         if(market_price == 0.0)
         {

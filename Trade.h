@@ -20,10 +20,9 @@ typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
 struct Trade;
 class TradeExit;
 
-AGIS_API typedef std::unique_ptr<Trade> TradePtr;
 AGIS_API typedef std::shared_ptr<Trade> SharedTradePtr;
 AGIS_API typedef std::shared_ptr<TradeExit> TradeExitPtr;
-AGIS_API typedef std::reference_wrapper<const TradePtr> TradeRef;
+AGIS_API typedef std::reference_wrapper<const SharedTradePtr> TradeRef;
 
 
 struct AGIS_API Trade {

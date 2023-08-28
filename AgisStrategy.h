@@ -140,14 +140,6 @@ AGIS_API typedef std::function<double(
 	double b
 	)> Operation;
 
-AGIS_API typedef const std::function<AgisResult<double>(
-	const std::shared_ptr<Asset>&,
-	const std::string&,
-	int
-	)> AssetFeatureLambda;
-
-extern AGIS_API AssetFeatureLambda asset_feature_lambda;
-
 
 extern AGIS_API const std::function<AgisResult<double>(
 	const std::shared_ptr<Asset>&,
@@ -269,7 +261,8 @@ public:
 	/// </summary>
 	/// <param name="order"></param>
 	void __remember_order(SharedOrderPtr order) { this->order_history.push_back(order); }
-
+	void __add_trade(SharedTradePtr trade) { this->trades.insert({ trade->asset_index, trade }); };
+	void __remove_trade(size_t asset_index) { this->trades.erase(asset_index); }
 	void __remember_trade(SharedTradePtr trade) { this->trade_history.push_back(trade); }
 
 	/// <summary>
@@ -397,6 +390,11 @@ protected:
 	/// Pointer to the main exchange map object
 	/// </summary>
 	ExchangeMap const* exchange_map = nullptr;
+
+	/// <summary>
+	/// Mapping between asset_index and trade owned by the strategy
+	/// </summary>
+	ankerl::unordered_dense::map<size_t, SharedTradePtr> trades;
 
 private:
 	/// <summary>

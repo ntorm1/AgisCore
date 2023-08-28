@@ -156,6 +156,7 @@ public:
     AGIS_API std::vector<std::string> get_column_names() const;
     AGIS_API inline ankerl::unordered_dense::map<std::string, size_t> const& get_headers() { return this->headers; };
     AGIS_API AgisResult<double> get_asset_feature(std::string const& col, int index) const;
+    AGIS_API AgisResult<double> get_asset_feature(size_t col, int index) const;
     AGIS_API AgisResult<double> get_beta() const;
 
     AGIS_API bool __get_is_valid_next_time() const { return __is_valid_next_time; }
