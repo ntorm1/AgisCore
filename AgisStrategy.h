@@ -154,6 +154,7 @@ extern AGIS_API std::unordered_map<std::string, AllocType> agis_strat_alloc_map;
 class AgisStrategy
 {
 public:
+	virtual ~AgisStrategy() = default;
 	AgisStrategy() = default;
 	AgisStrategy(
 		std::string id, 
@@ -370,14 +371,14 @@ protected:
 	/// </summary>
 	/// <param name="asset_index">unique index of the asset to search for</param>
 	/// <returns></returns>
-	AGIS_API std::optional<TradeRef> get_trade(size_t asset_index);
+	AGIS_API std::optional<SharedTradePtr> get_trade(size_t asset_index);
 
 	/// <summary>
 	/// Get a trade by asset id
 	/// </summary>
 	/// <param name="asset_id">unique id of the asset to search for</param>
 	/// <returns></returns>
-	AGIS_API std::optional<TradeRef> get_trade(std::string const& asset_id);
+	AGIS_API std::optional<SharedTradePtr> get_trade(std::string const& asset_id);
 
 	/// <summary>
 	/// Valid window in which the strategy next function is called

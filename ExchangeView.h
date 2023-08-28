@@ -83,7 +83,7 @@ struct ExchangeView
 	/// </summary>
 	/// <param name="exchange_map"></param>
 	/// <returns></returns>
-	AgisResult<bool> beta_scale();
+	AGIS_API AgisResult<bool> beta_scale();
 
 
 	/// <summary>
@@ -147,6 +147,22 @@ struct ExchangeView
 			}
 			else {
 				view[i].second = weight;
+			}
+		}
+	}
+
+	AGIS_API std::pair<size_t, double>& get_allocation_by_asset_index(size_t index);
+
+	void uniform_split(double c)
+	{
+		auto weight = c / static_cast<double>(view.size());
+		auto cutoff = view.size() / 2;
+		for (size_t i = 0; i < view.size(); ++i) {
+			if (i < cutoff) {
+				view[i].second = weight;
+			}
+			else {
+				view[i].second = -weight;
 			}
 		}
 	}

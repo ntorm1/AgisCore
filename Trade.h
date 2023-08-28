@@ -46,6 +46,12 @@ struct AGIS_API Trade {
     size_t portfolio_index;
     AgisStrategyRef strategy;
 
+    /// <summary>
+    /// Boolean flag to test if the strategy has allocated touch the trade. Used 
+    /// for clearing trades that were not in the new allocation of a strategy.
+    /// </summary>
+    bool strategy_alloc_touch = false;
+
     std::optional<TradeExitPtr> exit = std::nullopt;
 
     Trade(AgisStrategyRef strategy, OrderPtr const& order);
@@ -69,6 +75,7 @@ private:
 
 class TradeExit {
 public:
+    virtual ~TradeExit() = default;
     TradeExit() : trade(nullptr) {}
 
     void build(Trade const* trade_) { this->trade = trade_; }

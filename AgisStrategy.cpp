@@ -242,7 +242,7 @@ bool AgisStrategy::__is_step()
 }
 
 //============================================================================
-std::optional<TradeRef> AgisStrategy::get_trade(size_t asset_index)
+std::optional<SharedTradePtr> AgisStrategy::get_trade(size_t asset_index)
 {
 	if (!this->trades.contains(asset_index)) { return std::nullopt; }
 	return this->trades.at(asset_index);
@@ -250,7 +250,7 @@ std::optional<TradeRef> AgisStrategy::get_trade(size_t asset_index)
 
 
 //============================================================================
-std::optional<TradeRef> AgisStrategy::get_trade(std::string const& asset_id)
+std::optional<SharedTradePtr> AgisStrategy::get_trade(std::string const& asset_id)
 {
 	auto asset_index = this->exchange_map->get_asset_index(asset_id);
 	if (!this->trades.contains(asset_index)) { return std::nullopt; }
@@ -275,29 +275,6 @@ AGIS_API void AgisStrategy::strategy_allocate(
 {
 	auto& allocation = exchange_view.view;
 
-	// if clear_missing, clear and trades with asset index not in the allocation
-	if (clear_missing && this->trades.size())
-	{
-		std::vector<std::pair<size_t, double>> trade_closes;
-		for (const auto& element : this->trades) {
-			auto it = std::find_if(allocation.begin(), allocation.end(),
-				[&element](const auto& pair) { return pair.first == element.first; });
-			if (it == allocation.end()) {
-				trade_closes.emplace_back(element.first, element.second->units);
-
-			}
-			else {
-				continue;
-			}
-		}
-		for (auto& trade_close : trade_closes)
-		{
-			this->place_market_order(
-				trade_close.first,
-				-1 * trade_close.second
-			);
-		}
-	}
 	// generate orders based on the allocation passed
 	for (auto& alloc : allocation)
 	{
@@ -323,7 +300,9 @@ AGIS_API void AgisStrategy::strategy_allocate(
 		// if trade already exists, reflect those units on the allocation size
 		if (trade_opt.has_value())
 		{
-			double exsisting_units = trade_opt.value().get()->units;
+			SharedTradePtr& trade = *trade_opt;
+			trade->strategy_alloc_touch = true;
+			double exsisting_units = trade->units;
 			gmp_sub_assign(size, exsisting_units);
 
 			double offset = abs(size) / abs(exsisting_units);
@@ -332,9 +311,22 @@ AGIS_API void AgisStrategy::strategy_allocate(
 
 		// minimum required units in order to place an order
 		if (abs(size) < 1e-10) { continue; }
+		this->place_market_order(asset_index,size, exit);
+	}
 
-		if (exit.has_value()) this->place_market_order(asset_index, size, exit.value());
-		else this->place_market_order(asset_index,size);
+	// if clear_missing, clear and trades with asset index not in the allocation
+	if (clear_missing && this->trades.size())
+	{
+		for (const auto& element : this->trades) {
+			if (!element.second->strategy_alloc_touch)
+			{
+				this->place_market_order(
+					element.first,
+					-1 * element.second->units
+				);
+			}
+			element.second->strategy_alloc_touch = false;
+		}
 	}
 }
 
@@ -589,6 +581,13 @@ void AbstractAgisStrategy::next()
 		case ExchangeViewOpp::CONDITIONAL_SPLIT: {
 			ev.conditional_split(strat_alloc_ref.target_leverage, this->ev_opp_param.value());
 			break;
+		}
+		case ExchangeViewOpp::UNIFORM_SPLIT: {
+			ev.uniform_split(strat_alloc_ref.target_leverage);
+			break;
+		}
+		default: {
+			throw std::runtime_error("invalid exchange view operation");
 		}
 	}
 	this->strategy_allocate(

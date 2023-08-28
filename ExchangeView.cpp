@@ -21,6 +21,7 @@ AgisResult<bool> ExchangeView::beta_scale()
 	{
 		pair.second *= original_sum / new_sum;
 	}
+	return AgisResult<bool>(true);
 }
 
 
@@ -56,6 +57,17 @@ AGIS_API AgisResult<bool> ExchangeView::beta_hedge(double target_leverage)
 	}
 
 	return AgisResult<bool>(true);
+}
+
+
+//============================================================================
+std::pair<size_t, double>& ExchangeView::get_allocation_by_asset_index(size_t index)
+{
+	for (auto& pair : this->view)
+	{
+		if (pair.first == index) return pair;
+	}
+	throw std::exception("Asset index not found in allocation");
 }
 
 

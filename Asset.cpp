@@ -571,6 +571,10 @@ AgisResult<double> Asset::get_asset_feature(std::string const& col, int index) c
     {
 		return AgisResult<double>(AGIS_EXCEP("Asset is not streaming"));
 	}
+    if(!this->headers.contains(col)) 
+	{
+		return AgisResult<double>(AGIS_EXCEP("Column does not exist: " + col));
+	}
 
     size_t col_offset = this->headers.at(col) * this->rows;
     size_t row_offset = this->current_index + index - 1;

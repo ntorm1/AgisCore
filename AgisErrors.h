@@ -41,10 +41,7 @@ public:
     // Define the variant type with T and AgisException
     using ValueType = std::variant<T, AgisException>;
 
-    inline AgisResult(const ValueType& _value)
-    {
-        this->value = _value;
-    }
+    inline AgisResult(ValueType&& _value) : value(std::move(_value)) {}
 
     inline bool is_exception()
     {
@@ -53,7 +50,7 @@ public:
 
     inline T unwrap(bool panic = true)
     {
-        if (!this->is_exception()) 
+        if (std::holds_alternative<T>(this->value))
         {
             return std::get<T>(this->value);
         }
