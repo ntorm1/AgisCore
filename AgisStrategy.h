@@ -331,7 +331,7 @@ public:
 	/// </summary>
 	/// <param name="window_name"></param>
 	[[nodiscard]] AgisResult<bool> set_trading_window(std::string const& window_name);
-
+	void set_allocation(double allocation) { this->portfolio_allocation = allocation; }
 	inline std::optional<TradingWindow> get_trading_window() { return this->trading_window; };
 
 	/// <summary>
@@ -413,8 +413,6 @@ private:
 	/// </summary>
 	PortfolioPtr const portfolio;
 	
-
-
 	/// <summary>
 	/// All historical orders placed by the strategy
 	/// </summary>

@@ -18,7 +18,9 @@
 #include "Trade.h"
 
 class Portfolio;
+class PortfolioMap;
 class AgisStrategy;
+class AgisStrategyMap;
 struct Position;
 
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
@@ -38,6 +40,46 @@ static std::vector<std::string> position_column_names = {
     "Position ID","Asset ID","Portfolio ID","Units","Average Price",
     "Position Open Time","Position Close Time","Close Price","Last Price", "NLV",
     "Unrealized PL", "Realized PL", "Bars Held"
+};
+
+
+
+struct Frictions
+{
+    /// <summary>
+    /// Flat fee associated with an order i.e. $5.00
+    /// </summary>
+    std::optional<double> flat_commisions;
+
+    /// <summary>
+    /// A per units commision associated with an order. I.e. $0.01 per share
+    /// </summary>
+    std::optional<double> per_unit_commisions;
+
+    /// <summary>
+    /// A percentage of the order value that is subtracted. I.e. 0.01% of order value
+    /// </summary>
+    std::optional<double> slippage;
+
+    /// <summary>
+    /// Fristions constructor
+    /// </summary>
+    /// <param name="flat_commisions">Flat fee associated with an order i.e. $5.00</param>
+    /// <param name="per_unit_commisions">A per units commision associated with an order. I.e. $0.01 per share</param>
+    /// <param name="slippage">A percentage of the order value that is subtracted. I.e. 0.01% of order value</param>
+    Frictions(std::optional<double> flat_commisions, std::optional<double> per_unit_commisions, std::optional<double> slippage) :
+		flat_commisions(flat_commisions), per_unit_commisions(per_unit_commisions), slippage(slippage) {}
+
+    /// <summary>
+    /// Calculate the frictions associated with an order
+    /// </summary>
+    /// <param name="order"></param>
+    /// <returns></returns>
+    double calculate_frictions(OrderPtr const& order);
+
+    double total_flat_commisions = 0;
+    double total_per_unit_commisions = 0;
+    double total_slippage = 0;
 };
 
 
@@ -103,6 +145,7 @@ private:
 
 class Portfolio
 {
+    friend class PortfolioMap;
 public:
     AGIS_API Portfolio(std::string const& portfolio_id, double cash);
 
@@ -184,7 +227,31 @@ public:
     void __on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids);
 
 
+protected:
+    /// <summary>
+    /// Map between strategy index and ref to AgisStrategy
+    /// </summary>
+    ankerl::unordered_dense::map<size_t, AgisStrategyRef> strategies;
+    ankerl::unordered_dense::map<std::string, size_t> strategy_ids;
+
 private:
+    void open_position(OrderPtr const& order);
+    void modify_position(OrderPtr const& order);
+    void close_position(OrderPtr const& order);
+
+    /// <summary>
+    /// Get a reference to existing position by asset index that we know to exist
+    /// </summary>
+    /// <param name="asset_index">Asset index of the position to get</param>
+    /// <returns>Reference to an open position with the underlying asset</returns>
+    PositionPtr& __get_position(size_t asset_index) { return positions.at(asset_index); }
+
+    /// <summary>
+    /// When new trades are pushed to trade history, update their respective strategy
+    /// </summary>
+    /// <param name="start_index">index of first trade to copy</param>
+    void __on_trade_closed(size_t start_index);
+
 	/// <summary>
 	/// Mutex lock on the portfolio instance
 	/// </summary>
@@ -205,25 +272,6 @@ private:
     /// </summary>
     std::string portfolio_id;
 
-
-    void open_position(OrderPtr const& order);
-    void modify_position(OrderPtr const& order);
-    void close_position(OrderPtr const& order);
-
-    /// <summary>
-    /// Get a reference to existing position by asset index that we know to exist
-    /// </summary>
-    /// <param name="asset_index">Asset index of the position to get</param>
-    /// <returns>Reference to an open position with the underlying asset</returns>
-    PositionPtr& __get_position(size_t asset_index) { return positions.at(asset_index); }
-
-    /// <summary>
-    /// When new trades are pushed to trade history, update their respective strategy
-    /// </summary>
-    /// <param name="start_index">index of first trade to copy</param>
-    void __on_trade_closed(size_t start_index);
-
-
     double cash;
     double starting_cash;
     double nlv;
@@ -234,12 +282,7 @@ private:
     /// </summary>
     ankerl::unordered_dense::map<size_t, PositionPtr> positions;
 
-    /// <summary>
-    /// Map between strategy index and ref to AgisStrategy
-    /// </summary>
-    ankerl::unordered_dense::map<size_t, AgisStrategyRef> strategies;
-    ankerl::unordered_dense::map<std::string, size_t> strategy_ids;
-
+    std::optional<Frictions> frictions;
 
     std::vector<SharedPositionPtr> position_history;
     std::vector<SharedTradePtr> trade_history;
@@ -265,6 +308,7 @@ public:
     void __remove_portfolio(std::string const& portfolio_id);
     void __remove_strategy(size_t strategy_index);
     void __register_strategy(AgisStrategyRef strategy);
+    void __reload_strategies(AgisStrategyMap* strategies);
 
     AgisResult<std::string> __get_portfolio_id(size_t const& index) const;
     size_t const __get_portfolio_index(std::string const& id) const { return this->portfolio_map.at(id); }

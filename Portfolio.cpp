@@ -315,6 +315,24 @@ void PortfolioMap::__register_strategy(AgisStrategyRef strategy)
 
 
 //============================================================================
+void PortfolioMap::__reload_strategies(AgisStrategyMap* strategies)
+{
+    // loop over portfolios and clear their mappings
+    for (auto& portfolio_pair : this->portfolios)
+    {
+		auto& portfolio = portfolio_pair.second;
+		portfolio->strategies.clear();
+        portfolio->strategy_ids.clear();
+	}
+    // re-register all strategies
+    for (auto& strategy : strategies->__get_strategies())
+    {
+        this->__register_strategy(strategy.second);
+	}
+}
+
+
+//============================================================================
 PortfolioPtr const PortfolioMap::__get_portfolio(std::string const& id)
 {
     auto portfolio_index = this->portfolio_map.at(id);
@@ -432,6 +450,13 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
     }
     // adjust account levels
     auto amount = order->get_units() * order->get_average_price();
+
+    // adjust for any frictions present
+    if (this->frictions.has_value())
+    {
+        amount += frictions.value().calculate_frictions(order);
+	}
+
     this->cash -= amount;
 
     // adjust the strategy's cash
@@ -685,4 +710,31 @@ void Portfolio::close_position(OrderPtr const& order)
     this->unrealized_pl -= closed_position->unrealized_pl;
     this->position_history.push_back(std::move(closed_position));
     this->positions.erase(asset_id);
+}
+
+
+//============================================================================
+double Frictions::calculate_frictions(OrderPtr const& order)
+{
+    double friction = 0;
+    double v;
+    if (this->flat_commisions.has_value())
+    {
+		v = this->flat_commisions.value();
+        this->total_flat_commisions += v;
+		friction += v;
+	}
+    if (this->per_unit_commisions.has_value())
+    {
+        v = this->per_unit_commisions.value() * order->get_units();
+        this->total_per_unit_commisions += v;
+        friction += v;
+    }
+    if (this->slippage.has_value())
+    {
+		auto v = this->slippage.value() * abs(order->get_units());
+        this->total_slippage += v;
+        friction += v;
+	}
+    return friction;
 }

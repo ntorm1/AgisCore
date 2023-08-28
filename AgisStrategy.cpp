@@ -253,7 +253,7 @@ std::optional<SharedTradePtr> AgisStrategy::get_trade(size_t asset_index)
 std::optional<SharedTradePtr> AgisStrategy::get_trade(std::string const& asset_id)
 {
 	auto asset_index = this->exchange_map->get_asset_index(asset_id);
-	if (!this->trades.contains(asset_index)) { return std::nullopt; }
+	if (!this->trades.count(asset_index)) { return std::nullopt; }
 	return this->trades.at(asset_index);
 }
 
@@ -280,7 +280,6 @@ AGIS_API void AgisStrategy::strategy_allocate(
 	{
 		size_t asset_index = alloc.first;
 		double size = alloc.second;
-		auto trade_opt = this->get_trade(asset_index);
 		switch (alloc_type)
 		{
 			case AllocType::UNITS:
@@ -292,21 +291,29 @@ AGIS_API void AgisStrategy::strategy_allocate(
 			}
 			case AllocType::PCT: {
 				auto market_price = this->exchange_map->__get_market_price(asset_index, true);
-				size = gmp_mult(size, this->nlv) / market_price;
+				size *=  (this->nlv / market_price);
 				break;
 			}
 		}
 
 		// if trade already exists, reflect those units on the allocation size
+		auto trade_opt = this->get_trade(asset_index);
 		if (trade_opt.has_value())
 		{
 			SharedTradePtr& trade = *trade_opt;
 			trade->strategy_alloc_touch = true;
 			double exsisting_units = trade->units;
-			gmp_sub_assign(size, exsisting_units);
+			size -= exsisting_units;
 
 			double offset = abs(size) / abs(exsisting_units);
-			if (offset < epsilon) { continue; }
+			if(epsilon > 0.0 && offset < epsilon) { continue; }
+			// if epsilon is less than 0, only place new order if the new size has 
+			// opposite sign of the exsisting units
+			else if(epsilon < 0.0) {
+				uint64_t signA = *reinterpret_cast<uint64_t*>(&exsisting_units) & (1ULL << 63);
+				uint64_t signB = *reinterpret_cast<uint64_t*>(&size) & (1ULL << 63);
+				if (signA == signB) { continue; }
+			}
 		}
 
 		// minimum required units in order to place an order
@@ -426,7 +433,7 @@ bool AgisStrategyMap::__next()
 		flag.store(true, std::memory_order_relaxed);
 	};
 	
-	std::for_each(
+	tbb::parallel_for_each(
 		this->strategies.begin(),
 		this->strategies.end(),
 		strategy_next
@@ -462,6 +469,7 @@ AgisResult<bool> AgisStrategyMap::__build()
 {
 	for (auto& strategy : this->strategies)
 	{
+		if (!strategy.second->__is_live()) continue;
 		try {
 			strategy.second->build();
 		}
@@ -604,7 +612,7 @@ void AbstractAgisStrategy::next()
 void AbstractAgisStrategy::build()
 {
 	if (!ev_lambda_struct.has_value()) {
-		throw std::runtime_error("missing abstract lambda strategy");
+		throw std::runtime_error(this->get_strategy_id() + " missing abstract lambda strategy");
 	}
 
 	ExchangePtr exchange = ev_lambda_struct.value().exchange;
@@ -657,6 +665,7 @@ AgisResult<bool> AbstractAgisStrategy::extract_ev_lambda()
 			this->ev_opp_param = val;
 		}
 	}
+	this->set_is_live(true);
 	return AgisResult<bool>(true);
 }
 

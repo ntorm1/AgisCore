@@ -108,6 +108,7 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
     // register the strategy to the strategy map
     std::string id = strategy->get_strategy_id();
     this->strategies.register_strategy(std::move(strategy));
+    this->portfolios.__reload_strategies(&this->strategies);     // because of pointer invalidation
     this->is_built = false;
 }
 
