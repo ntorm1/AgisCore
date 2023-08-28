@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 
 class AgisStrategy;
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
-AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
+AGIS_API typedef std::reference_wrapper<const AgisStrategyPtr> AgisStrategyRef;
 
 AGIS_API typedef std::function<double(double, double)> AgisOperation;
 AGIS_API extern const AgisOperation agis_init;
@@ -280,6 +280,8 @@ public:
 	
 	AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() const { return this->trade_history; }
 
+	AGIS_API virtual AgisResult<bool> set_beta_scale_positions(bool val) {apply_beta_scale = val; return AgisResult<bool>(true);}
+	AGIS_API virtual AgisResult<bool> set_beta_hedge_positions(bool val) {apply_beta_hedge = val; return AgisResult<bool>(true);}
 	void set_nlv(double nlv_) { this->nlv = nlv_; }
 	void nlv_adjust(double nlv_adjustment) { this->nlv += nlv_adjustment; };
 	void cash_adjust(double cash_adjustment) { this->cash += cash_adjustment; };
@@ -386,6 +388,7 @@ protected:
 	std::optional<std::pair<TimePoint, TimePoint>> trading_window = std::nullopt;
 
 	bool apply_beta_hedge = false;
+	bool apply_beta_scale = false;
 
 	/// <summary>
 	/// Pointer to the main exchange map object
@@ -451,11 +454,12 @@ public:
 
 	AGIS_API void __remove_strategy(std::string const& id);
 	AGIS_API AgisResult<std::string> __get_strategy_id(size_t index) const;
-	AGIS_API inline size_t __get_strategy_index(std::string const& id) { return this->strategy_id_map.at(id); }
+	AGIS_API inline size_t __get_strategy_index(std::string const& id) const { return this->strategy_id_map.at(id); }
 	AGIS_API void register_strategy(AgisStrategyPtr strategy);
-	const AgisStrategyRef get_strategy(std::string strategy_id);
-	ankerl::unordered_dense::map<size_t, AgisStrategyPtr>& __get_strategies() { return this->strategies; }
-	
+	AgisStrategyRef get_strategy(std::string strategy_id) const;
+	ankerl::unordered_dense::map<size_t, AgisStrategyPtr> const& __get_strategies() const { return this->strategies; }
+	ankerl::unordered_dense::map<size_t, AgisStrategyPtr> & __get_strategies_mut() { return this->strategies; }
+
 	bool __next();
 	void __reset();
 	void __clear();
@@ -502,6 +506,11 @@ public:
 	AGIS_API void to_json(json& j);
 
 	AGIS_API void code_gen(fs::path strat_folder);
+
+	AGIS_API AgisResult<bool> set_beta_scale_positions(bool val) override;
+	AGIS_API AgisResult<bool> set_beta_hedge_positions(bool val) override;
+	AgisResult<bool> val_market_asset();
+
 
 private:
 	AbstractExchangeViewLambda ev_lambda;

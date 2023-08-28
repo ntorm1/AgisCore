@@ -1,7 +1,6 @@
 #include "pch.h"
 #include <tbb/parallel_for_each.h>
 #include <algorithm>
-
 #include "Portfolio.h"
 #include "AgisStrategy.h"
 
@@ -10,7 +9,7 @@ std::atomic<size_t> Portfolio::portfolio_counter(0);
 
 
 //============================================================================
-Position::Position(AgisStrategyRef strategy, OrderPtr const& filled_order_)
+Position::Position(MAgisStrategyRef strategy, OrderPtr const& filled_order_)
 {
     //populate common position values
     this->asset_index = filled_order_->get_asset_index();
@@ -99,7 +98,7 @@ void Position::close(OrderPtr const& order, std::vector<SharedTradePtr>& trade_h
 
 
 //============================================================================
-void Position::adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vector<SharedTradePtr>& trade_history)
+void Position::adjust(MAgisStrategyRef strategy, OrderPtr const& order, std::vector<SharedTradePtr>& trade_history)
 {
     auto units_ = order->get_units();
     auto fill_price = order->get_average_price();
@@ -127,7 +126,7 @@ void Position::adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vect
     //test to see if strategy already has a trade
     auto strategy_id = order->get_strategy_index();
     auto trade_opt = this->__get_trade(strategy_id);
-    if (!trade_opt)
+    if (!trade_opt.has_value())
     {
         auto trade = std::make_shared<Trade>(
             strategy,
@@ -307,10 +306,10 @@ AgisResult<std::string> PortfolioMap::__get_portfolio_id(size_t const& index) co
 }
 
 //============================================================================
-void PortfolioMap::__register_strategy(AgisStrategyRef strategy)
+void PortfolioMap::__register_strategy(MAgisStrategyRef strategy)
 {
     auto& portfolio = this->portfolios.at(strategy.get()->get_portfolio_index());
-    portfolio->register_strategy(std::move(strategy));
+    portfolio->register_strategy(strategy);
 }
 
 
@@ -325,7 +324,7 @@ void PortfolioMap::__reload_strategies(AgisStrategyMap* strategies)
         portfolio->strategy_ids.clear();
 	}
     // re-register all strategies
-    for (auto& strategy : strategies->__get_strategies())
+    for (auto& strategy : strategies->__get_strategies_mut())
     {
         this->__register_strategy(strategy.second);
 	}
@@ -333,7 +332,7 @@ void PortfolioMap::__reload_strategies(AgisStrategyMap* strategies)
 
 
 //============================================================================
-PortfolioPtr const PortfolioMap::__get_portfolio(std::string const& id)
+PortfolioPtr const PortfolioMap::__get_portfolio(std::string const& id) const
 {
     auto portfolio_index = this->portfolio_map.at(id);
     return this->portfolios.at(portfolio_index);
@@ -588,7 +587,7 @@ AGIS_API std::vector<std::string> Portfolio::get_strategy_ids() const
 
 
 //============================================================================
-AGIS_API void Portfolio::register_strategy(AgisStrategyRef strategy)
+AGIS_API void Portfolio::register_strategy(MAgisStrategyRef strategy)
 {
     LOCK_GUARD
     this->strategies.emplace(

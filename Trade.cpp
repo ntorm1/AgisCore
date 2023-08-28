@@ -8,7 +8,7 @@
 std::atomic<size_t> Trade::trade_counter(0);
 
 
-Trade::Trade(AgisStrategyRef strategy_, OrderPtr const& filled_order):
+Trade::Trade(MAgisStrategyRef strategy_, OrderPtr const& filled_order):
     strategy(strategy_)
 {
     this->asset_index = filled_order->get_asset_index();
@@ -101,7 +101,7 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
 
 
 //============================================================================
-AgisResult<json> Trade::serialize(json& _json, std::shared_ptr<Hydra> const hydra) const
+AgisResult<json> Trade::serialize(json& _json, HydraPtr hydra) const
 {
     if (_json.size()) { _json.clear(); }
 

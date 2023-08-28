@@ -11,10 +11,12 @@
 class Hydra;
 class Order;
 typedef std::unique_ptr<Order> OrderPtr;
+typedef const Hydra* HydraPtr;
+
 
 class AgisStrategy;
 typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
-typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
+typedef std::reference_wrapper<AgisStrategyPtr> MAgisStrategyRef;
 
 
 struct Trade;
@@ -44,7 +46,7 @@ struct AGIS_API Trade {
     size_t asset_index;
     size_t strategy_index;
     size_t portfolio_index;
-    AgisStrategyRef strategy;
+    MAgisStrategyRef strategy;
 
     /// <summary>
     /// Boolean flag to test if the strategy has allocated touch the trade. Used 
@@ -54,7 +56,7 @@ struct AGIS_API Trade {
 
     std::optional<TradeExitPtr> exit = std::nullopt;
 
-    Trade(AgisStrategyRef strategy, OrderPtr const& order);
+    Trade(MAgisStrategyRef strategy, OrderPtr const& order);
 
     void close(OrderPtr const& filled_order);
     void increase(OrderPtr const& filled_order);
@@ -62,7 +64,7 @@ struct AGIS_API Trade {
     void adjust(OrderPtr const& filled_order);
     void evaluate(double market_price, bool on_close, bool is_reprice = false);
     OrderPtr generate_trade_inverse();
-    AgisResult<json> serialize(json& _json, std::shared_ptr<Hydra> const hydra) const;
+    AgisResult<json> serialize(json& _json, HydraPtr hydra) const;
 
     [[nodiscard]] size_t get_asset_index() const { return this->asset_index; }
     [[nodiscard]] size_t get_strategy_index() const { return this->strategy_index; }

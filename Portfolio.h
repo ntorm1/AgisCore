@@ -24,7 +24,7 @@ class AgisStrategyMap;
 struct Position;
 
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
-AGIS_API typedef std::reference_wrapper<AgisStrategyPtr> AgisStrategyRef;
+AGIS_API typedef std::reference_wrapper<const AgisStrategyPtr> AgisStrategyRef;
 
 AGIS_API typedef std::shared_ptr<Portfolio> PortfolioPtr;
 AGIS_API typedef std::reference_wrapper<const PortfolioPtr> PortfolioRef;
@@ -107,7 +107,7 @@ struct Position
     /// </summary>
     size_t bars_held = 0;
 
-    Position(AgisStrategyRef strategy, OrderPtr const& order);
+    Position(MAgisStrategyRef strategy, OrderPtr const& order);
 
     std::optional<TradeRef> __get_trade(size_t strategy_index) const;
     size_t __get_trade_count() const { return this->trades.size(); }
@@ -123,7 +123,7 @@ struct Position
     void __evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close, bool is_reprice);
 
     void close(OrderPtr const& order, std::vector<std::shared_ptr<Trade>>& trade_history);
-    void adjust(AgisStrategyRef strategy, OrderPtr const& order, std::vector<SharedTradePtr>& trade_history);
+    void adjust(MAgisStrategyRef strategy, OrderPtr const& order, std::vector<SharedTradePtr>& trade_history);
 
     [[nodiscard]] double get_nlv() const { return this->nlv; }
     [[nodiscard]] double get_unrealized_pl() const { return this->unrealized_pl; }
@@ -206,7 +206,7 @@ public:
     /// </summary>
     /// <param name="strategy">A reference to an unique pointer to a AgisStrategy instance</param>
     /// <returns></returns>
-    AGIS_API void register_strategy(AgisStrategyRef strategy);
+    AGIS_API void register_strategy(MAgisStrategyRef strategy);
 
     
     double inline get_cash() const { return this->cash; }
@@ -231,7 +231,7 @@ protected:
     /// <summary>
     /// Map between strategy index and ref to AgisStrategy
     /// </summary>
-    ankerl::unordered_dense::map<size_t, AgisStrategyRef> strategies;
+    ankerl::unordered_dense::map<size_t, MAgisStrategyRef> strategies;
     ankerl::unordered_dense::map<std::string, size_t> strategy_ids;
 
 private:
@@ -307,13 +307,13 @@ public:
     void __register_portfolio(PortfolioPtr portfolio);
     void __remove_portfolio(std::string const& portfolio_id);
     void __remove_strategy(size_t strategy_index);
-    void __register_strategy(AgisStrategyRef strategy);
+    void __register_strategy(MAgisStrategyRef strategy);
     void __reload_strategies(AgisStrategyMap* strategies);
 
     AgisResult<std::string> __get_portfolio_id(size_t const& index) const;
     size_t const __get_portfolio_index(std::string const& id) const { return this->portfolio_map.at(id); }
-    PortfolioPtr const __get_portfolio(std::string const& id);
-    PortfolioPtr const __get_portfolio(size_t index) { return this->portfolios.at(index); };
+    PortfolioPtr const __get_portfolio(std::string const& id) const;
+    PortfolioPtr const __get_portfolio(size_t index) const { return this->portfolios.at(index); };
     bool __portfolio_exists(std::string const& id) const { return this->portfolio_map.count(id) > 0; }
 
     AGIS_API PortfolioRef get_portfolio(std::string const& id) const;

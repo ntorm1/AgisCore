@@ -27,7 +27,7 @@ Order::Order(OrderType order_type_,
 }
 
 
-AgisResult<json> Order::serialize(json& order, std::shared_ptr<Hydra> const hydra) const
+AgisResult<json> Order::serialize(json& order, HydraPtr hydra) const
 {
     if (order.size()) { order.clear(); }
     

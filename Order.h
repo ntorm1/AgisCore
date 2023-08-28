@@ -13,6 +13,7 @@
 class Order;
 class Hydra;
 
+typedef const Hydra* HydraPtr;
 AGIS_API typedef std::unique_ptr<Order> OrderPtr;
 AGIS_API typedef std::shared_ptr<Order> SharedOrderPtr;
 AGIS_API typedef std::reference_wrapper<const OrderPtr> OrderRef;
@@ -172,5 +173,5 @@ public:
     void fill(double market_price, long long fill_time);
     void cancel(long long cancel_time);
     void reject(long long reject_time);
-    AgisResult<json> serialize(json& order, std::shared_ptr<Hydra> const hydra) const;
+    AgisResult<json> serialize(json& order, HydraPtr hydra) const;
 };

@@ -1,3 +1,5 @@
+#include "AgisStrategy.h"
+#include "AgisStrategy.h"
 #include "pch.h"
 #include <fstream>
 #include <sstream>
@@ -204,6 +206,8 @@ void AgisStrategy::to_json(json& j)
 	j["strategy_type"] = this->strategy_type;
 	j["allocation"] = this->portfolio_allocation;
 	j["trading_window"] = trading_window_to_key_str(this->trading_window);
+	j["beta_scale"] = this->apply_beta_scale;
+	j["beta_hedge"] = this->apply_beta_hedge;
 }
 
 //============================================================================
@@ -414,7 +418,7 @@ void AgisStrategyMap::register_strategy(AgisStrategyPtr strategy)
 
 
 //============================================================================
-const AgisStrategyRef AgisStrategyMap::get_strategy(std::string strategy_id)
+AgisStrategyRef AgisStrategyMap::get_strategy(std::string strategy_id) const
 {
 	auto strategy_index = this->strategy_id_map.at(strategy_id);
 	return std::ref(this->strategies.at(strategy_index));
@@ -598,6 +602,10 @@ void AbstractAgisStrategy::next()
 			throw std::runtime_error("invalid exchange view operation");
 		}
 	}
+
+	if (this->apply_beta_scale) ev.beta_scale();
+	if (this->apply_beta_hedge) ev.beta_hedge(strat_alloc_ref.target_leverage);
+
 	this->strategy_allocate(
 		ev,
 		strat_alloc_ref.epsilon,
@@ -617,7 +625,16 @@ void AbstractAgisStrategy::build()
 
 	ExchangePtr exchange = ev_lambda_struct.value().exchange;
 	auto res = this->exchange_subscribe(exchange->get_exchange_id());
+
+	// validate exchange subscription
 	if (res.is_exception()) throw res.get_exception();
+
+	// validate beta hedge
+	if (this->apply_beta_hedge || this->apply_beta_scale)
+	{
+		auto market_asset = exchange->__get_market_asset();
+		if(market_asset.is_exception()) throw market_asset.get_exception();
+	}
 
 	// set the strategy warmup period
 	this->warmup = this->ev_lambda_struct.value().warmup;
@@ -665,7 +682,6 @@ AgisResult<bool> AbstractAgisStrategy::extract_ev_lambda()
 			this->ev_opp_param = val;
 		}
 	}
-	this->set_is_live(true);
 	return AgisResult<bool>(true);
 }
 
@@ -947,4 +963,33 @@ void {STRATEGY_ID}Class::next(){
 	auto source_path = strat_folder / (strategy_id + "Class.cpp");
 	AGIS_TRY(code_gen_write(header_path, strategy_header))
 	AGIS_TRY(code_gen_write(source_path, strategy_source))
+}
+
+AgisResult<bool> AbstractAgisStrategy::val_market_asset()
+{
+	if (!this->ev_lambda_struct.has_value()) {
+		return AgisResult<bool>(this->get_strategy_id() + " missing abstract lambda strategy");
+	}
+
+	ExchangePtr exchange = ev_lambda_struct.value().exchange;
+	auto market_asset = exchange->__get_market_asset();
+	if (market_asset.is_exception()) return AgisResult<bool>(market_asset.get_exception());
+	return AgisResult<bool>(true);
+}
+
+//============================================================================
+AgisResult<bool> AbstractAgisStrategy::set_beta_scale_positions(bool val)
+{
+	if (!val) return AgisStrategy::set_beta_scale_positions(val);
+	AGIS_DO_OR_RETURN(this->val_market_asset(), bool);
+	return AgisStrategy::set_beta_scale_positions(val);
+}
+
+
+//============================================================================
+AgisResult<bool> AbstractAgisStrategy::set_beta_hedge_positions(bool val)
+{
+	if(!val) return AgisStrategy::set_beta_hedge_positions(val);
+	AGIS_DO_OR_RETURN(this->val_market_asset(), bool);
+	return AgisStrategy::set_beta_hedge_positions(val);
 }

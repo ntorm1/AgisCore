@@ -114,14 +114,14 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
 
 
 //============================================================================
-AGIS_API PortfolioPtr const Hydra::get_portfolio(std::string const& portfolio_id)
+AGIS_API PortfolioPtr const Hydra::get_portfolio(std::string const& portfolio_id) const
 {
     return this->portfolios.__get_portfolio(portfolio_id);
 }
 
 
 //============================================================================
-AGIS_API const AgisStrategyRef Hydra::get_strategy(std::string strategy_id)
+AGIS_API const AgisStrategyRef Hydra::get_strategy(std::string strategy_id) const
 {
     return this->strategies.get_strategy(strategy_id);
 }
@@ -155,7 +155,7 @@ AGIS_API void Hydra::remove_strategy(std::string const& strategy_id)
 
 
 //============================================================================
-std::vector<std::string> Hydra::get_asset_ids(std::string exchange_id_)
+std::vector<std::string> Hydra::get_asset_ids(std::string exchange_id_) const
 {
     return this->exchanges.get_asset_ids(exchange_id_);
 }
@@ -226,7 +226,7 @@ AGIS_API AgisResult<bool> Hydra::build()
 
     // register the strategies to the portfolio after they have all been added to prevent
     // references from being invalidated when a new strategy is added
-    auto& strats = this->strategies.__get_strategies();
+    auto& strats = this->strategies.__get_strategies_mut();
     for (auto& strat : strats)
     {
         auto strat_ref = std::ref(strat.second);
@@ -272,12 +272,15 @@ void Hydra::restore(json const& j)
         auto& portfolio = this->get_portfolio(portfolio_id);
         for (const auto& strategy_json : strategies)
         {
-            std::string strategy_id = strategy_json["strategy_id"];
-            std::string trading_window = strategy_json["trading_window"];
-            bool is_live = strategy_json["is_live"];
-
-            double allocation = strategy_json["allocation"];
             AgisStrategyType strategy_type = strategy_json["strategy_type"];
+            if (strategy_type != AgisStrategyType::FLOW) continue;
+
+            std::string strategy_id = strategy_json.at("strategy_id");
+            std::string trading_window = strategy_json.at("trading_window");
+            bool beta_scale = strategy_json.at("beta_scale");
+            bool beta_hedge = strategy_json.at("beta_hedge");
+            bool is_live = strategy_json.at("is_live");
+            double allocation = strategy_json.at("allocation");
 
             if (strategy_type == AgisStrategyType::FLOW)
             {
@@ -287,6 +290,8 @@ void Hydra::restore(json const& j)
                     allocation
                 );
                 strategy->set_trading_window(trading_window).unwrap();
+                strategy->set_beta_scale_positions(beta_scale);
+                strategy->set_beta_hedge_positions(beta_hedge);
                 this->register_strategy(std::move(strategy));
             }
         }

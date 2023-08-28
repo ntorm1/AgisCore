@@ -40,7 +40,7 @@ class AGIS_API AgisResult {
 public:
     // Define the variant type with T and AgisException
     using ValueType = std::variant<T, AgisException>;
-
+    inline AgisResult() : value(T()) {}
     inline AgisResult(ValueType&& _value) : value(std::move(_value)) {}
 
     inline bool is_exception()

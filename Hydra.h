@@ -131,33 +131,33 @@ public:
 	/// Get a const ref to the exchange map containing all registered exchanges
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API ExchangeMap const& get_exchanges() { return this->exchanges; }
+	AGIS_API ExchangeMap const& get_exchanges() const { return this->exchanges; }
 	
 	/// <summary>
 	/// Get const ref to the portfolio map containing all registered portfolios
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API PortfolioMap const& get_portfolios() { return this->portfolios; }
+	AGIS_API PortfolioMap const& get_portfolios() const { return this->portfolios; }
 
 	/// <summary>
 	/// Get ref to the agis strategy map
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API AgisStrategyMap& __get_strategy_map() { return this->strategies; }
+	AGIS_API AgisStrategyMap const& __get_strategy_map() const { return this->strategies; }
 	
 	/// <summary>
 	/// Get const ref to a portfolio registered to the hydra instance
 	/// </summary>
 	/// <param name="portfolio_id">unique id of the portfolio to get</param>
 	/// <returns></returns>
-	AGIS_API PortfolioPtr const get_portfolio(std::string const& portfolio_id);
+	AGIS_API PortfolioPtr const get_portfolio(std::string const& portfolio_id) const;
 
 	/// <summary>
 	/// Get const ref to a AgisStrategy registered to the hydra instance
 	/// </summary>
 	/// <param name="strategy_id">unique id of the strategy</param>
 	/// <returns></returns>
-	AGIS_API const AgisStrategyRef get_strategy(std::string strategy_id);
+	AGIS_API const AgisStrategyRef get_strategy(std::string strategy_id) const;
 
 	
 	AGIS_API std::vector<SharedOrderPtr> const& get_order_history() { return this->router.get_order_history(); }
@@ -188,7 +188,7 @@ public:
 	/// </summary>
 	/// <param name="exchange_id_">unique id of the exchange to search</param>
 	/// <returns></returns>
-	AGIS_API std::vector<std::string> get_asset_ids(std::string exchange_id_);
+	AGIS_API std::vector<std::string> get_asset_ids(std::string exchange_id_) const;
 	
 	/// <summary>
 	/// Get a const ref to an asset registered in the exchange map
@@ -201,7 +201,7 @@ public:
 	AGIS_API AgisResult<std::string> strategy_index_to_id(size_t const& index) const;
 	AGIS_API AgisResult<std::string> portfolio_index_to_id(size_t const& index) const;
 
-	AGIS_API auto __get_dt_index() {return this->exchanges.__get_dt_index();}
+	AGIS_API auto __get_dt_index() const {return this->exchanges.__get_dt_index();}
 	AGIS_API size_t get_candle_count() { return this->exchanges.get_candle_count(); };
 	AGIS_API bool asset_exists(std::string asset_id) const;
 	AGIS_API bool portfolio_exists(std::string const& portfolio_id) const;
