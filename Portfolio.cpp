@@ -9,7 +9,8 @@ std::atomic<size_t> Portfolio::portfolio_counter(0);
 
 
 //============================================================================
-Position::Position(MAgisStrategyRef strategy, OrderPtr const& filled_order_)
+Position::Position(MAgisStrategyRef strategy, OrderPtr const& filled_order_) :
+    __asset(filled_order_->__asset)
 {
     //populate common position values
     this->asset_index = filled_order_->get_asset_index();
@@ -49,17 +50,19 @@ std::optional<TradeRef> Position::__get_trade(size_t strategy_index) const
 
 
 //============================================================================
-void Position::__evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close, bool is_reprice)
+void Position::__evaluate(ThreadSafeVector<OrderPtr>& orders, bool on_close, bool is_reprice)
 {
-    this->last_price = market_price;
-    this->unrealized_pl = this->units*(market_price-this->average_price);
-    this->nlv = market_price * this->units;
+    this->last_price = this->__asset->__get_market_price(on_close);
+    if (this->last_price == 0.0f) return;
+
+    this->unrealized_pl = this->units*(this->last_price-this->average_price);
+    this->nlv = this->last_price * this->units;
     if (on_close && !is_reprice) { this->bars_held++; }
 
     for (auto& trade_pair : this->trades) 
     {
         auto& trade = trade_pair.second;
-        trade->evaluate(market_price, on_close, is_reprice);
+        trade->evaluate(this->last_price, on_close, is_reprice);
 
         // test trade exit
         if (!trade->exit.has_value()) { continue; }
@@ -224,6 +227,18 @@ void PortfolioMap::__reset()
     {
         auto& portfolio = portfolio_pair.second;
         portfolio->__reset();
+    }
+}
+
+
+//============================================================================
+void PortfolioMap::__build(size_t size)
+{
+    for (auto& portfolio_pair : this->portfolios)
+    {
+        auto& portfolio = portfolio_pair.second;
+        portfolio->cash_history.reserve(size);
+        portfolio->nlv_history.reserve(size);
     }
 }
 
@@ -475,34 +490,29 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
     ThreadSafeVector<OrderPtr> orders;
 
     // set the strategy nlv equal to the strategies current cash amount 
+    // and zero out beta if needed
     for (auto& strategy : this->strategies)
     {
-        auto cash = strategy.second.get()->get_cash();
-        strategy.second.get()->set_nlv(cash);
+        auto& s = strategy.second.get();
+        auto cash = s->get_cash();
+        s->set_nlv(cash);
+        if (s->__is_beta_tracing()) s->set_net_beta(0);
     }
 
     // evalute all open positions and their respective trades
     for (auto it = this->positions.begin(); it != positions.end(); ++it)
-    {
-        // attempt to get the current market price of the underlying asset of the position
-        auto& position = it->second;
-        auto asset = exchanges.get_asset(position->asset_index).unwrap();
-        auto market_price = asset->__get_market_price(on_close);
-        if(market_price == 0.0)
-        {
-            continue;
-        }
-        
+    {        
         // evaluate the indivual positions and allow for any orders that are generated
         // as a result of the new valuation
-        position->__evaluate(orders, market_price, on_close, is_reprice);
+        auto& position = it->second;
+        position->__evaluate(orders, on_close, is_reprice);
         this->nlv += position->nlv;
         this->unrealized_pl += position->unrealized_pl;
 
         if (is_reprice) continue;
 
         // if asset expire next step clear from the portfolio
-        if (!asset->__get_is_valid_next_time())
+        if (!position->__asset->__get_is_valid_next_time())
         {
             auto order = position->generate_position_inverse();
             order->__set_state(OrderState::CHEAT);

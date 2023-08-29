@@ -76,6 +76,17 @@ struct ExchangeView
 	/// <param name="sort_type">type of sort to do</param>
 	void sort(size_t N, ExchangeQueryType sort_type);
 
+	/// <summary>
+	/// Sum of all weights in the exchange view
+	/// </summary>
+	/// <returns></returns>
+	AGIS_API double sum_weights(bool _abs = false) const;
+
+	/// <summary>
+	/// Get the neta beta of the exchange view allocation
+	/// </summary>
+	/// <returns></returns>
+	AGIS_API AgisResult<double> net_beta() const;
 
 	/// <summary>
 	/// Divide each pairs weights by it's respective beta, while maintaing the same leverage

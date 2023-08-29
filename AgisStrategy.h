@@ -217,6 +217,13 @@ public:
 	AGIS_API inline void set_is_live(bool _is_live) { this->is_live = _is_live; };
 
 	/// <summary>
+	/// Set wether or not to trace the net beta of the strategy
+	/// </summary>
+	/// <param name="_is_beta_tracing"></param>
+	/// <returns></returns>
+	AGIS_API inline void set_is_beta_tracing(bool _is_beta_tracing) { this->is_beta_tracing = _is_beta_tracing; };
+
+	/// <summary>
 	/// Set the type of strategy, either c++, flow based (node editor), or py (pybind11)
 	/// </summary>
 	/// <param name="t">type of strategy</param>
@@ -282,7 +289,9 @@ public:
 
 	AGIS_API virtual AgisResult<bool> set_beta_scale_positions(bool val) {apply_beta_scale = val; return AgisResult<bool>(true);}
 	AGIS_API virtual AgisResult<bool> set_beta_hedge_positions(bool val) {apply_beta_hedge = val; return AgisResult<bool>(true);}
+	void set_net_beta(double beta_) { this->net_beta = beta_; }
 	void set_nlv(double nlv_) { this->nlv = nlv_; }
+	void net_beta_adjust(double beta_adjustment) { this->net_beta += beta_adjustment; };
 	void nlv_adjust(double nlv_adjustment) { this->nlv += nlv_adjustment; };
 	void cash_adjust(double cash_adjustment) { this->cash += cash_adjustment; };
 	void unrealized_adjust(double unrealized_adjustment) { this->unrealized_pl += unrealized_adjustment; };
@@ -347,6 +356,9 @@ public:
 	/// Only a strategy that is live will have code gen run. Else it will recompile what is in it.
 	/// </summary>
 	AGIS_API bool __is_live() const { return this->is_live; }
+
+	bool __is_beta_tracing() const { return this->is_beta_tracing; }
+	bool __is_beta_hedged() const { return this->apply_beta_hedge; }
 
 protected:
 	AgisStrategyType strategy_type = AgisStrategyType::CPP;
@@ -423,13 +435,17 @@ private:
 
 	double unrealized_pl = 0;
 	double realized_pl = 0;
+
 	double nlv = 0;
 	double cash = 0;
+	double net_beta = 0;
+
 	double starting_cash = 0;
 	double portfolio_allocation = 0;
 
 	bool is_live = true;
 	bool is_subsribed = false; 
+	bool is_beta_tracing = false;
 	std::string exchange_subsrciption;
 
 	/// <summary>
@@ -441,6 +457,7 @@ private:
 	size_t strategy_index;
 	std::string strategy_id;
 
+	std::vector<double> beta_history;
 	std::vector<double> nlv_history;
 	std::vector<double> cash_history;
 	std::vector<SharedTradePtr> trade_history;

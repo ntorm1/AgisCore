@@ -130,7 +130,7 @@ public:
     AGIS_API Asset(
         std::string asset_id,
         std::string exchange_id,
-        size_t warmup = 0,
+        std::optional<size_t> warmup = std::nullopt,
         Frequency freq = Frequency::Day1,
         std::string time_zone = "America/New_York"
     );
@@ -217,6 +217,7 @@ protected:
 
     AGIS_API inline void __set_alignment(bool is_aligned_) { this->__is_aligned = is_aligned_; }
     bool __set_beta(AssetPtr market_asset, size_t lookback);
+    bool __set_beta(std::vector<double> beta_column);
     void __set_warmup(size_t warmup_) { if (this->warmup < warmup_) this->warmup = warmup_; }
     void __set_index(size_t index_) { this->asset_index = index_; }
     void __set_exchange_offset(size_t offset) { this->exchange_offset = offset; }
@@ -293,11 +294,20 @@ struct MarketAsset
     : asset(asset_), beta_lookback(beta_lookback_) 
     {
         this->market_index = asset->get_asset_index();
+        this->market_id = asset->get_asset_id();
     }
-    
-    size_t market_index;
-    AssetPtr asset;
-    std::optional<size_t> beta_lookback;
+
+    // allow for nullptr creation to be filled in later when restoring an exchange
+    MarketAsset(std::string asset_id, std::optional<size_t> beta_lookback_ = std::nullopt)
+        : asset(nullptr), beta_lookback(beta_lookback_)
+    {
+        this->market_id = asset_id;
+    }
+   
+    size_t                  market_index;
+    std::string             market_id;
+    AssetPtr                asset;
+    std::optional<size_t>   beta_lookback;
 };
 
 // Function to convert a string to Frequency enum

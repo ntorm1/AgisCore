@@ -107,9 +107,8 @@ enum class AGIS_API OrderParentType
 
 class AGIS_API Order
 {
-protected: 
+private: 
     static std::atomic<size_t> order_counter;
-
     OrderType order_type;                           /// type of the order
     OrderState order_state = OrderState::PENDING;   /// state of the order
     size_t order_id;                                /// unique id of the order
@@ -134,6 +133,7 @@ protected:
 
 public:
     bool force_close = false;                   /// force an order to close out a position
+    AssetPtr __asset = nullptr;							    /// pointer to the asset the order is for
 
     typedef std::shared_ptr<Order> order_sp_t;
 

@@ -70,8 +70,13 @@ public:
 	/// <summary>
 	/// Load in the all asset's found in the exchange's source directory
 	/// </summary>
-	/// <returns>status if the restore was succesful</returns>
-	AGIS_API [[nodiscard]] AgisResult<bool> restore(std::optional<std::vector<std::string>> asset_ids = std::nullopt);
+	/// <param name="asset_ids">optional vector of asset ids to load</param>
+	/// <param name="market_asset">optional market asset to load</param>
+	/// <returns>status if the load was succesful</returns>
+	AGIS_API [[nodiscard]] AgisResult<bool> restore(
+		std::optional<std::vector<std::string>> asset_ids = std::nullopt,
+		std::optional<MarketAsset> market_asset = std::nullopt
+	);
 
 	/// <summary>
 	/// Restore data from hdf5 file, assume each dataset is asset, dataset name is asset id
@@ -245,14 +250,18 @@ public:
 	/// <param name="source_dir_">file path of the folder containing the assets</param>
 	/// <param name="freq_">frequency of the exchange data points</param>
 	/// <param name="dt_format">the format of the datetime index</param>
-	/// <param name="asset_ids">optional vector of asset ids to include in the exchange</param>
 	/// <returns>status if the new exchange was created succesfully</returns>
 	AGIS_API [[nodiscard]] AgisResult<bool> new_exchange(
 		std::string exchange_id_,
 		std::string source_dir_,
 		Frequency freq_,
-		std::string dt_format,
-		std::optional<std::vector<std::string>> asset_ids = std::nullopt
+		std::string dt_format
+	);
+
+	AGIS_API [[nodiscard]] AgisResult<bool> restore_exchange(
+		std::string const& exchange_id_,
+		std::optional<std::vector<std::string>> asset_ids = std::nullopt,
+		std::optional<MarketAsset> market_asset = std::nullopt
 	);
 
 	/// <summary>

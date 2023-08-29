@@ -8,8 +8,10 @@
 std::atomic<size_t> Trade::trade_counter(0);
 
 
+//============================================================================
 Trade::Trade(MAgisStrategyRef strategy_, OrderPtr const& filled_order):
-    strategy(strategy_)
+    strategy(strategy_),
+    __asset(filled_order->__asset)
 {
     this->asset_index = filled_order->get_asset_index();
     this->strategy_index = filled_order->get_strategy_index();
@@ -38,6 +40,7 @@ Trade::Trade(MAgisStrategyRef strategy_, OrderPtr const& filled_order):
 }
 
 
+//============================================================================
 void Trade::close(OrderPtr const& filled_order)
 {
     this->close_price = filled_order->get_average_price();
@@ -47,6 +50,7 @@ void Trade::close(OrderPtr const& filled_order)
 }
 
 
+//============================================================================
 void Trade::increase(OrderPtr const& filled_order)
 {
     auto units_ = filled_order->get_units();
@@ -56,6 +60,8 @@ void Trade::increase(OrderPtr const& filled_order)
     this->units += units_;
 }
 
+
+//============================================================================
 void Trade::reduce(OrderPtr const& filled_order)
 {
     auto units_ = filled_order->get_units();
@@ -66,6 +72,7 @@ void Trade::reduce(OrderPtr const& filled_order)
 }
 
 
+//============================================================================
 void Trade::adjust(OrderPtr const& filled_order)
 {
     // extract order information
@@ -88,9 +95,18 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
     auto nlv_new = this->units * market_price;
     auto unrealized_pl_new = this->units*(market_price-this->average_price);
     
+    // adjust strategy levels 
     auto& strat = this->strategy.get();
     strat->nlv_adjust(nlv_new);
     strat->unrealized_adjust(unrealized_pl_new - this->unrealized_pl);
+
+    // adjust strategy net beta levels
+    if (strat->__is_beta_tracing())
+    {
+        strat->net_beta_adjust(
+            this->units * market_price * __asset->get_beta().unwrap_or(0.0f)
+        );
+    }
 
     this->nlv = nlv_new;
     this->unrealized_pl = unrealized_pl_new;

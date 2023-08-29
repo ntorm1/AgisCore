@@ -189,6 +189,9 @@ AgisResult<bool> Exchange::__set_market_asset(
 		}
 		// adjust the lookback of the market asset to line up with the others
 		else {
+			// set the market beta columns to 1.0s, maybe better way for this
+			std::vector<double> ones(this->dt_index_size, 1.0);
+			asset_mid->__set_beta(ones);
 			asset_mid->__set_warmup(beta_lookback.value());
 		}
 		});
@@ -457,7 +460,8 @@ AGIS_API AgisResult<bool> Exchange::restore_h5(std::optional<std::vector<std::st
 			H5::DataSet datasetIndex = file.openDataSet(asset_id + "/datetime");
 			H5::DataSpace dataspaceIndex = datasetIndex.getSpace();
 			
-			auto asset = std::make_shared<Asset>(asset_id, this->exchange_id);
+			std::optional<size_t> warmup = this->market_asset.has_value() ? this->market_asset.value().beta_lookback : std::nullopt;
+			auto asset = std::make_shared<Asset>(asset_id, this->exchange_id, warmup);
 			this->assets.push_back(asset);
 			AGIS_DO_OR_RETURN(asset->load(
 				dataset,
@@ -483,8 +487,13 @@ AGIS_API AgisResult<bool> Exchange::restore_h5(std::optional<std::vector<std::st
 
 
 //============================================================================
-AgisResult<bool> Exchange::restore(std::optional<std::vector<std::string>> asset_ids)
+AgisResult<bool> Exchange::restore(
+	std::optional<std::vector<std::string>> asset_ids,
+	std::optional<MarketAsset> market_asset)
 {
+	this->market_asset = market_asset;
+
+	// check if loading in a single h5 file
 	if (!is_folder(this->source_dir))
 	{
 		std::filesystem::path path(this->source_dir);
@@ -506,13 +515,33 @@ AgisResult<bool> Exchange::restore(std::optional<std::vector<std::string>> asset
 		{
 			continue;
 		}
-
-		auto asset = std::make_shared<Asset>(asset_id, this->exchange_id);
+		std::optional<size_t> warmup = this->market_asset.has_value() ? this->market_asset.value().beta_lookback : std::nullopt;
+		auto asset = std::make_shared<Asset>(asset_id, this->exchange_id, warmup);
 
 		this->assets.push_back(asset);
 		AGIS_DO_OR_RETURN(asset->load(file, this->dt_format),bool);
 		this->candles += asset->get_rows();
 	}
+
+	// set the market asset pointer
+	if (this->market_asset.has_value())
+	{
+		// find asset in assets with the same id as the market asset
+		auto new_market_asset_ptr = std::find_if(
+			this->assets.begin(),
+			this->assets.end(),
+			[&](const AssetPtr& asset) {
+				return asset->get_asset_id() == this->market_asset.value().market_id;
+			}
+		);
+		if (new_market_asset_ptr == this->assets.end())
+		{
+			return AgisResult<bool>(AGIS_EXCEP("Market asset not found"));
+		}
+		this->market_asset->asset = *new_market_asset_ptr;
+		this->market_asset->market_index = (*new_market_asset_ptr)->get_asset_index();
+	}
+
 	return AgisResult<bool>(true);
 }
 
@@ -563,6 +592,7 @@ void Exchange::__process_orders(AgisRouter& router, bool on_close)
 
 		if (order->is_filled())
 		{
+			order->__asset = this->assets[order->get_asset_index()];
 			router.place_order(std::move(*orderIter));
 			orderIter = this->orders.erase(orderIter);
 		}
@@ -661,14 +691,40 @@ json ExchangeMap::to_json() const {
 	return j;
 }
 
+//============================================================================
+AgisResult<bool> ExchangeMap::restore_exchange(
+	std::string const& exchange_id_,
+	std::optional<std::vector<std::string>> asset_ids,
+	std::optional<MarketAsset> market_asset
+)
+{
+	// Load in the exchange's data
+	ExchangePtr exchange = this->exchanges.at(exchange_id_);
+	AGIS_DO_OR_RETURN(exchange->restore(asset_ids), bool);
+	AGIS_DO_OR_RETURN(exchange->validate(), bool);
+
+	// Copy shared pointers to the main asset map
+	LOCK_GUARD
+		for (const auto& asset : exchange->get_assets())
+		{
+			// set the unique asset index as the exchange map's counter, then register it
+			asset->__set_index(this->asset_counter);
+			this->assets.push_back(asset);
+			this->asset_map.emplace(asset->get_asset_id(), this->asset_counter);
+			this->asset_counter++;
+		}
+	this->candles += exchange->get_candle_count();
+	UNLOCK_GUARD
+	return AgisResult<bool>(true);
+}
+
 
 //============================================================================
 AgisResult<bool> ExchangeMap::new_exchange(
 	std::string exchange_id_,
 	std::string source_dir_,
 	Frequency freq_,
-	std::string dt_format_,
-	std::optional<std::vector<std::string>> asset_ids
+	std::string dt_format_
 )
 {
 	if (this->exchanges.count(exchange_id_))
@@ -686,24 +742,6 @@ AgisResult<bool> ExchangeMap::new_exchange(
 	);
 	LOCK_GUARD
 	this->exchanges.emplace(exchange_id_, exchange);
-	UNLOCK_GUARD
-
-	// Load in the exchange's data
-	exchange = this->exchanges.at(exchange_id_);
-	AGIS_DO_OR_RETURN(exchange->restore(asset_ids), bool);
-	AGIS_DO_OR_RETURN(exchange->validate(), bool);
-
-	// Copy shared pointers to the main asset map
-	LOCK_GUARD
-	for (const auto& asset : exchange->get_assets())
-	{
-		// set the unique asset index as the exchange map's counter, then register it
-		asset->__set_index(this->asset_counter);
-		this->assets.push_back(asset);
-		this->asset_map.emplace(asset->get_asset_id(), this->asset_counter);
-		this->asset_counter++;
-	}
-	this->candles += exchange->get_candle_count();
 	UNLOCK_GUARD
 	return AgisResult<bool>(true);
 }
@@ -1134,8 +1172,11 @@ void ExchangeMap::restore(json const& j)
 		auto const& source_dir_ = exchange_json["source_dir"];
 		auto const& dt_format_ = exchange_json["dt_format"];
 		auto freq_ = string_to_freq(exchange_json["freq"]);
+
 		this->new_exchange(exchange_id_, source_dir_, freq_, dt_format_);
+		this->restore_exchange(exchange_id_);
 		});
+		
 }
 
 

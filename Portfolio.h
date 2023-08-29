@@ -85,6 +85,7 @@ struct Frictions
 
 struct Position
 {
+    AssetPtr __asset;
     size_t position_id;
     size_t asset_index;
     size_t portfolio_id;
@@ -120,7 +121,7 @@ struct Position
     /// <param name="orders">Reference to thread save vector of new orders to place</param>
     /// <param name="market_price">Current market price of the underlying asset</param>
     /// <param name="on_close">are we on close</param>
-    void __evaluate(ThreadSafeVector<OrderPtr>& orders, double market_price, bool on_close, bool is_reprice);
+    void __evaluate(ThreadSafeVector<OrderPtr>& orders, bool on_close, bool is_reprice);
 
     void close(OrderPtr const& order, std::vector<std::shared_ptr<Trade>>& trade_history);
     void adjust(MAgisStrategyRef strategy, OrderPtr const& order, std::vector<SharedTradePtr>& trade_history);
@@ -139,7 +140,7 @@ private:
     /// <summary>
     /// Map between strategy id and a trade
     /// </summary>
-    ankerl::unordered_dense::map<size_t, SharedTradePtr> trades;
+    ankerl::unordered_dense::map<size_t, SharedTradePtr> trades;  
 };
 
 
@@ -234,6 +235,9 @@ protected:
     ankerl::unordered_dense::map<size_t, MAgisStrategyRef> strategies;
     ankerl::unordered_dense::map<std::string, size_t> strategy_ids;
 
+    std::vector<double> nlv_history;
+    std::vector<double> cash_history;
+
 private:
     void open_position(OrderPtr const& order);
     void modify_position(OrderPtr const& order);
@@ -286,9 +290,6 @@ private:
 
     std::vector<SharedPositionPtr> position_history;
     std::vector<SharedTradePtr> trade_history;
-    std::vector<double> nlv_history;
-    std::vector<double> cash_history;
-
 };
 
 class PortfolioMap
@@ -299,6 +300,7 @@ public:
     void __evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close, bool is_reprice = false);
     void __clear();
     void __reset();
+    void __build(size_t size);
 
 	void __on_order_fill(OrderPtr const& order);
     void __remember_order(SharedOrderPtr order);

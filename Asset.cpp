@@ -18,14 +18,14 @@
 Asset::Asset(
     std::string asset_id_,
     std::string exchange_id_,
-    size_t warmup_,
+    std::optional<size_t> warmup_,
     Frequency freq_,
     std::string time_zone_)
 {
     this->current_index = 0;
     this->asset_id = asset_id_;
     this->exchange_id = exchange_id_;
-    this->warmup = warmup_;
+    this->warmup = warmup_.value_or(0);
     this->freq = freq_;
     this->tz = time_zone_;
 }
@@ -460,6 +460,16 @@ bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
     }
     this->beta_vector = rolling_beta(returns_this, returns_market, lookback);
     assert(this->beta_vector.size() == this->rows);
+    return true;
+}
+
+
+//============================================================================
+bool Asset::__set_beta(std::vector<double> beta_column)
+{
+    // allow for explcit setting of beta instead of rolling cov/var. Also used to
+    // set the market asset beta column to 1
+    this->beta_vector = beta_column;
     return true;
 }
 

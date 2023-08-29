@@ -71,7 +71,9 @@ AgisResult<bool> Hydra::new_exchange(
     std::string dt_format_)
 {
     this->is_built = false;
-    return this->exchanges.new_exchange(exchange_id_, source_dir_, freq_, dt_format_);
+    auto res = this->exchanges.new_exchange(exchange_id_, source_dir_, freq_, dt_format_);
+    if (res.is_exception()) return AgisResult<bool>(res.get_exception());
+    return this->exchanges.restore_exchange(exchange_id_);
 }
 
 
@@ -222,6 +224,7 @@ void Hydra::clear()
 AGIS_API AgisResult<bool> Hydra::build()
 {
     this->exchanges.__build();
+    this->portfolios.__build(this->exchanges.__get_dt_index().size());
     AGIS_DO_OR_RETURN(this->strategies.__build(), bool);
 
     // register the strategies to the portfolio after they have all been added to prevent

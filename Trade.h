@@ -10,6 +10,8 @@
 
 class Hydra;
 class Order;
+class Asset;
+typedef std::shared_ptr<Asset> AssetPtr;
 typedef std::unique_ptr<Order> OrderPtr;
 typedef const Hydra* HydraPtr;
 
@@ -28,6 +30,7 @@ AGIS_API typedef std::reference_wrapper<const SharedTradePtr> TradeRef;
 
 
 struct AGIS_API Trade {
+    AssetPtr __asset;
     double units;
     double average_price;
     double open_price;
@@ -62,7 +65,11 @@ struct AGIS_API Trade {
     void increase(OrderPtr const& filled_order);
     void reduce(OrderPtr const& filled_order);
     void adjust(OrderPtr const& filled_order);
-    void evaluate(double market_price, bool on_close, bool is_reprice = false);
+    void evaluate(
+        double market_price,
+        bool on_close,
+        bool is_reprice = false
+    );
     OrderPtr generate_trade_inverse();
     AgisResult<json> serialize(json& _json, HydraPtr hydra) const;
 

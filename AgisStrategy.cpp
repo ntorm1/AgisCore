@@ -161,10 +161,13 @@ std::unordered_map<std::string, AllocType> agis_strat_alloc_map = {
 //============================================================================
 void AgisStrategy::__reset()
 {
-	this->order_history.clear();
 	this->cash_history.clear();
 	this->nlv_history.clear();
+	this->beta_history.clear();
+
 	this->trades.clear();
+	this->order_history.clear();
+
 	this->cash = this->starting_cash;
 	this->nlv = this->cash;
 	this->reset();
@@ -181,9 +184,10 @@ void AgisStrategy::__build(
 	this->cash = this->portfolio_allocation * this->portfolio->get_cash();
 	this->nlv = this->cash;
 
-	auto s = exchange_map->__get_dt_index().size();
-	this->nlv_history.reserve(s);
-	this->cash_history.reserve(s);
+	auto dt_index_length = exchange_map->__get_dt_index().size();
+	this->nlv_history.reserve(dt_index_length);
+	this->cash_history.reserve(dt_index_length);
+	if (this->is_beta_tracing) this->beta_history.reserve(dt_index_length);
 }
 
 
@@ -194,6 +198,7 @@ void AgisStrategy::__evaluate(bool on_close)
 	{
 		this->nlv_history.push_back(this->nlv);
 		this->cash_history.push_back(this->cash);
+		if (this->is_beta_tracing) this->beta_history.push_back(this->net_beta);
 	}
 }
 
@@ -976,6 +981,7 @@ AgisResult<bool> AbstractAgisStrategy::val_market_asset()
 	if (market_asset.is_exception()) return AgisResult<bool>(market_asset.get_exception());
 	return AgisResult<bool>(true);
 }
+
 
 //============================================================================
 AgisResult<bool> AbstractAgisStrategy::set_beta_scale_positions(bool val)

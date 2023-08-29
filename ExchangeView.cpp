@@ -38,8 +38,8 @@ AGIS_API AgisResult<bool> ExchangeView::beta_hedge(double target_leverage)
 		// now we need to apply the beta hedge
 		auto beta = this->exchange->get_asset_beta(pair.first);
 		if (beta.is_exception()) return AgisResult<bool>(beta.get_exception());
-		double beta_hedge = pair.second * beta.unwrap();
-		sum += beta_hedge;
+		double beta_hedge = -1 * pair.second * beta.unwrap();
+		sum += abs(beta_hedge);
 
 		beta_hedge_total += beta_hedge;
 	}
@@ -77,4 +77,33 @@ void ExchangeView::realloc(double c)
 	for (auto& pair : this->view) {
 		pair.second = c;
 	}
+}
+
+
+//============================================================================
+double ExchangeView::sum_weights(bool _abs) const
+{
+	// get the sum of the second element in each pair of the view
+	double sum = 0;
+	for (auto& pair : this->view)
+	{
+		if(_abs) sum += abs(pair.second);
+		else sum += pair.second;
+	}
+	return sum;
+}
+
+
+//============================================================================
+AgisResult<double> ExchangeView::net_beta() const
+{
+	double net_beta = 0;
+	// scale each position by its beta
+	for (auto& pair : this->view)
+	{
+		auto beta = this->exchange->get_asset_beta(pair.first);
+		if (beta.is_exception()) return AgisResult<double>(beta.get_exception());
+		net_beta += pair.second * beta.unwrap();
+	}
+	return AgisResult<double>(net_beta);
 }
