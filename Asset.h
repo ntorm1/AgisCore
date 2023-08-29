@@ -145,6 +145,14 @@ public:
     /// <returns></returns>
     bool encloses(AssetPtr asset_b);
 
+    /// <summary>
+    /// Takes an asset and returns a vector of NLV values representing the result of 
+    /// a portfolio which takes a 100% position in this asset at time 0
+    /// </summary>
+    /// <param name="starting_amount"></param>
+    /// <returns></returns>
+    std::vector<double> generate_baseline_returns(double starting_amount);
+
     AGIS_API inline  std::string get_asset_id() const { return this->asset_id; }
     AGIS_API inline  size_t get_asset_index() const { return this->asset_index; }
     AGIS_API inline  size_t const get_size() const { return this->rows - this->warmup; }

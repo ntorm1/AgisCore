@@ -1172,9 +1172,13 @@ void ExchangeMap::restore(json const& j)
 		auto const& source_dir_ = exchange_json["source_dir"];
 		auto const& dt_format_ = exchange_json["dt_format"];
 		auto freq_ = string_to_freq(exchange_json["freq"]);
-
 		this->new_exchange(exchange_id_, source_dir_, freq_, dt_format_);
-		this->restore_exchange(exchange_id_);
+
+		MarketAsset market_asset = MarketAsset(
+			exchange_json["market_asset"], exchange_json["market_warmup"]
+		);
+
+		this->restore_exchange(exchange_id_, std::nullopt, market_asset);
 		});
 		
 }

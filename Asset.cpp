@@ -196,6 +196,20 @@ bool Asset::encloses(AssetPtr asset_b)
     
 }
 
+
+//============================================================================
+std::vector<double> Asset::generate_baseline_returns(double starting_amount)
+{
+    std::vector<double> returns(this->rows, 0.0);
+    auto close_price = this->__get_column(this->close_index);
+    returns[0] = starting_amount / close_price[0];
+    for (size_t i = 1; i < this->rows; i++)
+    {
+		returns[i] = returns[i - 1] * close_price[i] / close_price[i - 1];
+	}
+    return returns;
+}
+
 //============================================================================
 AgisResult<bool> Asset::load_headers()
 {
