@@ -36,7 +36,7 @@ AgisResult<json> Order::serialize(json& order, HydraPtr hydra) const
     order["Order State"] = this->order_state;
     order["Units"] = this->units;
 	order["Average Price"] = this->avg_price;
-    order["Limit"] = this->limit.value_or(-1.0f);
+    order["Limit"] = this->limit.value_or(0.0f);
     order["Order Create Time"] = this->order_create_time;   
     order["Order Fill Time"] = this->order_fill_time;
     order["Order Cancel Time"] = this->order_cancel_time;

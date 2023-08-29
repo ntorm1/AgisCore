@@ -526,7 +526,7 @@ public:
 
 	AGIS_API AgisResult<bool> set_beta_scale_positions(bool val) override;
 	AGIS_API AgisResult<bool> set_beta_hedge_positions(bool val) override;
-	AgisResult<bool> val_market_asset();
+	AgisResult<bool> validate_market_asset();
 
 
 private:

@@ -316,12 +316,11 @@ AGIS_API void AgisStrategy::strategy_allocate(
 
 			double offset = abs(size) / abs(exsisting_units);
 			if(epsilon > 0.0 && offset < epsilon) { continue; }
-			// if epsilon is less than 0, only place new order if the new size has 
-			// opposite sign of the exsisting units
+			// if epsilon is less than 0, only place new order if the new order is reversing the 
+			// direction of the trade
 			else if(epsilon < 0.0) {
-				uint64_t signA = *reinterpret_cast<uint64_t*>(&exsisting_units) & (1ULL << 63);
-				uint64_t signB = *reinterpret_cast<uint64_t*>(&size) & (1ULL << 63);
-				if (signA == signB) { continue; }
+				if (size * exsisting_units > 0) continue;
+				if (size * exsisting_units < 0 && abs(size) < abs(exsisting_units)) continue;
 			}
 		}
 
@@ -608,8 +607,8 @@ void AbstractAgisStrategy::next()
 		}
 	}
 
-	if (this->apply_beta_scale) ev.beta_scale();
-	if (this->apply_beta_hedge) ev.beta_hedge(strat_alloc_ref.target_leverage);
+	if (this->apply_beta_scale) AGIS_DO_OR_THROW(ev.beta_scale());
+	if (this->apply_beta_hedge) AGIS_DO_OR_THROW(ev.beta_hedge(strat_alloc_ref.target_leverage));
 
 	this->strategy_allocate(
 		ev,
@@ -970,7 +969,7 @@ void {STRATEGY_ID}Class::next(){
 	AGIS_TRY(code_gen_write(source_path, strategy_source))
 }
 
-AgisResult<bool> AbstractAgisStrategy::val_market_asset()
+AgisResult<bool> AbstractAgisStrategy::validate_market_asset()
 {
 	if (!this->ev_lambda_struct.has_value()) {
 		return AgisResult<bool>(this->get_strategy_id() + " missing abstract lambda strategy");
@@ -987,7 +986,7 @@ AgisResult<bool> AbstractAgisStrategy::val_market_asset()
 AgisResult<bool> AbstractAgisStrategy::set_beta_scale_positions(bool val)
 {
 	if (!val) return AgisStrategy::set_beta_scale_positions(val);
-	AGIS_DO_OR_RETURN(this->val_market_asset(), bool);
+	AGIS_DO_OR_RETURN(this->validate_market_asset(), bool);
 	return AgisStrategy::set_beta_scale_positions(val);
 }
 
@@ -996,6 +995,6 @@ AgisResult<bool> AbstractAgisStrategy::set_beta_scale_positions(bool val)
 AgisResult<bool> AbstractAgisStrategy::set_beta_hedge_positions(bool val)
 {
 	if(!val) return AgisStrategy::set_beta_hedge_positions(val);
-	AGIS_DO_OR_RETURN(this->val_market_asset(), bool);
+	AGIS_DO_OR_RETURN(this->validate_market_asset(), bool);
 	return AgisStrategy::set_beta_hedge_positions(val);
 }

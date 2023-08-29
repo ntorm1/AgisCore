@@ -578,6 +578,15 @@ AgisResult<bool> Exchange::restore(
 		}
 		this->market_asset->asset = *new_market_asset_ptr;
 		this->market_asset->market_index = (*new_market_asset_ptr)->get_asset_index();
+
+		// build the beta vectors if the market asset has a beta lookback
+		if (this->market_asset.value().beta_lookback.has_value())
+		{
+			for (auto& asset : this->assets)
+			{
+				asset->__set_beta(*new_market_asset_ptr, this->market_asset.value().beta_lookback.value());
+			}
+		}
 	}
 
 	return AgisResult<bool>(true);
@@ -625,7 +634,6 @@ void Exchange::__process_orders(AgisRouter& router, bool on_close)
 			orderIter = this->orders.erase(orderIter);
 			continue;
 		}
-
 		this->__process_order(on_close, order);
 
 		if (order->is_filled())
