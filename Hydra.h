@@ -15,9 +15,7 @@
 #include "Portfolio.h"
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+
 
 class Hydra
 {
@@ -108,7 +106,8 @@ public:
 		std::string exchange_id_,
 		std::string source_dir_,
 		Frequency freq_,
-		std::string dt_format
+		std::string dt_format,
+		std::optional<MarketAsset> market_asset_ = std::nullopt
 	);
 
 	/// <summary>
@@ -197,6 +196,13 @@ public:
 	/// <returns></returns>
 	AGIS_API AgisResult<AssetPtr> get_asset(std::string const& asset_id) const;
 	
+	AGIS_API [[nodiscard]] AgisResult<bool> set_market_asset(
+		std::string const& exchange_id,
+		std::string const& asset_id,
+		bool disable,
+		std::optional<size_t> beta_lookback
+	);
+	
 	AGIS_API AgisResult<std::string> asset_index_to_id(size_t const& index) const;
 	AGIS_API AgisResult<std::string> strategy_index_to_id(size_t const& index) const;
 	AGIS_API AgisResult<std::string> portfolio_index_to_id(size_t const& index) const;
@@ -207,7 +213,3 @@ public:
 	AGIS_API bool portfolio_exists(std::string const& portfolio_id) const;
 	AGIS_API bool strategy_exists(std::string const& strategy_id) const;
 };
-
-#ifdef __cplusplus
-}
-#endif

@@ -311,6 +311,14 @@ struct MarketAsset
     {
         this->market_id = asset_id;
     }
+
+    // equality operator
+    bool operator==(const MarketAsset& other) const
+    {
+        auto a = this->beta_lookback.value_or(0) == other.beta_lookback.value_or(0);
+		auto b = this->market_id == other.market_id;
+        return a && b;
+	}
    
     size_t                  market_index;
     std::string             market_id;
@@ -320,3 +328,4 @@ struct MarketAsset
 
 // Function to convert a string to Frequency enum
 AGIS_API Frequency string_to_freq(const std::string& str);
+AGIS_API std::string freq_to_string(Frequency freq);

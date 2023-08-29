@@ -68,12 +68,13 @@ AgisResult<bool> Hydra::new_exchange(
     std::string exchange_id_,
     std::string source_dir_,
     Frequency freq_,
-    std::string dt_format_)
+    std::string dt_format_,
+    std::optional<MarketAsset> market_asset_)
 {
     this->is_built = false;
     auto res = this->exchanges.new_exchange(exchange_id_, source_dir_, freq_, dt_format_);
     if (res.is_exception()) return AgisResult<bool>(res.get_exception());
-    return this->exchanges.restore_exchange(exchange_id_);
+    return this->exchanges.restore_exchange(exchange_id_, std::nullopt, market_asset_);
 }
 
 
@@ -300,6 +301,19 @@ void Hydra::restore(json const& j)
         }
     }
 }
+
+
+AgisResult<bool> Hydra::set_market_asset(
+    std::string const& exchange_id,
+    std::string const& asset_id,
+    bool disable,
+    std::optional<size_t> beta_lookback
+) 
+{
+    this->is_built = false;
+    return this->exchanges.set_market_asset(exchange_id, asset_id, disable, beta_lookback);
+}
+
 
 template class AGIS_API AgisResult<bool>;
 template class AGIS_API AgisResult<json>;

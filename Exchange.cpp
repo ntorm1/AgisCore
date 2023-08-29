@@ -42,6 +42,38 @@ Exchange::~Exchange()
 
 
 //============================================================================
+void ExchangeMap::restore(json const& j)
+{
+	json exchanges = j["exchanges"];
+	std::vector<std::pair<std::string, json>> exchangeItems;
+
+	// Store the exchange items in a vector for parallel processing
+	for (const auto& exchange : exchanges.items())
+	{
+		exchangeItems.emplace_back(exchange.key(), exchange.value());
+	}
+
+	this->asset_counter = 0;
+	// Process the exchange items in parallel
+	std::for_each(std::execution::par, exchangeItems.begin(), exchangeItems.end(), [&](const auto& exchange) {
+		auto const& exchange_id_ = exchange.first;
+		auto const& exchange_json = exchange.second;
+		auto const& source_dir_ = exchange_json["source_dir"];
+		auto const& dt_format_ = exchange_json["dt_format"];
+		auto freq_ = string_to_freq(exchange_json["freq"]);
+		this->new_exchange(exchange_id_, source_dir_, freq_, dt_format_);
+
+		MarketAsset market_asset = MarketAsset(
+			exchange_json["market_asset"], exchange_json["market_warmup"]
+		);
+
+		this->restore_exchange(exchange_id_, std::nullopt, market_asset);
+		});
+
+}
+
+
+//============================================================================
 json Exchange::to_json() const
 {
 	auto j = json{
@@ -328,9 +360,10 @@ void Exchange::build(size_t exchange_offset_)
 	// Generate date time index as sorted union of each asset's datetime index
 	auto datetime_index_ = vector_sorted_union(
 		this->assets,
-		[](std::shared_ptr<Asset> const obj)
+		[](std::shared_ptr<Asset> const obj) -> long long*
 		{ 
-			return obj->__get_dt_index().data();
+			if (obj->get_rows() < obj->get_warmup()) return nullptr; // exclude invlaid assets
+			return obj->__get_dt_index(true).data();
 		},
 		[](std::shared_ptr<Asset> const obj)
 		{ 
@@ -498,29 +531,34 @@ AgisResult<bool> Exchange::restore(
 	{
 		std::filesystem::path path(this->source_dir);
 		if(path.extension() == ".h5") {
-			return restore_h5(asset_ids);
+			auto res = restore_h5(asset_ids);
+			if(res.is_exception()) return AgisResult<bool>(AGIS_EXCEP(res.get_exception()));
 		}
-		return AgisResult<bool>(AGIS_EXCEP("Invalid source directory"));
+		else {
+			return AgisResult<bool>(AGIS_EXCEP("Invalid source directory"));
+		}
 	}
-	auto asset_files = files_in_folder(this->source_dir);
+	else {
+		auto asset_files = files_in_folder(this->source_dir);
 
-	// Loop over all fles in source folder and build each asset
-	for (const auto& file : asset_files)
-	{
-		std::filesystem::path path(file);
-		std::string asset_id = path.stem().string();
-
-		// if asset_ids is not empty and asset_id is not in asset_ids skip
-		if (asset_ids.has_value() && std::find(asset_ids.value().begin(), asset_ids.value().end(), asset_id) == asset_ids.value().end())
+		// Loop over all fles in source folder and build each asset
+		for (const auto& file : asset_files)
 		{
-			continue;
-		}
-		std::optional<size_t> warmup = this->market_asset.has_value() ? this->market_asset.value().beta_lookback : std::nullopt;
-		auto asset = std::make_shared<Asset>(asset_id, this->exchange_id, warmup);
+			std::filesystem::path path(file);
+			std::string asset_id = path.stem().string();
 
-		this->assets.push_back(asset);
-		AGIS_DO_OR_RETURN(asset->load(file, this->dt_format),bool);
-		this->candles += asset->get_rows();
+			// if asset_ids is not empty and asset_id is not in asset_ids skip
+			if (asset_ids.has_value() && std::find(asset_ids.value().begin(), asset_ids.value().end(), asset_id) == asset_ids.value().end())
+			{
+				continue;
+			}
+			std::optional<size_t> warmup = this->market_asset.has_value() ? this->market_asset.value().beta_lookback : std::nullopt;
+			auto asset = std::make_shared<Asset>(asset_id, this->exchange_id, warmup);
+
+			this->assets.push_back(asset);
+			AGIS_DO_OR_RETURN(asset->load(file, this->dt_format), bool);
+			this->candles += asset->get_rows();
+		}
 	}
 
 	// set the market asset pointer
@@ -700,7 +738,7 @@ AgisResult<bool> ExchangeMap::restore_exchange(
 {
 	// Load in the exchange's data
 	ExchangePtr exchange = this->exchanges.at(exchange_id_);
-	AGIS_DO_OR_RETURN(exchange->restore(asset_ids), bool);
+	AGIS_DO_OR_RETURN(exchange->restore(asset_ids, market_asset), bool);
 	AGIS_DO_OR_RETURN(exchange->validate(), bool);
 
 	// Copy shared pointers to the main asset map
@@ -1149,38 +1187,6 @@ void ExchangeMap::__clear()
 	this->current_index = 0;
 	this->candles = 0;
 	this->asset_counter = 0;
-}
-
-
-//============================================================================
-void ExchangeMap::restore(json const& j)
-{
-	json exchanges = j["exchanges"];
-	std::vector<std::pair<std::string, json>> exchangeItems;
-
-	// Store the exchange items in a vector for parallel processing
-	for (const auto& exchange : exchanges.items())
-	{
-		exchangeItems.emplace_back(exchange.key(), exchange.value());
-	}
-
-	this->asset_counter = 0;
-	// Process the exchange items in parallel
-	std::for_each(std::execution::par, exchangeItems.begin(), exchangeItems.end(), [&](const auto& exchange) {
-		auto const& exchange_id_ = exchange.first;
-		auto const& exchange_json = exchange.second;
-		auto const& source_dir_ = exchange_json["source_dir"];
-		auto const& dt_format_ = exchange_json["dt_format"];
-		auto freq_ = string_to_freq(exchange_json["freq"]);
-		this->new_exchange(exchange_id_, source_dir_, freq_, dt_format_);
-
-		MarketAsset market_asset = MarketAsset(
-			exchange_json["market_asset"], exchange_json["market_warmup"]
-		);
-
-		this->restore_exchange(exchange_id_, std::nullopt, market_asset);
-		});
-		
 }
 
 

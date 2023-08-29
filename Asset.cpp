@@ -429,7 +429,6 @@ AGIS_API std::vector<std::string> Asset::__get_dt_index_str(bool adjust_for_warm
 
 bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
 {
-    // TODO fix
     auto market_close_col_index = market_asset->__get_close_index();
     std::span<double> market_close_col = market_asset->__get_column(market_close_col_index);
     std::span<double> close_column = this->__get_column(this->close_index);
@@ -631,36 +630,37 @@ double Asset::__get(std::string col, size_t row) const
 }
 
 
+std::unordered_map<Frequency, std::string > frequency_str_map = {
+    {Frequency::Tick, "Tick"},
+    {Frequency::Min1, "Min1"},
+    {Frequency::Min5, "Min5"},
+    {Frequency::Min15, "Min15"},
+    {Frequency::Min30, "Min30"},
+    {Frequency::Hour1, "Hour1"},
+    {Frequency::Hour4, "Hour4"},
+    {Frequency::Day1, "Day1"},
+};
+
+
 //============================================================================
 Frequency string_to_freq(const std::string& str)
- {
-     if (str == "Tick") {
-         return Frequency::Tick;
-     }
-     else if (str == "Min1") {
-         return Frequency::Min1;
-     }
-     else if (str == "Min5") {
-         return Frequency::Min5;
-     }
-     else if (str == "Min15") {
-         return Frequency::Min15;
-     }
-     else if (str == "Min30") {
-         return Frequency::Min30;
-     }
-     else if (str == "Hour1") {
-         return Frequency::Hour1;
-     }
-     else if (str == "Hour4") {
-         return Frequency::Hour4;
-     }
-     else if (str == "Day1") {
-         return Frequency::Day1;
-     }
-     else {
-         return Frequency::Tick;
-     }
+{
+    for (auto& freq_enum : frequency_str_map)
+    {
+        if (freq_enum.second == str)
+        {
+			return freq_enum.first;
+		}
+    }
+    throw std::invalid_argument("Invalid frequency string: " + str);
+}
+
+//============================================================================
+std::string freq_to_string(Frequency freq)
+{
+    if(!frequency_str_map.count(freq))
+        throw std::invalid_argument("Invalid frequency");
+    return frequency_str_map[freq];
 }
 
 

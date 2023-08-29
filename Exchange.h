@@ -160,6 +160,9 @@ public:
 
 
 	AGIS_API size_t get_candle_count() { return this->candles; };
+	AGIS_API inline auto get_frequency() const { return this->freq; }
+	AGIS_API inline std::string get_source() const { return this->source_dir; }
+	AGIS_API inline std::string get_dt_format() const { return this->dt_format; }
 	AGIS_API inline std::string get_exchange_id() const { return this->exchange_id; }
 	AGIS_API inline StridedPointer<long long> const __get_dt_index() const;
 	AGIS_API inline size_t const __get_size() const { return this->dt_index_size; }
@@ -167,6 +170,7 @@ public:
 	AGIS_API inline long long __get_market_time() { return this->dt_index[this->current_index]; }
 	size_t __get_exchange_index() const { return this->current_index - 1; };
 	AGIS_API [[nodiscard]] AgisResult<AssetPtr> __get_market_asset();
+	AGIS_API [[nodiscard]] std::optional<MarketAsset> __get_market_asset_struct() const { return this->market_asset;};
 
 
 	void __goto(long long datetime);

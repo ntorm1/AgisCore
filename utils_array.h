@@ -200,7 +200,9 @@ tuple<long long*, int> inline vector_sorted_union(
     size_t length = 0;
 
     for (const auto& element : vec) {
-
+        // skip null pointers passed to indicate element should not be included
+        // in the sorted union
+        if (!index_loc(element)) continue;
         if (length == index_len(element)) {
             if (array_eq(sorted_array, index_loc(element), length)) {
                 continue;
