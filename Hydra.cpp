@@ -280,8 +280,8 @@ void Hydra::restore(json const& j)
 
             std::string strategy_id = strategy_json.at("strategy_id");
             std::string trading_window = strategy_json.at("trading_window");
-            bool beta_scale = strategy_json.at("beta_scale");
-            bool beta_hedge = strategy_json.at("beta_hedge");
+            bool beta_scale = strategy_json.value("beta_scale", false);
+            bool beta_hedge = strategy_json.value("beta_hedge", false);
             bool is_live = strategy_json.at("is_live");
             double allocation = strategy_json.at("allocation");
 
