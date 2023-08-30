@@ -202,6 +202,7 @@ public:
 
     AGIS_API std::vector<size_t> get_strategy_positions(size_t strategy_index) const;
     AGIS_API std::vector<std::string> get_strategy_ids() const;
+    AGIS_API AgisStrategyRef __get_strategy(std::string const& id);
 
     /// <summary>
     /// Register a new stratey to the portfolio instance
@@ -218,8 +219,9 @@ public:
 
     AGIS_API inline std::vector<SharedPositionPtr> const& get_position_history() { return this->position_history; }
     AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() { return this->trade_history; }
-    AGIS_API inline std::vector<double> const& get_nlv_history() { return this->nlv_history; }
-    AGIS_API inline std::vector<double> const& get_cash_history() { return this->cash_history; }
+    AGIS_API inline std::span<double const> get_nlv_history() { return std::span<double const>(nlv_history.data(), nlv_history.size());; }
+    AGIS_API inline std::span<double const> get_cash_history() const { return std::span<double const>(cash_history.data(), cash_history.size());; }
+    AGIS_API PortfolioStats const* get_portfolio_stats() const { return &this->stats; }
 
     json to_json() const;
     void restore(json const& strategies);

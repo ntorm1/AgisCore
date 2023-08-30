@@ -1,14 +1,27 @@
 #include "pch.h"
 #include "AgisAnalysis.h"
+#include "AgisStrategy.h"
 #include "Portfolio.h"
 #include <deque>
 
-PortfolioStats::PortfolioStats(Portfolio* portolio_, double risk_free_) :
-	nlv_history(portolio_->get_nlv_history()),
-	cash_history(portolio_->get_cash_history()),
-	portfolio(portolio_)
+
+//============================================================================
+PortfolioStats::PortfolioStats(Portfolio* portfolio_, double risk_free_) :
+    entity(portfolio_),
+    nlv_history(portfolio_->nlv_history),
+    cash_history(portfolio_->cash_history)
 {
 	this->risk_free = risk_free_;
+}
+
+
+//============================================================================
+PortfolioStats::PortfolioStats(AgisStrategy* strategy_, double risk_free_) :
+    entity(strategy_),
+    nlv_history(strategy_->nlv_history),
+    cash_history(strategy_->cash_history)
+{
+    this->risk_free = risk_free_;
 }
 
 //============================================================================

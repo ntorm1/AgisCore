@@ -8,6 +8,7 @@
 #include <utility>
 #include <filesystem>
 #include "AgisRouter.h"
+#include "AgisAnalysis.h"
 #include "Order.h"
 #include "Portfolio.h"
 #include "Exchange.h"
@@ -15,6 +16,7 @@
 namespace fs = std::filesystem;
 
 class AgisStrategy;
+
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
 AGIS_API typedef std::reference_wrapper<const AgisStrategyPtr> AgisStrategyRef;
 
@@ -153,6 +155,8 @@ extern AGIS_API std::unordered_map<std::string, AllocType> agis_strat_alloc_map;
 
 class AgisStrategy
 {
+	friend class PortfolioStats;
+
 public:
 	virtual ~AgisStrategy() = default;
 	AgisStrategy() = default;
@@ -160,7 +164,9 @@ public:
 		std::string id, 
 		PortfolioPtr const portfolio_,
 		double portfolio_allocation
-	): portfolio(portfolio_) 
+	):
+		portfolio(portfolio_),
+		stats(this)
 	{
 		this->strategy_id = id;
 		this->strategy_index = strategy_counter++;
@@ -344,7 +350,8 @@ public:
 	[[nodiscard]] AgisResult<bool> set_trading_window(std::string const& window_name);
 	void set_allocation(double allocation) { this->portfolio_allocation = allocation; }
 	inline std::optional<TradingWindow> get_trading_window() { return this->trading_window; };
-
+	AGIS_API PortfolioStats const* get_portfolio_stats() const {return &this->stats; }
+	
 	/// <summary>
 	/// Find out if the class is and Abstract Agis Class
 	/// </summary>
@@ -413,6 +420,11 @@ protected:
 	/// </summary>
 	ankerl::unordered_dense::map<size_t, SharedTradePtr> trades;
 
+	std::vector<double> beta_history;
+	std::vector<double> nlv_history;
+	std::vector<double> cash_history;
+	PortfolioStats stats;
+
 private:
 	/// <summary>
 	/// Counter of strategy instances
@@ -458,9 +470,7 @@ private:
 	size_t strategy_index;
 	std::string strategy_id;
 
-	std::vector<double> beta_history;
-	std::vector<double> nlv_history;
-	std::vector<double> cash_history;
+
 	std::vector<SharedTradePtr> trade_history;
 };
 
@@ -472,6 +482,7 @@ public:
 
 	AGIS_API void __remove_strategy(std::string const& id);
 	AGIS_API AgisResult<std::string> __get_strategy_id(size_t index) const;
+	AGIS_API std::vector<std::string> __get_strategy_ids() const;
 	AGIS_API inline size_t __get_strategy_index(std::string const& id) const { return this->strategy_id_map.at(id); }
 	AGIS_API void register_strategy(AgisStrategyPtr strategy);
 	AgisStrategyRef get_strategy(std::string strategy_id) const;

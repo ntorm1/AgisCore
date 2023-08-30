@@ -5,10 +5,11 @@
 #define AGIS_API __declspec(dllimport)
 #endif
 #include <memory>
-
+#include <variant>
 #include "AgisErrors.h"
 
 class Portfolio;
+class AgisStrategy;
 
 struct Drawdown {
     double maxDrawdown;
@@ -18,13 +19,15 @@ struct Drawdown {
 
  class PortfolioStats
 {
+    friend class AgisStrategy;
     friend class Portfolio;
 public:
     AGIS_API PortfolioStats(Portfolio* portolio, double risk_free = 0);
+    AGIS_API PortfolioStats(AgisStrategy* strategy, double risk_free = 0);
 
     double risk_free = 0;
     std::span<long long> dt_index;
-    Portfolio* portfolio;
+    std::variant<Portfolio*, AgisStrategy*> entity;
 
     std::vector<double> const& nlv_history;
     std::vector<double> const& cash_history;

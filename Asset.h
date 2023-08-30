@@ -166,6 +166,7 @@ public:
     AGIS_API AgisResult<double> get_asset_feature(std::string const& col, int index) const;
     AGIS_API AgisResult<double> get_asset_feature(size_t col, int index) const;
     AGIS_API AgisResult<double> get_beta() const;
+    AGIS_API std::span<double const> get_beta_column() const;
 
     AGIS_API bool __get_is_valid_next_time() const { return __is_valid_next_time; }
     AGIS_API double __get(std::string col, size_t row) const;

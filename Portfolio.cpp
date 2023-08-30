@@ -1,3 +1,4 @@
+#include "Portfolio.h"
 #include "pch.h"
 #include <tbb/parallel_for_each.h>
 #include <algorithm>
@@ -594,6 +595,14 @@ AGIS_API std::vector<std::string> Portfolio::get_strategy_ids() const
         v.push_back(pair.first);
     }
     return v;
+}
+
+
+//============================================================================
+AGIS_API AgisStrategyRef Portfolio::__get_strategy(std::string const& id)
+{
+    auto strategy_index = this->strategy_ids.at(id);
+    return this->strategies.at(strategy_index);
 }
 
 

@@ -1,5 +1,6 @@
 #include "AgisStrategy.h"
 #include "AgisStrategy.h"
+#include "AgisStrategy.h"
 #include "pch.h"
 #include <fstream>
 #include <sstream>
@@ -499,7 +500,7 @@ void AgisStrategyMap::__remove_strategy(std::string const& id)
 
 
 //============================================================================
-AGIS_API AgisResult<std::string> AgisStrategyMap::__get_strategy_id(size_t index) const
+AgisResult<std::string> AgisStrategyMap::__get_strategy_id(size_t index) const
 {
 	// find the strategy with the given index and return it's id
 	auto strategy = std::find_if(
@@ -519,7 +520,24 @@ AGIS_API AgisResult<std::string> AgisStrategyMap::__get_strategy_id(size_t index
 
 
 //============================================================================
-AGIS_API std::string opp_to_str(const AgisOperation& func)
+std::vector<std::string> AgisStrategyMap::__get_strategy_ids() const
+{
+	// return every key in the strategy_id_map
+	std::vector<std::string> ids;
+	std::transform(
+		this->strategy_id_map.begin(),
+		this->strategy_id_map.end(),
+		std::back_inserter(ids),
+		[](auto& strategy) {
+			return strategy.first;
+		}
+	);
+	return ids;
+}
+
+
+//============================================================================
+std::string opp_to_str(const AgisOperation& func)
 {
 	int a = 1; int b = 2;
 	if (func(a,b) == agis_init(a,b)) {

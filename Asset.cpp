@@ -1,3 +1,5 @@
+#include "Asset.h"
+#include "Asset.h"
 #include "pch.h"
 #include <string>
 #include <fstream>
@@ -416,7 +418,7 @@ std::span<long long> const Asset::__get_dt_index(bool adjust_for_warmup) const
 
 
 //============================================================================
-AGIS_API std::vector<std::string> Asset::__get_dt_index_str(bool adjust_for_warmup) const
+std::vector<std::string> Asset::__get_dt_index_str(bool adjust_for_warmup) const
 {
     auto dt_index = this->__get_dt_index(adjust_for_warmup);
     std::vector<std::string> dt_index_str;
@@ -498,6 +500,12 @@ AGIS_API AgisResult<double> Asset::get_beta() const
     {
         return AgisResult<double>(AGIS_EXCEP("beta not available"));
     }
+}
+
+AGIS_API std::span<double const> Asset::get_beta_column() const
+{
+    // return beta_vector as span
+    return std::span<double const>(this->beta_vector);
 }
 
 

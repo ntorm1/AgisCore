@@ -96,6 +96,12 @@ AGIS_API PortfolioPtr const Hydra::new_portfolio(std::string id, double cash)
 //============================================================================
 AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
 {
+    // if strategy id has space in it throw
+    if (strategy->get_strategy_id().find(' ') != std::string::npos)
+	{
+		AGIS_THROW("Strategy ID must not contain spaces");
+	}
+
     if (this->strategies.__strategy_exists(strategy->get_strategy_id()))
     {
         AGIS_THROW("strategy already exsits");
