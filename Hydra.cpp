@@ -261,7 +261,7 @@ void Hydra::save_state(json& j)
 
 
 //============================================================================
-void Hydra::restore(json const& j)
+AgisResult<bool> Hydra::restore(json const& j)
 {
     this->exchanges.restore(j);
     this->portfolios.restore(j);
@@ -295,12 +295,13 @@ void Hydra::restore(json const& j)
                     allocation
                 );
                 strategy->set_trading_window(trading_window).unwrap();
-                strategy->set_beta_scale_positions(beta_scale);
-                strategy->set_beta_hedge_positions(beta_hedge);
+                AGIS_DO_OR_RETURN(strategy->set_beta_scale_positions(beta_scale, false), bool);
+                AGIS_DO_OR_RETURN(strategy->set_beta_hedge_positions(beta_hedge, false), bool);
                 this->register_strategy(std::move(strategy));
             }
         }
     }
+    return AgisResult<bool>(true);
 }
 
 

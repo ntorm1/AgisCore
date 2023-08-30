@@ -66,7 +66,7 @@ double PortfolioStats::get_stats_sharpe_ratio() const
 Drawdown PortfolioStats::get_stats_drawdown() const
 {
     Drawdown result = { 0.0, 0, 0 };
-    int n = nlv_history.size();
+    size_t n = nlv_history.size();
 
     double peak = nlv_history[0];
     double trough = nlv_history[0];
@@ -109,7 +109,7 @@ Drawdown PortfolioStats::get_stats_drawdown() const
 
 
 //============================================================================
-std::span<double> PortfolioStats::get_rolling_sharpe(size_t window_size = 252) const
+std::vector<double> PortfolioStats::get_rolling_sharpe(size_t window_size)const
 {
     std::vector<double> returns;
     std::vector<double> rolling_sharpe_ratios;
@@ -142,27 +142,29 @@ std::span<double> PortfolioStats::get_rolling_sharpe(size_t window_size = 252) c
             rolling_sharpe_ratios.push_back(sharpe_ratio);
         }
     }
+    return rolling_sharpe_ratios;
 }
 
 
 //============================================================================
-std::span<double> PortfolioStats::get_stats_underwater_plot() const{
-    int n = this->nlv_history.size();
+std::vector<double> PortfolioStats::get_stats_underwater_plot() const{
+    auto n = this->nlv_history.size();
     std::vector<double> underwater_plot(n, 0.0);
 
     double peak = this->nlv_history[0];
-    for (int i = 0; i < n; ++i) {
+    for (size_t i = 0; i < n; ++i) {
         if (this->nlv_history[i] > peak) {
             peak = this->nlv_history[i];
         }
         underwater_plot[i] = (this->nlv_history[i] - peak) / peak;
     }
 
-    return std::span<double>(underwater_plot.data(), underwater_plot.size());
+    return underwater_plot;
 }
 
+
 //============================================================================
-std::span<double> PortfolioStats::get_stats_rolling_drawdown() const {
+std::vector<double> PortfolioStats::get_stats_rolling_drawdown() const {
     int n = 252;
     int dataSize = this->nlv_history.size();
     std::vector<double> max_drawdowns(dataSize, 0.0);
@@ -184,5 +186,5 @@ std::span<double> PortfolioStats::get_stats_rolling_drawdown() const {
                 / this->nlv_history[drawdown_queue.front()];
         }
     }
-    return std::span<double>(max_drawdowns.data(), max_drawdowns.size());
+    return max_drawdowns;
 }

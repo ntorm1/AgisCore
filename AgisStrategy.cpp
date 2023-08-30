@@ -441,7 +441,7 @@ bool AgisStrategyMap::__next()
 		flag.store(true, std::memory_order_relaxed);
 	};
 	
-	tbb::parallel_for_each(
+	std::for_each(
 		this->strategies.begin(),
 		this->strategies.end(),
 		strategy_next
@@ -983,18 +983,18 @@ AgisResult<bool> AbstractAgisStrategy::validate_market_asset()
 
 
 //============================================================================
-AgisResult<bool> AbstractAgisStrategy::set_beta_scale_positions(bool val)
+AgisResult<bool> AbstractAgisStrategy::set_beta_scale_positions(bool val, bool check)
 {
 	if (!val) return AgisStrategy::set_beta_scale_positions(val);
-	AGIS_DO_OR_RETURN(this->validate_market_asset(), bool);
+	if(check) AGIS_DO_OR_RETURN(this->validate_market_asset(), bool);
 	return AgisStrategy::set_beta_scale_positions(val);
 }
 
 
 //============================================================================
-AgisResult<bool> AbstractAgisStrategy::set_beta_hedge_positions(bool val)
+AgisResult<bool> AbstractAgisStrategy::set_beta_hedge_positions(bool val, bool check)
 {
 	if(!val) return AgisStrategy::set_beta_hedge_positions(val);
-	AGIS_DO_OR_RETURN(this->validate_market_asset(), bool);
+	if(check) AGIS_DO_OR_RETURN(this->validate_market_asset(), bool);
 	return AgisStrategy::set_beta_hedge_positions(val);
 }

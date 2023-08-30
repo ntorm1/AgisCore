@@ -123,12 +123,12 @@ struct ExchangeView
 	void apply_weights(
 		std::string const& type,
 		double c,
-		double x = 0)
+		std::optional<double> x = std::nullopt)
 	{
 		if (type == "UNIFORM") this->uniform_weights(c);
 		else if (type == "LINEAR_DECREASE") this->linear_decreasing_weights(c);
 		else if (type == "LINEAR_INCREASE") this->linear_increasing_weights(c);
-		else if (type == "CONDITIONAL_SPLIT") this->conditional_split(c, x);
+		else if (type == "CONDITIONAL_SPLIT") this->conditional_split(c, x.value());
 		else AGIS_THROW("invalid weight function name");
 	};
 

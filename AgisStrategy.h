@@ -287,8 +287,8 @@ public:
 	
 	AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() const { return this->trade_history; }
 
-	AGIS_API virtual AgisResult<bool> set_beta_scale_positions(bool val) {apply_beta_scale = val; return AgisResult<bool>(true);}
-	AGIS_API virtual AgisResult<bool> set_beta_hedge_positions(bool val) {apply_beta_hedge = val; return AgisResult<bool>(true);}
+	AGIS_API virtual AgisResult<bool> set_beta_scale_positions(bool val, bool check = true) {apply_beta_scale = val; return AgisResult<bool>(true);}
+	AGIS_API virtual AgisResult<bool> set_beta_hedge_positions(bool val, bool check = true) {apply_beta_hedge = val; return AgisResult<bool>(true);}
 	void set_net_beta(double beta_) { this->net_beta = beta_; }
 	void set_nlv(double nlv_) { this->nlv = nlv_; }
 	void net_beta_adjust(double beta_adjustment) { this->net_beta += beta_adjustment; };
@@ -358,6 +358,7 @@ public:
 	AGIS_API bool __is_live() const { return this->is_live; }
 
 	bool __is_beta_tracing() const { return this->is_beta_tracing; }
+	bool __is_beta_scaling() const { return this->apply_beta_scale; }
 	bool __is_beta_hedged() const { return this->apply_beta_hedge; }
 
 protected:
@@ -524,8 +525,8 @@ public:
 
 	AGIS_API void code_gen(fs::path strat_folder);
 
-	AGIS_API AgisResult<bool> set_beta_scale_positions(bool val) override;
-	AGIS_API AgisResult<bool> set_beta_hedge_positions(bool val) override;
+	AGIS_API [[nodiscard]] AgisResult<bool> set_beta_scale_positions(bool val, bool check = true) override;
+	AGIS_API [[nodiscard]] AgisResult<bool> set_beta_hedge_positions(bool val, bool check = true) override;
 	AgisResult<bool> validate_market_asset();
 
 

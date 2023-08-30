@@ -564,10 +564,10 @@ std::optional<PositionRef> Portfolio::get_position(size_t asset_index) const
 //============================================================================
 AGIS_API std::optional<TradeRef> Portfolio::get_trade(size_t asset_index, std::string const& strategy_id)
 {
-    auto index = this->strategy_ids.at(strategy_id);
+    auto strategy_index = this->strategy_ids.at(strategy_id);
     auto position = this->get_position(asset_index);
     if (!position.has_value()) { return std::nullopt; }
-    return position.value().get()->__get_trade(index);
+    return position.value().get()->__get_trade(strategy_index);
 }
 
 
@@ -658,6 +658,7 @@ void Portfolio::__remember_order(SharedOrderPtr order)
 
 void Portfolio::__on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids)
 {
+    LOCK_GUARD
     for (auto& id : ids)
     {
         auto position = this->get_position(id);
@@ -668,6 +669,7 @@ void Portfolio::__on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t>
         order->__set_force_close(true);
         router.place_order(std::move(order));
     }
+    UNLOCK_GUARD
 }
 
 

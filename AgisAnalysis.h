@@ -35,8 +35,8 @@ public:
     AGIS_API double get_stats_annualized_volatility() const;
     AGIS_API double get_stats_sharpe_ratio() const;
     AGIS_API Drawdown get_stats_drawdown() const;
-    AGIS_API std::span<double> get_stats_rolling_drawdown() const;
-    AGIS_API std::span<double> get_stats_underwater_plot() const;
-    AGIS_API std::span<double> get_rolling_sharpe(size_t window_size = 252) const;
+    AGIS_API std::vector<double> get_stats_rolling_drawdown() const;
+    AGIS_API std::vector<double> get_stats_underwater_plot() const;
+    AGIS_API std::vector<double> get_rolling_sharpe(size_t window_size = 252) const;
 
 };
