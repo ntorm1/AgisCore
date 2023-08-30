@@ -163,18 +163,15 @@ public:
 	AgisStrategy(
 		std::string id, 
 		PortfolioPtr const portfolio_,
-		double portfolio_allocation
+		double portfolio_allocation_
 	):
 		portfolio(portfolio_),
-		stats(this)
+		stats(this, portfolio_allocation_* portfolio_->get_cash())
 	{
 		this->strategy_id = id;
 		this->strategy_index = strategy_counter++;
 		this->router = nullptr;
-		this->portfolio_allocation = portfolio_allocation;
-		this->nlv = portfolio_allocation * portfolio->get_cash();
-		this->cash = portfolio_allocation * portfolio->get_cash();
-		this->starting_cash = this->cash;
+		this->portfolio_allocation = portfolio_allocation_;
 	}
 
 	/// <summary>
@@ -227,7 +224,7 @@ public:
 	/// </summary>
 	/// <param name="_is_beta_tracing"></param>
 	/// <returns></returns>
-	AGIS_API inline void set_is_beta_tracing(bool _is_beta_tracing) { this->is_beta_tracing = _is_beta_tracing; };
+	AGIS_API inline void set_is_beta_tracing(bool _is_beta_tracing) { this->stats.is_beta_tracing = _is_beta_tracing; };
 
 	/// <summary>
 	/// Set the type of strategy, either c++, flow based (node editor), or py (pybind11)
@@ -295,14 +292,14 @@ public:
 
 	AGIS_API virtual AgisResult<bool> set_beta_scale_positions(bool val, bool check = true) {apply_beta_scale = val; return AgisResult<bool>(true);}
 	AGIS_API virtual AgisResult<bool> set_beta_hedge_positions(bool val, bool check = true) {apply_beta_hedge = val; return AgisResult<bool>(true);}
-	void set_net_beta(double beta_) { this->net_beta = beta_; }
-	void set_nlv(double nlv_) { this->nlv = nlv_; }
-	void net_beta_adjust(double beta_adjustment) { this->net_beta += beta_adjustment; };
-	void nlv_adjust(double nlv_adjustment) { this->nlv += nlv_adjustment; };
-	void cash_adjust(double cash_adjustment) { this->cash += cash_adjustment; };
+	void set_net_beta(double beta_) { this->stats.net_beta = beta_; }
+	void set_nlv(double nlv_) { this->stats.nlv = nlv_; }
+	void net_beta_adjust(double beta_adjustment) { this->stats.net_beta += beta_adjustment; };
+	void nlv_adjust(double nlv_adjustment) { this->stats.nlv += nlv_adjustment; };
+	void cash_adjust(double cash_adjustment) { this->stats.cash += cash_adjustment; };
 	void unrealized_adjust(double unrealized_adjustment) { this->unrealized_pl += unrealized_adjustment; };
-	double get_nlv() { return this->nlv; }
-	double get_cash() { return this->cash; }
+	double get_nlv() { return this->stats.nlv; }
+	double get_cash() { return this->stats.cash; }
 	double get_allocation() { return this->portfolio_allocation; }
 
 	/// <summary>
@@ -363,8 +360,8 @@ public:
 	/// Only a strategy that is live will have code gen run. Else it will recompile what is in it.
 	/// </summary>
 	AGIS_API bool __is_live() const { return this->is_live; }
-
-	bool __is_beta_tracing() const { return this->is_beta_tracing; }
+	void __zero_out_tracers();
+	bool __is_beta_tracing() const { return this->stats.is_beta_tracing; }
 	bool __is_beta_scaling() const { return this->apply_beta_scale; }
 	bool __is_beta_hedged() const { return this->apply_beta_hedge; }
 
@@ -420,9 +417,6 @@ protected:
 	/// </summary>
 	ankerl::unordered_dense::map<size_t, SharedTradePtr> trades;
 
-	std::vector<double> beta_history;
-	std::vector<double> nlv_history;
-	std::vector<double> cash_history;
 	PortfolioStats stats;
 
 private:
@@ -448,17 +442,11 @@ private:
 
 	double unrealized_pl = 0;
 	double realized_pl = 0;
-
-	double nlv = 0;
-	double cash = 0;
-	double net_beta = 0;
-
-	double starting_cash = 0;
 	double portfolio_allocation = 0;
 
 	bool is_live = true;
 	bool is_subsribed = false; 
-	bool is_beta_tracing = false;
+
 	std::string exchange_subsrciption;
 
 	/// <summary>

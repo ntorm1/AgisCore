@@ -238,8 +238,7 @@ void PortfolioMap::__build(size_t size)
     for (auto& portfolio_pair : this->portfolios)
     {
         auto& portfolio = portfolio_pair.second;
-        portfolio->cash_history.reserve(size);
-        portfolio->nlv_history.reserve(size);
+        portfolio->stats.__reserve(size);
     }
 }
 
@@ -368,7 +367,7 @@ json Portfolio::to_json() const
     }
 
     auto j = json{
-        {"starting_cash", this->starting_cash},
+        {"starting_cash", this->stats.starting_cash},
     };
     j["strategies"] = strategies;
     return j;
@@ -426,12 +425,9 @@ AGIS_API json PortfolioMap::to_json() const
 
 //============================================================================
 Portfolio::Portfolio(std::string const & portfolio_id_, double cash_) :
-    stats(this)
+    stats(this, cash_)
 {
     this->portfolio_id = portfolio_id_;
-    this->cash = cash_;
-    this->starting_cash = cash_;
-    this->nlv = cash_;
     this->portfolio_index = portfolio_counter++;
 }
 
@@ -474,7 +470,7 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
         amount += frictions.value().calculate_frictions(order);
 	}
 
-    this->cash -= amount;
+    this->stats.cash -= amount;
 
     // adjust the strategy's cash
     AgisStrategyRef strategy = this->strategies.at(order->get_strategy_index());
@@ -487,19 +483,17 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
 void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close, bool is_reprice)
 {
     LOCK_GUARD
-    this->nlv = this->cash;
+    this->stats.nlv = this->stats.cash;
     this->unrealized_pl = 0;
     ThreadSafeVector<OrderPtr> orders;
 
-    // set the strategy nlv equal to the strategies current cash amount 
-    // and zero out beta if needed
+    // when evaluating the portfolio we need to zero out strategy levels so they can 
+    // be recalculated using their respective trades
     for (auto& strategy : this->strategies)
     {
-        auto& s = strategy.second.get();
-        auto cash = s->get_cash();
-        s->set_nlv(cash);
-        if (s->__is_beta_tracing()) s->set_net_beta(0);
+        strategy.second.get()->__zero_out_tracers();
     }
+    
 
     // evalute all open positions and their respective trades
     for (auto it = this->positions.begin(); it != positions.end(); ++it)
@@ -508,7 +502,7 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
         // as a result of the new valuation
         auto& position = it->second;
         position->__evaluate(orders, on_close, is_reprice);
-        this->nlv += position->nlv;
+        this->stats.nlv += position->nlv;
         this->unrealized_pl += position->unrealized_pl;
 
         if (is_reprice) continue;
@@ -536,8 +530,8 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
             router.place_order(std::move(order.value()));
         }
     }
-    this->nlv_history.push_back(this->nlv);
-    this->cash_history.push_back(this->cash);
+    // store portfolio stats at the current level
+    this->stats.__evaluate();
 
     // log strategy levels
     for (const auto& strat : this->strategies)
@@ -626,15 +620,12 @@ AGIS_API void Portfolio::register_strategy(MAgisStrategyRef strategy)
 void Portfolio::__reset()
 {
     LOCK_GUARD
-    this->nlv = this->starting_cash;
-    this->cash = this->starting_cash;
     this->positions.clear();
     this->unrealized_pl = 0;
 
     this->position_history.clear();
     this->trade_history.clear();
-    this->nlv_history.clear();
-    this->cash_history.clear();
+    this->stats.__reset();
     UNLOCK_GUARD
 }
 

@@ -6,22 +6,55 @@
 
 
 //============================================================================
-PortfolioStats::PortfolioStats(Portfolio* portfolio_, double risk_free_) :
-    entity(portfolio_),
-    nlv_history(portfolio_->nlv_history),
-    cash_history(portfolio_->cash_history)
+PortfolioStats::PortfolioStats(Portfolio* portfolio_, double cash_, double risk_free_) :
+    entity(portfolio_)
 {
 	this->risk_free = risk_free_;
+    this->starting_cash = cash_;
+    this->cash = cash_;
+    this->nlv = cash_;
 }
 
 
 //============================================================================
-PortfolioStats::PortfolioStats(AgisStrategy* strategy_, double risk_free_) :
-    entity(strategy_),
-    nlv_history(strategy_->nlv_history),
-    cash_history(strategy_->cash_history)
+PortfolioStats::PortfolioStats(AgisStrategy* strategy_,double cash_, double risk_free_) :
+    entity(strategy_)
 {
     this->risk_free = risk_free_;
+    this->starting_cash = cash_;
+    this->cash = cash_;
+    this->nlv = cash_;
+}
+
+
+//============================================================================
+void PortfolioStats::__reserve(size_t n)
+{
+    this->nlv_history.reserve(n);
+    this->cash_history.reserve(n);
+    if(this->is_beta_tracing) this->beta_history.reserve(n);
+}
+
+//============================================================================
+
+void PortfolioStats::__reset()
+{
+    this->cash_history.clear();
+    this->nlv_history.clear();
+    this->beta_history.clear();
+
+    this->cash = this->starting_cash;
+    this->nlv = this->cash;
+    this->net_beta = 0.0f;
+}
+
+
+//============================================================================
+void PortfolioStats::__evaluate()
+{
+    this->nlv_history.push_back(this->nlv);
+    this->cash_history.push_back(this->cash);
+    if (this->is_beta_tracing) this->beta_history.push_back(this->net_beta);
 }
 
 //============================================================================

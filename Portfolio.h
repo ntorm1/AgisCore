@@ -213,14 +213,18 @@ public:
 
 
     AGIS_API PortfolioStats const& get_stats() const { return this->stats; }
-    double inline get_cash() const { return this->cash; }
-    double inline get_nlv() const { return this->nlv; }
+    double inline get_cash() const { return this->stats.cash; }
+    double inline get_nlv() const { return this->stats.nlv; }
     double inline get_unrealized_pl() const { return this->unrealized_pl; }
 
     AGIS_API inline std::vector<SharedPositionPtr> const& get_position_history() { return this->position_history; }
     AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() { return this->trade_history; }
-    AGIS_API inline std::span<double const> get_nlv_history() { return std::span<double const>(nlv_history.data(), nlv_history.size());; }
-    AGIS_API inline std::span<double const> get_cash_history() const { return std::span<double const>(cash_history.data(), cash_history.size());; }
+    AGIS_API inline std::span<double const> get_nlv_history() { 
+        return std::span<double const>(stats.nlv_history.data(), stats.nlv_history.size());
+    }
+    AGIS_API inline std::span<double const> get_cash_history() const {
+        return std::span<double const>(stats.cash_history.data(), stats.cash_history.size());
+    }
     AGIS_API PortfolioStats const* get_portfolio_stats() const { return &this->stats; }
 
     json to_json() const;
@@ -239,9 +243,6 @@ protected:
     /// </summary>
     ankerl::unordered_dense::map<size_t, MAgisStrategyRef> strategies;
     ankerl::unordered_dense::map<std::string, size_t> strategy_ids;
-
-    std::vector<double> nlv_history;
-    std::vector<double> cash_history;
 
     /// <summary>
     /// Mutex lock on the portfolio instance
@@ -282,9 +283,6 @@ private:
     /// </summary>
     std::string portfolio_id;
 
-    double cash;
-    double starting_cash;
-    double nlv;
     double unrealized_pl = 0;
 
     /// <summary>

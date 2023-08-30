@@ -22,15 +22,28 @@ struct Drawdown {
     friend class AgisStrategy;
     friend class Portfolio;
 public:
-    AGIS_API PortfolioStats(Portfolio* portolio, double risk_free = 0);
-    AGIS_API PortfolioStats(AgisStrategy* strategy, double risk_free = 0);
+    AGIS_API PortfolioStats(Portfolio* portolio, double cash, double risk_free = 0);
+    AGIS_API PortfolioStats(AgisStrategy* strategy, double cash, double risk_free = 0);
 
     double risk_free = 0;
     std::span<long long> dt_index;
     std::variant<Portfolio*, AgisStrategy*> entity;
 
-    std::vector<double> const& nlv_history;
-    std::vector<double> const& cash_history;
+    std::vector<double> beta_history;
+    std::vector<double> nlv_history;
+    std::vector<double> cash_history;
+
+    double net_beta = 0;
+    double nlv = 0;
+    double cash = 0;
+    double starting_cash = 0;
+
+    bool is_beta_tracing = false;
+
+    void __reserve(size_t n);
+    void __evaluate();
+    void __reset();
+
 
     AGIS_API double get_stats_total_pl() const;
     AGIS_API double get_stats_pct_returns() const;

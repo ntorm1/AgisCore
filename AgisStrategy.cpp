@@ -162,15 +162,9 @@ std::unordered_map<std::string, AllocType> agis_strat_alloc_map = {
 //============================================================================
 void AgisStrategy::__reset()
 {
-	this->cash_history.clear();
-	this->nlv_history.clear();
-	this->beta_history.clear();
-
 	this->trades.clear();
 	this->order_history.clear();
-
-	this->cash = this->starting_cash;
-	this->nlv = this->cash;
+	this->stats.__reset();
 	this->reset();
 }
 
@@ -182,13 +176,11 @@ void AgisStrategy::__build(
 {
 	this->router = router_;
 	this->exchange_map = exchange_map;
-	this->cash = this->portfolio_allocation * this->portfolio->get_cash();
-	this->nlv = this->cash;
+	this->stats.cash = this->portfolio_allocation * this->portfolio->get_cash();
+	this->stats.nlv = this->stats.cash;
 
 	auto dt_index_length = exchange_map->__get_dt_index().size();
-	this->nlv_history.reserve(dt_index_length);
-	this->cash_history.reserve(dt_index_length);
-	if (this->is_beta_tracing) this->beta_history.reserve(dt_index_length);
+	this->stats.__reserve(dt_index_length);
 }
 
 
@@ -197,9 +189,7 @@ void AgisStrategy::__evaluate(bool on_close)
 {
 	if (on_close)
 	{
-		this->nlv_history.push_back(this->nlv);
-		this->cash_history.push_back(this->cash);
-		if (this->is_beta_tracing) this->beta_history.push_back(this->net_beta);
+		this->stats.__evaluate();
 	}
 }
 
@@ -301,7 +291,7 @@ AGIS_API void AgisStrategy::strategy_allocate(
 			}
 			case AllocType::PCT: {
 				auto market_price = this->exchange_map->__get_market_price(asset_index, true);
-				size *=  (this->nlv / market_price);
+				size *=  (this->stats.nlv / market_price);
 				break;
 			}
 		}
@@ -360,6 +350,14 @@ AgisResult<bool> AgisStrategy::set_trading_window(std::string const& window_name
 	TradingWindow window = agis_trading_window_map.at(window_name);
 	this->set_trading_window(window);
 	return  AgisResult<bool>(true);
+}
+
+
+//============================================================================s
+void AgisStrategy::__zero_out_tracers()
+{
+	this->set_nlv(this->stats.cash);
+	if (this->stats.is_beta_tracing) this->stats.net_beta = 0.0f;
 }
 
 //============================================================================
