@@ -242,6 +242,7 @@ void PortfolioMap::__build(size_t size)
     }
 }
 
+
 //============================================================================
 void PortfolioMap::__on_order_fill(OrderPtr const& order)
 {
@@ -423,7 +424,8 @@ AGIS_API json PortfolioMap::to_json() const
 
 
 //============================================================================
-Portfolio::Portfolio(std::string const & portfolio_id_, double cash_)
+Portfolio::Portfolio(std::string const & portfolio_id_, double cash_) :
+    stats(this)
 {
     this->portfolio_id = portfolio_id_;
     this->cash = cash_;
@@ -476,7 +478,6 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
     // adjust the strategy's cash
     AgisStrategyRef strategy = this->strategies.at(order->get_strategy_index());
     strategy.get()->cash_adjust(-1*amount);
-
     UNLOCK_GUARD
 }
 

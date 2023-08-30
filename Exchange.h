@@ -354,8 +354,8 @@ public:
 	AGIS_API double __get_market_price(size_t asset_index, bool on_close) const;
 	AGIS_API double __get_market_price(std::string& asset_id, bool on_close) const;
 	
-	AGIS_API std::span<long long> const __get_dt_index() const;
-	AGIS_API inline long long __get_market_time() { return this->dt_index[this->current_index]; }
+	AGIS_API std::span<long long> const __get_dt_index(bool cutoff = false) const;
+	AGIS_API inline long long __get_market_time() const { return this->current_time; }
 
 	AGIS_API void __goto(long long datetime);
 	AGIS_API void __reset();
@@ -388,6 +388,8 @@ private:
 
 	TimePoint time_point;
 	long long* dt_index = nullptr;
+	long long current_time;
+
 	size_t dt_index_size = 0;
 	size_t current_index = 0;
 	size_t candles = 0;

@@ -13,6 +13,7 @@
 #include <ankerl/unordered_dense.h>
 #include "AgisPointers.h"
 #include "AgisRouter.h"
+#include "AgisAnalysis.h"
 #include "Exchange.h"
 #include "Order.h"
 #include "Trade.h"
@@ -82,7 +83,6 @@ struct Frictions
     double total_slippage = 0;
 };
 
-
 struct Position
 {
     AssetPtr __asset;
@@ -147,6 +147,7 @@ private:
 class Portfolio
 {
     friend class PortfolioMap;
+    friend class PortfolioStats;
 public:
     AGIS_API Portfolio(std::string const& portfolio_id, double cash);
 
@@ -209,7 +210,8 @@ public:
     /// <returns></returns>
     AGIS_API void register_strategy(MAgisStrategyRef strategy);
 
-    
+
+    AGIS_API PortfolioStats const& get_stats() const { return this->stats; }
     double inline get_cash() const { return this->cash; }
     double inline get_nlv() const { return this->nlv; }
     double inline get_unrealized_pl() const { return this->unrealized_pl; }
@@ -217,6 +219,7 @@ public:
     AGIS_API inline std::vector<SharedPositionPtr> const& get_position_history() { return this->position_history; }
     AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() { return this->trade_history; }
     AGIS_API inline std::vector<double> const& get_nlv_history() { return this->nlv_history; }
+    AGIS_API inline std::vector<double> const& get_cash_history() { return this->cash_history; }
 
     json to_json() const;
     void restore(json const& strategies);
@@ -238,6 +241,11 @@ protected:
     std::vector<double> nlv_history;
     std::vector<double> cash_history;
 
+    /// <summary>
+    /// Mutex lock on the portfolio instance
+    /// </summary>
+    std::mutex _mutex;
+
 private:
     void open_position(OrderPtr const& order);
     void modify_position(OrderPtr const& order);
@@ -256,10 +264,6 @@ private:
     /// <param name="start_index">index of first trade to copy</param>
     void __on_trade_closed(size_t start_index);
 
-	/// <summary>
-	/// Mutex lock on the portfolio instance
-	/// </summary>
-	std::mutex _mutex;
 
     /// <summary>
     /// Static portfolio counter used to assign unique ids on instantiation
@@ -287,7 +291,7 @@ private:
     ankerl::unordered_dense::map<size_t, PositionPtr> positions;
 
     std::optional<Frictions> frictions;
-
+    PortfolioStats stats;
     std::vector<SharedPositionPtr> position_history;
     std::vector<SharedTradePtr> trade_history;
 };

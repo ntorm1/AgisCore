@@ -160,6 +160,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AgisAnalysis.h" />
     <ClInclude Include="AgisErrors.h" />
     <ClInclude Include="AgisPointers.h" />
     <ClInclude Include="AgisRisk.h" />
@@ -180,6 +181,7 @@
     <ClInclude Include="utils_array.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AgisAnalysis.cpp" />
     <ClCompile Include="AgisRisk.cpp" />
     <ClCompile Include="AgisRouter.cpp" />
     <ClCompile Include="AgisStrategy.cpp" />

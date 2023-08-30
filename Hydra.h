@@ -158,7 +158,6 @@ public:
 	/// <returns></returns>
 	AGIS_API const AgisStrategyRef get_strategy(std::string strategy_id) const;
 
-	
 	AGIS_API std::vector<SharedOrderPtr> const& get_order_history() { return this->router.get_order_history(); }
 
 	/// <summary>

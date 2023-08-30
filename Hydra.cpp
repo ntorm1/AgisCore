@@ -129,6 +129,7 @@ AGIS_API const AgisStrategyRef Hydra::get_strategy(std::string strategy_id) cons
     return this->strategies.get_strategy(strategy_id);
 }
 
+
 //============================================================================
 AGIS_API NexusStatusCode Hydra::remove_exchange(std::string exchange_id_)
 {

@@ -959,9 +959,10 @@ NexusStatusCode ExchangeMap::remove_exchange(std::string const& exchange_id_)
 
 
 //============================================================================
-std::span<long long> const ExchangeMap::__get_dt_index() const
+std::span<long long> const ExchangeMap::__get_dt_index(bool cutoff) const
 {
-	return std::span(this->dt_index, this->dt_index_size);
+	if (!cutoff) return std::span(this->dt_index, this->dt_index_size);
+	return std::span(this->dt_index, this->current_index - 1);
 }
 
 
@@ -1137,7 +1138,7 @@ AGIS_API void ExchangeMap::__build()
 	this->dt_index = get<0>(datetime_index_);
 	this->dt_index_size = get<1>(datetime_index_);
 	this->is_built = true;
-
+	this->current_time = this->dt_index[0];
 	// empty vector to contain expired assets
 	this->assets_expired.resize(this->assets.size());
 	std::fill(assets_expired.begin(), assets_expired.end(), nullptr);
@@ -1152,16 +1153,16 @@ AGIS_API bool ExchangeMap::step()
 		return false;
 	}
 
-	auto current_time = this->dt_index[this->current_index];
+	this->current_time = this->dt_index[this->current_index];
 
 	// set the exchagne time point 
-	this->time_point = epoch_to_tp(current_time);
+	this->time_point = epoch_to_tp(this->current_time);
 
 	expired_asset_index.clear();
 	// Define a lambda function that processes each asset
 	auto process_exchange = [&](auto& exchange_pair) {
 		auto exchange_time = exchange_pair.second->__get_market_time();
-		if (exchange_time != current_time) { return; }
+		if (exchange_time != this->current_time) { return; }
 		exchange_pair.second->step(expired_asset_index);
 		exchange_pair.second->__took_step = true;
 	};
