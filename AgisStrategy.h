@@ -155,7 +155,7 @@ extern AGIS_API std::unordered_map<std::string, AllocType> agis_strat_alloc_map;
 
 class AgisStrategy
 {
-	friend class PortfolioStats;
+	friend struct Trade;
 
 public:
 	virtual ~AgisStrategy() = default;
@@ -165,13 +165,16 @@ public:
 		PortfolioPtr const portfolio_,
 		double portfolio_allocation_
 	):
-		portfolio(portfolio_),
-		stats(this, portfolio_allocation_* portfolio_->get_cash())
+		portfolio(portfolio_)
 	{
 		this->strategy_id = id;
 		this->strategy_index = strategy_counter++;
 		this->router = nullptr;
+
 		this->portfolio_allocation = portfolio_allocation_;
+		this->nlv = portfolio_allocation * portfolio->get_cash();
+		this->cash = portfolio_allocation * portfolio->get_cash();
+		this->starting_cash = this->cash;
 	}
 
 	/// <summary>
@@ -224,7 +227,7 @@ public:
 	/// </summary>
 	/// <param name="_is_beta_tracing"></param>
 	/// <returns></returns>
-	AGIS_API inline void set_is_beta_tracing(bool _is_beta_tracing) { this->stats.is_beta_tracing = _is_beta_tracing; };
+	AGIS_API inline void set_is_beta_tracing(bool _is_beta_tracing) { this->is_beta_tracing = _is_beta_tracing; };
 
 	/// <summary>
 	/// Set the type of strategy, either c++, flow based (node editor), or py (pybind11)
@@ -292,14 +295,9 @@ public:
 
 	AGIS_API virtual AgisResult<bool> set_beta_scale_positions(bool val, bool check = true) {apply_beta_scale = val; return AgisResult<bool>(true);}
 	AGIS_API virtual AgisResult<bool> set_beta_hedge_positions(bool val, bool check = true) {apply_beta_hedge = val; return AgisResult<bool>(true);}
-	void set_net_beta(double beta_) { this->stats.net_beta = beta_; }
-	void set_nlv(double nlv_) { this->stats.nlv = nlv_; }
-	void net_beta_adjust(double beta_adjustment) { this->stats.net_beta += beta_adjustment; };
-	void nlv_adjust(double nlv_adjustment) { this->stats.nlv += nlv_adjustment; };
-	void cash_adjust(double cash_adjustment) { this->stats.cash += cash_adjustment; };
-	void unrealized_adjust(double unrealized_adjustment) { this->unrealized_pl += unrealized_adjustment; };
-	double get_nlv() { return this->stats.nlv; }
-	double get_cash() { return this->stats.cash; }
+
+	double get_nlv() { return this->nlv; }
+	double get_cash() { return this->cash; }
 	double get_allocation() { return this->portfolio_allocation; }
 
 	/// <summary>
@@ -345,9 +343,12 @@ public:
 	/// </summary>
 	/// <param name="window_name"></param>
 	[[nodiscard]] AgisResult<bool> set_trading_window(std::string const& window_name);
-	void set_allocation(double allocation) { this->portfolio_allocation = allocation; }
+
+	/// <summary>
+	/// Get the strategies current trading window
+	/// </summary>
+	/// <returns></returns>
 	inline std::optional<TradingWindow> get_trading_window() { return this->trading_window; };
-	AGIS_API PortfolioStats const* get_portfolio_stats() const {return &this->stats; }
 	
 	/// <summary>
 	/// Find out if the class is and Abstract Agis Class
@@ -361,9 +362,24 @@ public:
 	/// </summary>
 	AGIS_API bool __is_live() const { return this->is_live; }
 	void __zero_out_tracers();
-	bool __is_beta_tracing() const { return this->stats.is_beta_tracing; }
+	bool __is_beta_tracing() const { return this->is_beta_tracing; }
 	bool __is_beta_scaling() const { return this->apply_beta_scale; }
 	bool __is_beta_hedged() const { return this->apply_beta_hedge; }
+
+	void __set_allocation(double allocation) { this->portfolio_allocation = allocation; }
+	void __set_net_beta(double beta_) { this->net_beta = beta_; }
+	void __set_nlv(double nlv_) { this->nlv = nlv_; }
+	void __net_beta_adjust(double beta_adjustment) { this->net_beta += beta_adjustment; };
+	void __nlv_adjust(double nlv_adjustment) { this->nlv += nlv_adjustment; };
+	void __cash_adjust(double cash_adjustment) { this->cash += cash_adjustment; };
+	void __unrealized_adjust(double unrealized_adjustment) { this->unrealized_pl += unrealized_adjustment; };
+
+	AGIS_API inline std::span<double const> get_nlv_history() {
+		return std::span<double const>(nlv_history.data(), nlv_history.size());
+	}
+	AGIS_API inline std::span<double const> get_cash_history() const {
+		return std::span<double const>(cash_history.data(), cash_history.size());
+	}
 
 protected:
 	AgisStrategyType strategy_type = AgisStrategyType::CPP;
@@ -406,6 +422,16 @@ protected:
 
 	bool apply_beta_hedge = false;
 	bool apply_beta_scale = false;
+	bool is_beta_tracing = false;
+
+	std::vector<double> beta_history;
+	std::vector<double> nlv_history;
+	std::vector<double> cash_history;
+
+	double net_beta = 0;
+	double nlv = 0;
+	double cash = 0;
+	double starting_cash = 0;
 
 	/// <summary>
 	/// Pointer to the main exchange map object
@@ -416,8 +442,6 @@ protected:
 	/// Mapping between asset_index and trade owned by the strategy
 	/// </summary>
 	ankerl::unordered_dense::map<size_t, SharedTradePtr> trades;
-
-	PortfolioStats stats;
 
 private:
 	/// <summary>

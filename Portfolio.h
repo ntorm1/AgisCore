@@ -211,21 +211,19 @@ public:
     /// <returns></returns>
     AGIS_API void register_strategy(MAgisStrategyRef strategy);
 
-
-    AGIS_API PortfolioStats const& get_stats() const { return this->stats; }
-    double inline get_cash() const { return this->stats.cash; }
-    double inline get_nlv() const { return this->stats.nlv; }
+    double inline get_cash() const { return this->cash; }
+    double inline get_nlv() const { return this->nlv; }
     double inline get_unrealized_pl() const { return this->unrealized_pl; }
 
     AGIS_API inline std::vector<SharedPositionPtr> const& get_position_history() { return this->position_history; }
     AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() { return this->trade_history; }
+    AGIS_API inline std::vector<double> const& get_nlv_history_vec() { return this->nlv_history; }
     AGIS_API inline std::span<double const> get_nlv_history() { 
-        return std::span<double const>(stats.nlv_history.data(), stats.nlv_history.size());
+        return std::span<double const>(nlv_history.data(), nlv_history.size());
     }
     AGIS_API inline std::span<double const> get_cash_history() const {
-        return std::span<double const>(stats.cash_history.data(), stats.cash_history.size());
+        return std::span<double const>(cash_history.data(), cash_history.size());
     }
-    AGIS_API PortfolioStats const* get_portfolio_stats() const { return &this->stats; }
 
     json to_json() const;
     void restore(json const& strategies);
@@ -249,6 +247,16 @@ protected:
     /// </summary>
     std::mutex _mutex;
 
+    std::vector<double> beta_history;
+    std::vector<double> nlv_history;
+    std::vector<double> cash_history;
+    bool is_beta_tracing = false;
+
+    double net_beta = 0;
+    double nlv = 0;
+    double cash = 0;
+    double starting_cash = 0;
+
 private:
     void open_position(OrderPtr const& order);
     void modify_position(OrderPtr const& order);
@@ -266,7 +274,6 @@ private:
     /// </summary>
     /// <param name="start_index">index of first trade to copy</param>
     void __on_trade_closed(size_t start_index);
-
 
     /// <summary>
     /// Static portfolio counter used to assign unique ids on instantiation
@@ -291,7 +298,6 @@ private:
     ankerl::unordered_dense::map<size_t, PositionPtr> positions;
 
     std::optional<Frictions> frictions;
-    PortfolioStats stats;
     std::vector<SharedPositionPtr> position_history;
     std::vector<SharedTradePtr> trade_history;
 };

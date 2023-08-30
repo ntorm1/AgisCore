@@ -1,12 +1,10 @@
 #include "AgisStrategy.h"
-#include "AgisStrategy.h"
-#include "AgisStrategy.h"
 #include "pch.h"
 #include <fstream>
 #include <sstream>
 #include <tbb/parallel_for_each.h>
 
-
+#include "AgisAnalysis.h"
 #include "AgisStrategy.h"
 #include "AgisErrors.h"
 
@@ -164,7 +162,15 @@ void AgisStrategy::__reset()
 {
 	this->trades.clear();
 	this->order_history.clear();
-	this->stats.__reset();
+	
+	this->cash_history.clear();
+	this->nlv_history.clear();
+	this->beta_history.clear();
+
+	this->cash = this->starting_cash;
+	this->nlv = this->cash;
+	this->net_beta = 0.0f;
+
 	this->reset();
 }
 
@@ -176,11 +182,13 @@ void AgisStrategy::__build(
 {
 	this->router = router_;
 	this->exchange_map = exchange_map;
-	this->stats.cash = this->portfolio_allocation * this->portfolio->get_cash();
-	this->stats.nlv = this->stats.cash;
+	this->cash = this->portfolio_allocation * this->portfolio->get_cash();
+	this->nlv = this->cash;
 
-	auto dt_index_length = exchange_map->__get_dt_index().size();
-	this->stats.__reserve(dt_index_length);
+	auto n = exchange_map->__get_dt_index().size();
+	this->nlv_history.reserve(n);
+	this->cash_history.reserve(n);
+	if (this->is_beta_tracing) this->beta_history.reserve(n);
 }
 
 
@@ -189,7 +197,9 @@ void AgisStrategy::__evaluate(bool on_close)
 {
 	if (on_close)
 	{
-		this->stats.__evaluate();
+		this->nlv_history.push_back(this->nlv);
+		this->cash_history.push_back(this->cash);
+		if (this->is_beta_tracing) this->beta_history.push_back(this->net_beta);
 	}
 }
 
@@ -291,7 +301,7 @@ AGIS_API void AgisStrategy::strategy_allocate(
 			}
 			case AllocType::PCT: {
 				auto market_price = this->exchange_map->__get_market_price(asset_index, true);
-				size *=  (this->stats.nlv / market_price);
+				size *=  (this->nlv / market_price);
 				break;
 			}
 		}
@@ -356,8 +366,8 @@ AgisResult<bool> AgisStrategy::set_trading_window(std::string const& window_name
 //============================================================================s
 void AgisStrategy::__zero_out_tracers()
 {
-	this->set_nlv(this->stats.cash);
-	if (this->stats.is_beta_tracing) this->stats.net_beta = 0.0f;
+	this->__set_nlv(this->cash);
+	if (this->is_beta_tracing) this->net_beta = 0.0f;
 }
 
 //============================================================================

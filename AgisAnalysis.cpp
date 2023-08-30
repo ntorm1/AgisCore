@@ -1,115 +1,65 @@
 #include "pch.h"
 #include "AgisAnalysis.h"
-#include "AgisStrategy.h"
 #include "Portfolio.h"
-#include <deque>
+#include "AgisStrategy.h"
 
 
 //============================================================================
-PortfolioStats::PortfolioStats(Portfolio* portfolio_, double cash_, double risk_free_) :
-    entity(portfolio_)
+double get_stats_total_pl(std::vector<double> const& nlv_history)
 {
-	this->risk_free = risk_free_;
-    this->starting_cash = cash_;
-    this->cash = cash_;
-    this->nlv = cash_;
+    return nlv_history.back() - nlv_history.front();
 }
 
 
 //============================================================================
-PortfolioStats::PortfolioStats(AgisStrategy* strategy_,double cash_, double risk_free_) :
-    entity(strategy_)
+double get_stats_pct_returns(std::vector<double> const& nlv_history)
 {
-    this->risk_free = risk_free_;
-    this->starting_cash = cash_;
-    this->cash = cash_;
-    this->nlv = cash_;
+    return 100 * get_stats_total_pl(nlv_history) / nlv_history.front();
 }
 
 
 //============================================================================
-void PortfolioStats::__reserve(size_t n)
+double get_stats_annualized_pct_returns(std::vector<double> const& nlv_history)
 {
-    this->nlv_history.reserve(n);
-    this->cash_history.reserve(n);
-    if(this->is_beta_tracing) this->beta_history.reserve(n);
-}
-
-//============================================================================
-
-void PortfolioStats::__reset()
-{
-    this->cash_history.clear();
-    this->nlv_history.clear();
-    this->beta_history.clear();
-
-    this->cash = this->starting_cash;
-    this->nlv = this->cash;
-    this->net_beta = 0.0f;
+    // calculate annualized returns
+    auto days = nlv_history.size();
+    auto years = days / 252.0;
+    return 100 * (pow(nlv_history.back() / nlv_history.front(), 1 / years) - 1);
 }
 
 
 //============================================================================
-void PortfolioStats::__evaluate()
+double get_stats_annualized_volatility(std::vector<double> const& nlv_history)
 {
-    this->nlv_history.push_back(this->nlv);
-    this->cash_history.push_back(this->cash);
-    if (this->is_beta_tracing) this->beta_history.push_back(this->net_beta);
-}
-
-//============================================================================
-double PortfolioStats::get_stats_total_pl() const
-{
-	return this->nlv_history.back() - this->nlv_history.front();
-}
-
-
-//============================================================================
-double PortfolioStats::get_stats_pct_returns() const
-{
-	return 100 * this->get_stats_total_pl() / this->nlv_history.front();
+    // calculate annualized volatility
+    auto days = nlv_history.size();
+    auto years = days / 252.0;
+    auto daily_returns = std::vector<double>(days - 1);
+    for (size_t i = 0; i < days - 1; i++)
+    {
+        daily_returns[i] = (nlv_history[i + 1] - nlv_history[i]) / nlv_history[i];
+    }
+    auto mean = std::accumulate(daily_returns.begin(), daily_returns.end(), 0.0) / daily_returns.size();
+    auto sq_sum = std::inner_product(daily_returns.begin(), daily_returns.end(), daily_returns.begin(), 0.0);
+    auto stdev = std::sqrt(sq_sum / daily_returns.size() - mean * mean);
+    return 100 * stdev * std::sqrt(252);
 }
 
 
 //============================================================================
-double PortfolioStats::get_stats_annualized_pct_returns() const
+double get_stats_sharpe_ratio(std::vector<double> const& nlv_history, double risk_free)
 {
-	// calculate annualized returns
-	auto days = this->nlv_history.size();
-	auto years = days / 252.0;
-	return 100 * (pow(nlv_history.back() / nlv_history.front(), 1 / years) - 1);
+    // Calculate the Sharpe Ratio
+    return (get_stats_annualized_pct_returns(nlv_history) - risk_free)
+        / get_stats_annualized_volatility(nlv_history);
 }
 
 
-//============================================================================
-double PortfolioStats::get_stats_annualized_volatility() const
-{
-	// calculate annualized volatility
-	auto days = this->nlv_history.size();
-	auto years = days / 252.0;
-	auto daily_returns = std::vector<double>(days - 1);
-	for (size_t i = 0; i < days - 1; i++)
-	{
-		daily_returns[i] = (this->nlv_history[i + 1] - this->nlv_history[i]) / this->nlv_history[i];
-	}
-	auto mean = std::accumulate(daily_returns.begin(), daily_returns.end(), 0.0) / daily_returns.size();
-	auto sq_sum = std::inner_product(daily_returns.begin(), daily_returns.end(), daily_returns.begin(), 0.0);
-	auto stdev = std::sqrt(sq_sum / daily_returns.size() - mean * mean);
-	return 100 * stdev * std::sqrt(252);
-}
-
-
-//============================================================================
-double PortfolioStats::get_stats_sharpe_ratio() const
-{
-	// Calculate the Sharpe Ratio
-	return (get_stats_annualized_pct_returns() - risk_free) 
-        / get_stats_annualized_volatility();
-}
-
-
-//============================================================================
-Drawdown PortfolioStats::get_stats_drawdown() const
+//============================================================================F
+Drawdown get_stats_drawdown(
+    std::vector<double> const& nlv_history,
+    std::span<long long> dt_index
+)
 {
     Drawdown result = { 0.0, 0, 0 };
     size_t n = nlv_history.size();
@@ -155,7 +105,11 @@ Drawdown PortfolioStats::get_stats_drawdown() const
 
 
 //============================================================================
-std::vector<double> PortfolioStats::get_rolling_sharpe(size_t window_size)const
+
+std::vector<double> get_rolling_sharpe(
+    std::vector<double> const& nlv_history,
+    size_t window_size,
+    double risk_free)
 {
     std::vector<double> returns;
     std::vector<double> rolling_sharpe_ratios;
@@ -163,8 +117,8 @@ std::vector<double> PortfolioStats::get_rolling_sharpe(size_t window_size)const
     double rolling_avg_return = 0.0;
     double rolling_std_dev_sum = 0.0;
 
-    for (size_t i = 1; i <= this->nlv_history.size(); ++i) {
-        double current_return = (this->nlv_history[i] - this->nlv_history[i - 1]) / this->nlv_history[i - 1];
+    for (size_t i = 1; i <= nlv_history.size(); ++i) {
+        double current_return = (nlv_history[i] - nlv_history[i - 1]) / nlv_history[i - 1];
         returns.push_back(current_return);
 
         rolling_avg_return += current_return;
@@ -172,8 +126,8 @@ std::vector<double> PortfolioStats::get_rolling_sharpe(size_t window_size)const
 
         if (i >= window_size) {
             if (i > window_size) {
-                double removed_return = (this->nlv_history[i - window_size] - this->nlv_history[i - window_size - 1]) 
-                    / this->nlv_history[i - window_size - 1];
+                double removed_return = (nlv_history[i - window_size] - nlv_history[i - window_size - 1])
+                    / nlv_history[i - window_size - 1];
                 rolling_avg_return -= removed_return;
                 rolling_std_dev_sum -= removed_return * removed_return;
             }
@@ -184,7 +138,7 @@ std::vector<double> PortfolioStats::get_rolling_sharpe(size_t window_size)const
             double annualized_avg_return = avg_return * 252; // Assuming 252 trading days in a year
             double annualized_std_dev = std_dev * std::sqrt(252); // Annualize standard deviation
 
-            double sharpe_ratio = (annualized_avg_return - this->risk_free) / annualized_std_dev;           
+            double sharpe_ratio = (annualized_avg_return - risk_free) / annualized_std_dev;
             rolling_sharpe_ratios.push_back(sharpe_ratio);
         }
     }
@@ -193,16 +147,17 @@ std::vector<double> PortfolioStats::get_rolling_sharpe(size_t window_size)const
 
 
 //============================================================================
-std::vector<double> PortfolioStats::get_stats_underwater_plot() const{
-    auto n = this->nlv_history.size();
+
+std::vector<double> get_stats_underwater_plot(std::vector<double> const& nlv_history) {
+    auto n = nlv_history.size();
     std::vector<double> underwater_plot(n, 0.0);
 
-    double peak = this->nlv_history[0];
+    double peak = nlv_history[0];
     for (size_t i = 0; i < n; ++i) {
-        if (this->nlv_history[i] > peak) {
-            peak = this->nlv_history[i];
+        if (nlv_history[i] > peak) {
+            peak = nlv_history[i];
         }
-        underwater_plot[i] = (this->nlv_history[i] - peak) / peak;
+        underwater_plot[i] = (nlv_history[i] - peak) / peak;
     }
 
     return underwater_plot;
@@ -210,9 +165,10 @@ std::vector<double> PortfolioStats::get_stats_underwater_plot() const{
 
 
 //============================================================================
-std::vector<double> PortfolioStats::get_stats_rolling_drawdown() const {
+
+std::vector<double> get_stats_rolling_drawdown(std::vector<double> const& nlv_history) {
     int n = 252;
-    int dataSize = this->nlv_history.size();
+    int dataSize = nlv_history.size();
     std::vector<double> max_drawdowns(dataSize, 0.0);
     std::deque<int> drawdown_queue;
 
@@ -222,14 +178,14 @@ std::vector<double> PortfolioStats::get_stats_rolling_drawdown() const {
             drawdown_queue.pop_front();
 
         // Remove indices that are not relevant for calculating drawdown
-        while (!drawdown_queue.empty() && this->nlv_history[i] >= this->nlv_history[drawdown_queue.back()])
+        while (!drawdown_queue.empty() && nlv_history[i] >= nlv_history[drawdown_queue.back()])
             drawdown_queue.pop_back();
 
         drawdown_queue.push_back(i);
 
         if (i >= n - 1) {
-            max_drawdowns[i] = (this->nlv_history[drawdown_queue.front()] - this->nlv_history[i - n + 1]) 
-                / this->nlv_history[drawdown_queue.front()];
+            max_drawdowns[i] = (nlv_history[drawdown_queue.front()] - nlv_history[i - n + 1])
+                / nlv_history[drawdown_queue.front()];
         }
     }
     return max_drawdowns;

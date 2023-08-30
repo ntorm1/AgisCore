@@ -97,13 +97,13 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
     
     // adjust strategy levels 
     auto& strat = this->strategy.get();
-    strat->nlv_adjust(nlv_new);
-    strat->unrealized_adjust(unrealized_pl_new - this->unrealized_pl);
+    strat->nlv += nlv_new;
+    strat->unrealized_pl += (unrealized_pl_new - this->unrealized_pl);
 
     // adjust strategy net beta levels
     if (strat->__is_beta_tracing())
     {
-        strat->net_beta_adjust(
+        strat->net_beta += (
             this->units * market_price * __asset->get_beta().unwrap_or(0.0f)
         );
     }
