@@ -1,5 +1,5 @@
-#include "Portfolio.h"
 #include "pch.h"
+#include <cmath>
 #include <tbb/parallel_for_each.h>
 #include <algorithm>
 #include "Portfolio.h"
@@ -11,7 +11,7 @@ std::atomic<size_t> Portfolio::portfolio_counter(0);
 
 //============================================================================
 Position::Position(
-    MAgisStrategyRef strategy,
+    AgisStrategy* strategy,
     OrderPtr const& filled_order_
 ) :
     __asset(filled_order_->__asset)
@@ -29,11 +29,11 @@ Position::Position(
 
     // insert the new trade
     auto trade = std::make_shared<Trade>(
-        strategy.get().get(),
+        strategy,
         filled_order_
     );
     this->trades.insert({trade->strategy_index,trade});
-    strategy.get()->__add_trade(trade);
+    strategy->__add_trade(trade);
     this->position_id = position_counter++;
 }
 
@@ -104,7 +104,7 @@ void Position::close(OrderPtr const& order, std::vector<SharedTradePtr>& trade_h
 
 
 //============================================================================
-void Position::adjust(MAgisStrategyRef strategy, OrderPtr const& order, std::vector<SharedTradePtr>& trade_history)
+void Position::adjust(AgisStrategy* strategy, OrderPtr const& order, std::vector<SharedTradePtr>& trade_history)
 {
     auto units_ = order->get_units();
     auto fill_price = order->get_average_price();
@@ -135,11 +135,11 @@ void Position::adjust(MAgisStrategyRef strategy, OrderPtr const& order, std::vec
     if (!trade_opt.has_value())
     {
         auto trade = std::make_shared<Trade>(
-            strategy.get().get(),
+            strategy,
             order
         );
         this->trades.insert({ strategy_id,trade });
-        strategy.get()->__add_trade(trade);
+        strategy->__add_trade(trade);
     }
     else
     {
@@ -149,13 +149,14 @@ void Position::adjust(MAgisStrategyRef strategy, OrderPtr const& order, std::vec
             trade_ptr->close(order);
             SharedTradePtr extracted_trade = this->trades.at(strategy_id);
             this->trades.erase(strategy_id);
-            strategy.get()->__remove_trade(order->get_asset_index());
+            strategy->__remove_trade(order->get_asset_index());
             trade_history.push_back(extracted_trade);
         }
         else
         {
             // test to see if the trade is being reversed
-            if(units_ * trade_ptr->units < 0 && abs(units_) > abs(trade_ptr->units))
+            if(std::signbit(units_) != std::signbit(trade_ptr->units) 
+                && abs(units_) > abs(trade_ptr->units))
 			{
                 // get the number of units left over after reversing the trade
                 auto units_left = trade_ptr->units + units_;
@@ -163,18 +164,18 @@ void Position::adjust(MAgisStrategyRef strategy, OrderPtr const& order, std::vec
 				trade_ptr->close(order);
                 SharedTradePtr extracted_trade = this->trades.at(strategy_id);
 				this->trades.erase(strategy_id);
-                strategy.get()->__remove_trade(order->get_asset_index());
+                strategy->__remove_trade(order->get_asset_index());
 				trade_history.push_back(extracted_trade);
 
                 // open a new trade with the new order minus the units needed to close out 
                 // the previous trade
                 order->set_units(units_left);
                 auto trade = std::make_shared<Trade>(
-                    strategy.get().get(),
+                    strategy,
                     order
                 );
                 this->trades.insert({ strategy_id,trade });
-                strategy.get()->__add_trade(trade);
+                strategy->__add_trade(trade);
                 order->set_units(units_);
 			}
             else
@@ -366,7 +367,7 @@ json Portfolio::to_json() const
     for (const auto& strategy : this->strategies)
     {
         json strat_json;
-        strategy.second.get()->to_json(strat_json);
+        strategy.second->to_json(strat_json);
         strategies.push_back(strat_json);
     }
 
@@ -467,7 +468,7 @@ void Portfolio::__on_phantom_order(OrderPtr const& order)
 	}
     // adjust cash levels
     auto amount = order->get_units() * order->get_average_price();
-    benchmark_strategy->__cash_adjust(-1 * amount);
+    benchmark_strategy->cash -= amount;
 }
 
 
@@ -522,8 +523,8 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
     this->cash -= amount;
 
     // adjust the strategy's cash
-    AgisStrategyRef strategy = this->strategies.at(order->get_strategy_index());
-    strategy.get()->__cash_adjust(-1*amount);
+    auto strategy = this->strategies.at(order->get_strategy_index());
+    strategy->cash -= amount;
     UNLOCK_GUARD
 }
 
@@ -540,7 +541,7 @@ void Portfolio::__evaluate(AgisRouter& router, bool on_close, bool is_reprice)
     // be recalculated using their respective trades
     for (auto& strategy : this->strategies)
     {
-        strategy.second.get()->__zero_out_tracers();
+        strategy.second->__zero_out_tracers();
     }
     if (benchmark_strategy) benchmark_strategy->__zero_out_tracers();
     
@@ -596,7 +597,7 @@ void Portfolio::__evaluate(AgisRouter& router, bool on_close, bool is_reprice)
     // log strategy levels
     for (const auto& strat : this->strategies)
     {
-        strat.second.get()->__evaluate(on_close);
+        strat.second->__evaluate(on_close);
     }
     UNLOCK_GUARD
 }
@@ -653,7 +654,7 @@ AGIS_API std::vector<std::string> Portfolio::get_strategy_ids() const
 
 
 //============================================================================
-AGIS_API AgisStrategyRef Portfolio::__get_strategy(std::string const& id)
+AGIS_API AgisStrategy const* Portfolio::__get_strategy(std::string const& id)
 {
     auto strategy_index = this->strategy_ids.at(id);
     return this->strategies.at(strategy_index);
@@ -672,7 +673,7 @@ AGIS_API void Portfolio::register_strategy(MAgisStrategyRef strategy)
     else {
         this->strategies.emplace(
             strategy.get()->get_strategy_index(),
-            strategy
+            strategy.get().get()
         );
         this->strategy_ids.emplace(
             strategy.get()->get_strategy_id(),
@@ -724,7 +725,7 @@ void Portfolio::__remember_order(SharedOrderPtr order)
 {
     LOCK_GUARD
     auto& strategy = this->strategies.at(order.get()->get_strategy_index());
-    strategy.get()->__remember_order(order);
+    strategy->__remember_order(order);
     UNLOCK_GUARD
 }
 
@@ -763,7 +764,7 @@ void Portfolio::__on_trade_closed(size_t start_index)
     {
         SharedTradePtr trade = this->trade_history[i];
         auto& strategy = this->strategies.at(trade->strategy_index);
-        strategy.get()->__remember_trade(trade);
+        strategy->__remember_trade(trade);
     }
 }
 

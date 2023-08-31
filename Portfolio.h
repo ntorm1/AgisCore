@@ -26,7 +26,6 @@ class AgisStrategyMap;
 struct Position;
 
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
-AGIS_API typedef std::reference_wrapper<const AgisStrategyPtr> AgisStrategyRef;
 
 AGIS_API typedef std::shared_ptr<Portfolio> PortfolioPtr;
 AGIS_API typedef std::reference_wrapper<const PortfolioPtr> PortfolioRef;
@@ -115,7 +114,7 @@ struct Position
     /// <param name="strategy">Mutable ref to the strategy that placed the order</param>
     /// <param name="order">the order that tirggered the new position call</param>
     Position(
-        MAgisStrategyRef strategy,
+        AgisStrategy* strategy,
         OrderPtr const& order
     );
 
@@ -133,7 +132,7 @@ struct Position
     void __evaluate(ThreadSafeVector<OrderPtr>& orders, bool on_close, bool is_reprice);
 
     void close(OrderPtr const& order, std::vector<std::shared_ptr<Trade>>& trade_history);
-    void adjust(MAgisStrategyRef strategy, OrderPtr const& order, std::vector<SharedTradePtr>& trade_history);
+    void adjust(AgisStrategy* strategy, OrderPtr const& order, std::vector<SharedTradePtr>& trade_history);
 
     [[nodiscard]] double get_nlv() const { return this->nlv; }
     [[nodiscard]] double get_unrealized_pl() const { return this->unrealized_pl; }
@@ -217,7 +216,7 @@ public:
 
     AGIS_API std::vector<size_t> get_strategy_positions(size_t strategy_index) const;
     AGIS_API std::vector<std::string> get_strategy_ids() const;
-    AGIS_API AgisStrategyRef __get_strategy(std::string const& id);
+    AGIS_API AgisStrategy const* __get_strategy(std::string const& id);
 
     /// <summary>
     /// Register a new stratey to the portfolio instance
@@ -247,13 +246,14 @@ public:
     static void __reset_counter() { Portfolio::portfolio_counter = 0; }
     void __remember_order(SharedOrderPtr order);
     void __on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids);
+    bool __is_beta_trace() const { return this->is_beta_tracing; }
 
 
 protected:
     /// <summary>
     /// Map between strategy index and ref to AgisStrategy
     /// </summary>
-    ankerl::unordered_dense::map<size_t, MAgisStrategyRef> strategies;
+    ankerl::unordered_dense::map<size_t, AgisStrategy*> strategies;
 
     /// <summary>
     /// Map between strategy id and strategy index

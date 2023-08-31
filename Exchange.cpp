@@ -54,7 +54,7 @@ void ExchangeMap::restore(json const& j)
 	}
 
 	this->asset_counter = 0;
-	// Process the exchange items in parallel
+	// Process the exchange items 
 	std::for_each(std::execution::par, exchangeItems.begin(), exchangeItems.end(), [&](const auto& exchange) {
 		auto const& exchange_id_ = exchange.first;
 		auto const& exchange_json = exchange.second;
@@ -69,6 +69,15 @@ void ExchangeMap::restore(json const& j)
 
 		this->restore_exchange(exchange_id_, std::nullopt, market_asset);
 		});
+
+	// set market assets
+	for (auto& exchange : this->exchanges)
+	{
+		auto res = exchange.second->__get_market_asset();
+		if(res.is_exception()) continue;
+		auto market_asset = res.unwrap();
+		this->market_assets[market_asset->get_frequency()] = market_asset;
+	}
 
 }
 

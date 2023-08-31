@@ -218,7 +218,7 @@ void AgisStrategy::__evaluate(bool on_close)
 //============================================================================s
 void AgisStrategy::__zero_out_tracers()
 {
-	this->__set_nlv(this->cash);
+	this->nlv = this->cash;
 	if (this->net_beta.has_value()) this->net_beta = 0.0f;
 	if (this->net_leverage_ratio.has_value()) this->net_leverage_ratio = 0.0f;
 }
@@ -451,10 +451,18 @@ void AgisStrategyMap::register_strategy(AgisStrategyPtr strategy)
 
 
 //============================================================================
-AgisStrategyRef AgisStrategyMap::get_strategy(std::string strategy_id) const
+AgisStrategy const* AgisStrategyMap::get_strategy(std::string strategy_id) const
 {
 	auto strategy_index = this->strategy_id_map.at(strategy_id);
-	return std::ref(this->strategies.at(strategy_index));
+	return this->strategies.at(strategy_index).get();
+}
+
+
+//============================================================================
+AgisStrategy* AgisStrategyMap::__get_strategy(std::string strategy_id) const
+{
+	auto strategy_index = this->strategy_id_map.at(strategy_id);
+	return this->strategies.at(strategy_index).get();
 }
 
 

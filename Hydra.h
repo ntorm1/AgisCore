@@ -152,11 +152,18 @@ public:
 	AGIS_API PortfolioPtr const get_portfolio(std::string const& portfolio_id) const;
 
 	/// <summary>
+	/// Get pointer to const AgisStrategy registered to the hydra instance
+	/// </summary>
+	/// <param name="strategy_id">unique id of the strategy</param>
+	/// <returns></returns>
+	AGIS_API AgisStrategy const* get_strategy(std::string strategy_id) const;
+
+	/// <summary>
 	/// Get const ref to a AgisStrategy registered to the hydra instance
 	/// </summary>
 	/// <param name="strategy_id">unique id of the strategy</param>
 	/// <returns></returns>
-	AGIS_API const AgisStrategyRef get_strategy(std::string strategy_id) const;
+	AGIS_API AgisStrategy* __get_strategy(std::string strategy_id) const;
 
 	AGIS_API std::vector<SharedOrderPtr> const& get_order_history() { return this->router.get_order_history(); }
 
@@ -202,6 +209,10 @@ public:
 		std::optional<size_t> beta_lookback
 	);
 	
+	AGIS_API inline void __set_strategy_is_live(std::string const& strategy_id, bool is_live) {
+		this->__get_strategy(strategy_id)->set_is_live(is_live);
+	}
+
 	AGIS_API AgisResult<std::string> asset_index_to_id(size_t const& index) const;
 	AGIS_API AgisResult<std::string> strategy_index_to_id(size_t const& index) const;
 	AGIS_API AgisResult<std::string> portfolio_index_to_id(size_t const& index) const;

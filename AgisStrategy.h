@@ -18,7 +18,6 @@ namespace fs = std::filesystem;
 class AgisStrategy;
 
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
-AGIS_API typedef std::reference_wrapper<const AgisStrategyPtr> AgisStrategyRef;
 
 AGIS_API typedef std::function<double(double, double)> AgisOperation;
 AGIS_API extern const AgisOperation agis_init;
@@ -157,7 +156,7 @@ extern AGIS_API std::unordered_map<std::string, AllocType> agis_strat_alloc_map;
 class AgisStrategy
 {
 	friend struct Trade;
-
+	friend class Portfolio;
 public:
 	virtual ~AgisStrategy() = default;
 	AgisStrategy() = default;
@@ -313,39 +312,39 @@ public:
 	/// <returns></returns>
 	AGIS_API virtual AgisResult<bool> set_beta_hedge_positions(bool val, bool check = true) {apply_beta_hedge = val; return AgisResult<bool>(true);}
 
-	double get_nlv() { return this->nlv; }
-	double get_cash() { return this->cash; }
-	double get_allocation() { return this->portfolio_allocation; }
+	double get_nlv() const { return this->nlv; }
+	double get_cash() const { return this->cash; }
+	double get_allocation() const { return this->portfolio_allocation; }
 
 	/// <summary>
 	/// Get the unique strategy index of a strategy instance
 	/// </summary>
 	/// <returns> unique strategy index of a strategy instance </returns>
-	size_t get_strategy_index() { return this->strategy_index; }
+	size_t get_strategy_index() const { return this->strategy_index; }
 
 	/// <summary>
 	/// Get the unique strategy id of a strategy instance
 	/// </summary>
 	/// <returns> unique strategy id of a strategy instance</returns>
-	std::string get_strategy_id() { return this->strategy_id; }
+	std::string get_strategy_id() const { return this->strategy_id; }
 
 	/// <summary>
 	/// Get the unique strategy id of a strategy instance
 	/// </summary>
 	/// <returns> unique strategy id of a strategy instance</returns>
-	AgisStrategyType get_strategy_type() { return this->strategy_type; }
+	AgisStrategyType get_strategy_type() const { return this->strategy_type; }
 
 	/// <summary>
 	/// Get the unique strategy id of a strategy instance
 	/// </summary>
 	/// <returns> unique strategy id of a strategy instance</returns>
-	Frequency get_frequency() { return this->frequency; }
+	Frequency get_frequency() const { return this->frequency; }
 
 	/// <summary>
 	/// Get the index of the portfolio the strategy is registered to 
 	/// </summary>
 	/// <returns>Unique index of the portfolio the strategy is registered to</returns>
-	size_t get_portfolio_index() { return this->portfolio->__get_index(); }
+	size_t get_portfolio_index() const { return this->portfolio->__get_index(); }
 
 	/// <summary>
 	/// Get the id of the portfolio the strategy is registered to 
@@ -380,13 +379,6 @@ public:
 	inline std::optional<TradingWindow> get_trading_window() { return this->trading_window; };
 
 	/// <summary>
-	/// Get current open position in a given asset by asset index
-	/// </summary>
-	/// <param name="asset_index">unique index of the asset to search for</param>
-	/// <returns></returns>
-	AGIS_API std::optional<SharedTradePtr> get_trade(size_t asset_index);
-
-	/// <summary>
 	/// Find out if the class is and Abstract Agis Class
 	/// </summary>
 	/// <returns></returns>
@@ -408,13 +400,7 @@ public:
 	bool __is_beta_hedged() const { return this->apply_beta_hedge; }
 	bool __is_beta_trace() const { return this->net_beta.has_value(); }
 	bool __is_net_lev_trace() const {return this->net_leverage_ratio.has_value(); } 
-
 	void __set_allocation(double allocation) { this->portfolio_allocation = allocation; }
-	void __set_net_beta(double beta_) { this->net_beta = beta_; }
-	void __set_nlv(double nlv_) { this->nlv = nlv_; }
-	void __nlv_adjust(double nlv_adjustment) { this->nlv += nlv_adjustment; };
-	void __cash_adjust(double cash_adjustment) { this->cash += cash_adjustment; };
-	void __unrealized_adjust(double unrealized_adjustment) { this->unrealized_pl += unrealized_adjustment; };
 
 	AGIS_API inline std::vector<double> get_beta_history() const { return beta_history; }
 	AGIS_API inline std::vector<double> get_nlv_history() const { return nlv_history; }
@@ -545,6 +531,12 @@ private:
 	/// </summary>
 	std::string strategy_id;
 
+	/// <summary>
+	/// Get current open position in a given asset by asset index
+	/// </summary>
+	/// <param name="asset_index">unique index of the asset to search for</param>
+	/// <returns></returns>
+	AGIS_API std::optional<SharedTradePtr> get_trade(size_t asset_index);
 
 	std::vector<SharedTradePtr> trade_history;
 };
@@ -560,7 +552,8 @@ public:
 	AGIS_API std::vector<std::string> __get_strategy_ids() const;
 	AGIS_API inline size_t __get_strategy_index(std::string const& id) const { return this->strategy_id_map.at(id); }
 	AGIS_API void register_strategy(AgisStrategyPtr strategy);
-	AgisStrategyRef get_strategy(std::string strategy_id) const;
+	AgisStrategy const* get_strategy(std::string strategy_id) const;
+	AgisStrategy* __get_strategy(std::string strategy_id) const;
 	ankerl::unordered_dense::map<size_t, AgisStrategyPtr> const& __get_strategies() const { return this->strategies; }
 	ankerl::unordered_dense::map<size_t, AgisStrategyPtr> & __get_strategies_mut() { return this->strategies; }
 
