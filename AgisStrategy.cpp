@@ -167,10 +167,13 @@ void AgisStrategy::__reset()
 	this->cash_history.clear();
 	this->nlv_history.clear();
 	this->beta_history.clear();
+	this->net_leverage_ratio_history.clear();
+
 
 	this->cash = this->starting_cash;
 	this->nlv = this->cash;
-	this->net_beta = 0.0f;
+	this->net_beta.has_value() ? this->net_beta = 0.0f : std::nullopt;
+	this->net_leverage_ratio.has_value() ? this->net_leverage_ratio = 0.0f : std::nullopt;
 
 	this->reset();
 }
@@ -190,6 +193,7 @@ void AgisStrategy::__build(
 	this->nlv_history.reserve(n);
 	this->cash_history.reserve(n);
 	if (this->net_beta.has_value()) this->beta_history.reserve(n);
+	if (this->net_leverage_ratio.has_value()) this->net_leverage_ratio_history.reserve(n);
 }
 
 
@@ -201,9 +205,22 @@ void AgisStrategy::__evaluate(bool on_close)
 		this->nlv_history.push_back(this->nlv);
 		this->cash_history.push_back(this->cash);
 		if (this->net_beta.has_value()) this->beta_history.push_back(this->net_beta.value());
+		if (this->net_leverage_ratio.has_value()) {
+			this->net_leverage_ratio = (this->nlv - this->cash) / this->nlv;
+			this->net_leverage_ratio_history.push_back(this->net_leverage_ratio.value());
+		}
+
 	}
 }
 
+
+//============================================================================s
+void AgisStrategy::__zero_out_tracers()
+{
+	this->__set_nlv(this->cash);
+	if (this->net_beta.has_value()) this->net_beta = 0.0f;
+	if (this->net_leverage_ratio.has_value()) this->net_leverage_ratio = 0.0f;
+}
 
 
 //============================================================================
@@ -368,13 +385,6 @@ AgisResult<bool> AgisStrategy::set_trading_window(std::string const& window_name
 	return  AgisResult<bool>(true);
 }
 
-
-//============================================================================s
-void AgisStrategy::__zero_out_tracers()
-{
-	this->__set_nlv(this->cash);
-	if (this->net_beta.has_value()) this->net_beta = 0.0f;
-}
 
 //============================================================================
 void AgisStrategy::place_market_order(

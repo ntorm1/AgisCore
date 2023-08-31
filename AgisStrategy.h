@@ -391,6 +391,8 @@ public:
 	AGIS_API inline std::vector<double> get_beta_history() const { return beta_history; }
 	AGIS_API inline std::vector<double> get_nlv_history() const { return nlv_history; }
 	AGIS_API inline std::vector<double> get_cash_history() const { return cash_history;}
+	AGIS_API inline std::vector<double> get_net_leverage_ratio_history() const { return net_leverage_ratio_history; }
+
 
 protected:
 	AgisStrategyType strategy_type = AgisStrategyType::CPP;
@@ -437,8 +439,18 @@ protected:
 	std::vector<double> beta_history;
 	std::vector<double> nlv_history;
 	std::vector<double> cash_history;
+	std::vector<double> net_leverage_ratio_history;
 
+	/// <summary>
+	/// Defined as the net beta dollars of the portfolio. I.e. units*share_price*beta
+	/// </summary>
 	std::optional<double> net_beta = std::nullopt;
+
+	/// <summary>
+	/// Defined as the net leverage ratio of the portfolio. I.e. (nlv - cash)/nlv
+	/// </summary>
+	std::optional<double> net_leverage_ratio = std::nullopt;
+
 	double nlv = 0;
 	double cash = 0;
 	double starting_cash = 0;

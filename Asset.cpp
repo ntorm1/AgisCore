@@ -580,6 +580,12 @@ AgisMatrix<double> const Asset::__get__data() const
 }
 
 
+AGIS_API size_t Asset::get_current_index() const
+{
+    if (this->current_index == 0) return 0;
+    return this->current_index - 1;
+}
+
 //============================================================================
 AGIS_API std::vector<std::string> Asset::get_column_names() const
 {

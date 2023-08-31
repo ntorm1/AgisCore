@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "AgisRisk.h"
-
+#include "Asset.h"
 
 //============================================================================
 double covariance(const std::vector<double>& values1, const std::vector<double>& values2, size_t start, size_t end)
@@ -45,6 +45,19 @@ double mean(const std::vector<double>& values, size_t start, size_t end)
     return sum / static_cast<double>(end - start);
 }
 
+
+//============================================================================
+double mean(const double* values, size_t start, size_t end)
+{
+    double sum = 0.0;
+
+    for (size_t i = start; i < end; i++)
+    {
+        sum += values[i];
+    }
+
+    return sum / static_cast<double>(end - start);
+}
 
 //============================================================================
 double correlation(const std::vector<double>& values1, const std::vector<double>& values2, size_t start, size_t end)
@@ -104,3 +117,32 @@ std::vector<double> rolling_beta(const std::vector<double>& stock_returns, const
 
     return rolling_betas;
 }
+
+
+
+//============================================================================
+IncrementalCovariance::IncrementalCovariance(
+    std::shared_ptr<Asset> a1,
+    std::shared_ptr<Asset> a2,
+    size_t period) : IncrementalCovariance(
+        a1->__get_column(a1->__get_close_index()),
+        a2->__get_column(a2->__get_close_index()),
+        period,
+        a1->get_current_index()
+    )
+{
+#ifdef _DEBUG
+    if (a1->get_frequency() != a2->get_frequency())
+    {
+        throw std::runtime_error("Assets must have the same frequency");
+    }
+    if (a1->get_current_index() != a2->get_current_index())
+    {
+        throw std::runtime_error("Assets must have the same current index");
+    }
+#endif
+}
+
+
+
+

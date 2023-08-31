@@ -159,7 +159,8 @@ public:
     AGIS_API inline  size_t const get_rows() const { return this->rows; }
     AGIS_API inline  size_t const get_cols() const { return this->columns; }
     AGIS_API inline  size_t const get_warmup()const { return this->warmup; }
-    AGIS_API inline  size_t const get_current_index() const { return this->current_index - 1; }
+    AGIS_API inline Frequency const get_frequency() const { return this->freq; }
+    AGIS_API size_t get_current_index() const;
     AGIS_API inline  std::string const& get_exchange_id() { return this->exchange_id; }
     AGIS_API std::vector<std::string> get_column_names() const;
     AGIS_API inline ankerl::unordered_dense::map<std::string, size_t> const& get_headers() { return this->headers; };

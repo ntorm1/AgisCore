@@ -147,7 +147,6 @@ private:
 class Portfolio
 {
     friend class PortfolioMap;
-    friend class PortfolioStats;
 public:
     AGIS_API Portfolio(std::string const& portfolio_id, double cash);
 
