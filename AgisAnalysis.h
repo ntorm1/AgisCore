@@ -48,7 +48,7 @@ AGIS_API std::vector<double> get_rolling_sharpe(
 );
 
 //============================================================================
-AGIS_API std::vector<double> get_stats_underwater_plot(std::vector<double> const& entity);
+AGIS_API std::vector<double> get_stats_underwater_plot(std::span<double const> const& entity);
 
 //============================================================================
 AGIS_API std::vector<double> get_stats_rolling_drawdown(std::vector<double> const& entity);

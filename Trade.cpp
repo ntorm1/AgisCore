@@ -66,6 +66,8 @@ void Trade::reduce(OrderPtr const& filled_order)
 {
     auto units_ = filled_order->get_units();
     auto adjustment = -1 * (units_*(filled_order->get_average_price()-this->average_price));
+    auto& strat = this->strategy.get();
+    strat->unrealized_pl -= adjustment;
     this->realized_pl += adjustment;
     this->unrealized_pl -= adjustment;
     this->units += units_;
@@ -101,9 +103,9 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
     strat->unrealized_pl += (unrealized_pl_new - this->unrealized_pl);
 
     // adjust strategy net beta levels
-    if (strat->__is_beta_tracing())
+    if (strat->net_beta.has_value())
     {
-        strat->net_beta += (
+        strat->net_beta.value() += (
             this->units * market_price * __asset->get_beta().unwrap_or(0.0f)
         );
     }

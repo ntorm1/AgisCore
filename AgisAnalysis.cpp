@@ -148,7 +148,7 @@ std::vector<double> get_rolling_sharpe(
 
 //============================================================================
 
-std::vector<double> get_stats_underwater_plot(std::vector<double> const& nlv_history) {
+std::vector<double> get_stats_underwater_plot(std::span<double const> const& nlv_history) {
     auto n = nlv_history.size();
     std::vector<double> underwater_plot(n, 0.0);
 

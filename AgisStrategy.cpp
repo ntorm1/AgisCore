@@ -1,4 +1,5 @@
 #include "AgisStrategy.h"
+#include "AgisStrategy.h"
 #include "pch.h"
 #include <fstream>
 #include <sstream>
@@ -188,7 +189,7 @@ void AgisStrategy::__build(
 	auto n = exchange_map->__get_dt_index().size();
 	this->nlv_history.reserve(n);
 	this->cash_history.reserve(n);
-	if (this->is_beta_tracing) this->beta_history.reserve(n);
+	if (this->net_beta.has_value()) this->beta_history.reserve(n);
 }
 
 
@@ -199,9 +200,10 @@ void AgisStrategy::__evaluate(bool on_close)
 	{
 		this->nlv_history.push_back(this->nlv);
 		this->cash_history.push_back(this->cash);
-		if (this->is_beta_tracing) this->beta_history.push_back(this->net_beta);
+		if (this->net_beta.has_value()) this->beta_history.push_back(this->net_beta.value());
 	}
 }
+
 
 
 //============================================================================
@@ -214,6 +216,7 @@ void AgisStrategy::to_json(json& j)
 	j["trading_window"] = trading_window_to_key_str(this->trading_window);
 	j["beta_scale"] = this->apply_beta_scale;
 	j["beta_hedge"] = this->apply_beta_hedge;
+	j["beta_trace"] = this->net_beta.has_value();
 }
 
 //============================================================================
@@ -277,12 +280,15 @@ AGIS_API ExchangePtr const AgisStrategy::get_exchange(std::string const& id) con
 
 //============================================================================
 AGIS_API void AgisStrategy::strategy_allocate(
-	ExchangeView const& exchange_view,
+	ExchangeView& exchange_view,
 	double epsilon,
 	bool clear_missing,
-	std::optional<TradeExitPtr> exit,
+	std::optional<TradeExitPtr> exit,	
 	AllocType alloc_type)
 {
+	if (this->apply_beta_scale) AGIS_DO_OR_THROW(exchange_view.beta_scale());
+	if (this->apply_beta_hedge) AGIS_DO_OR_THROW(exchange_view.beta_hedge(this->target_leverage));
+
 	auto& allocation = exchange_view.view;
 
 	// generate orders based on the allocation passed
@@ -367,7 +373,7 @@ AgisResult<bool> AgisStrategy::set_trading_window(std::string const& window_name
 void AgisStrategy::__zero_out_tracers()
 {
 	this->__set_nlv(this->cash);
-	if (this->is_beta_tracing) this->net_beta = 0.0f;
+	if (this->net_beta.has_value()) this->net_beta = 0.0f;
 }
 
 //============================================================================
@@ -633,9 +639,6 @@ void AbstractAgisStrategy::next()
 		}
 	}
 
-	if (this->apply_beta_scale) AGIS_DO_OR_THROW(ev.beta_scale());
-	if (this->apply_beta_hedge) AGIS_DO_OR_THROW(ev.beta_hedge(strat_alloc_ref.target_leverage));
-
 	this->strategy_allocate(
 		ev,
 		strat_alloc_ref.epsilon,
@@ -668,6 +671,9 @@ void AbstractAgisStrategy::build()
 
 	// set the strategy warmup period
 	this->warmup = this->ev_lambda_struct.value().warmup;
+
+	// set the strategy target leverage
+	this->target_leverage = this->ev_lambda_struct.value().strat_alloc_struct.value().target_leverage;
 }
 
 
@@ -1009,18 +1015,36 @@ AgisResult<bool> AbstractAgisStrategy::validate_market_asset()
 
 
 //============================================================================
+AgisResult<bool> AgisStrategy::set_beta_trace(bool val, bool check)
+{
+	val ? this->net_beta = 0 : this->net_beta = std::nullopt;
+	return AgisResult<bool>(true);
+}
+
+
+//============================================================================
 AgisResult<bool> AbstractAgisStrategy::set_beta_scale_positions(bool val, bool check)
 {
-	if (!val) return AgisStrategy::set_beta_scale_positions(val);
+	if (!val) return AgisStrategy::set_beta_scale_positions(val, check);
 	if(check) AGIS_DO_OR_RETURN(this->validate_market_asset(), bool);
-	return AgisStrategy::set_beta_scale_positions(val);
+	return AgisResult<bool>(true);
 }
 
 
 //============================================================================
 AgisResult<bool> AbstractAgisStrategy::set_beta_hedge_positions(bool val, bool check)
 {
-	if(!val) return AgisStrategy::set_beta_hedge_positions(val);
+	if (!val) return AgisStrategy::set_beta_hedge_positions(val, check);
 	if(check) AGIS_DO_OR_RETURN(this->validate_market_asset(), bool);
-	return AgisStrategy::set_beta_hedge_positions(val);
+	this->apply_beta_hedge = val;
+	return AgisResult<bool>(true);
+}
+
+
+//============================================================================
+AGIS_API AgisResult<bool> AbstractAgisStrategy::set_beta_trace(bool val, bool check)
+{
+	if (!val) return AgisStrategy::set_beta_trace(val, check);
+	if (check) AGIS_DO_OR_RETURN(this->validate_market_asset(), bool);
+	return AgisStrategy::set_beta_trace(val);
 }

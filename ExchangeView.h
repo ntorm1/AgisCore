@@ -101,9 +101,9 @@ struct ExchangeView
 	/// Generate a beta hedge for the portfolio and adjust allocation weights to match 
 	/// the target leverage of the portfolio. Note assumes the allocations are % of nlv
 	/// </summary>
-	/// <param name="target_leverage">the target leverage of the strategy</param>
+	/// <param name="target_leverage">the target leverage of the strategy, otherwise maintains allocation leverage</param>
 	/// <returns></returns>
-	AGIS_API AgisResult<bool> beta_hedge(double target_leverage);
+	AGIS_API AgisResult<bool> beta_hedge(std::optional<double> target_leverage);
 
 	/// <summary>
 	/// set the weights of all pairs equal to c

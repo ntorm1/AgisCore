@@ -288,8 +288,11 @@ AgisResult<bool> Hydra::restore(json const& j)
 
             std::string strategy_id = strategy_json.at("strategy_id");
             std::string trading_window = strategy_json.at("trading_window");
+            
             bool beta_scale = strategy_json.value("beta_scale", false);
             bool beta_hedge = strategy_json.value("beta_hedge", false);
+            bool beta_trace = strategy_json.value("beta_trace", false);
+            
             bool is_live = strategy_json.at("is_live");
             double allocation = strategy_json.at("allocation");
 
@@ -303,6 +306,7 @@ AgisResult<bool> Hydra::restore(json const& j)
                 strategy->set_trading_window(trading_window).unwrap();
                 AGIS_DO_OR_RETURN(strategy->set_beta_scale_positions(beta_scale, false), bool);
                 AGIS_DO_OR_RETURN(strategy->set_beta_hedge_positions(beta_hedge, false), bool);
+                AGIS_DO_OR_RETURN(strategy->set_beta_trace(beta_trace, false), bool);
                 this->register_strategy(std::move(strategy));
             }
         }

@@ -26,14 +26,16 @@ AgisResult<bool> ExchangeView::beta_scale()
 
 
 //============================================================================
-AGIS_API AgisResult<bool> ExchangeView::beta_hedge(double target_leverage)
+AGIS_API AgisResult<bool> ExchangeView::beta_hedge(std::optional<double> target_leverage)
 {
 	// get the sum of the allocation.view
 	double sum = 0;
+	double original_sum = 0.0f;
 	double beta_hedge_total = 0;
 	for (auto& pair : this->view)
 	{
 		sum += pair.second;
+		original_sum += pair.second;
 
 		// now we need to apply the beta hedge
 		auto beta = this->exchange->get_asset_beta(pair.first);
@@ -53,7 +55,7 @@ AGIS_API AgisResult<bool> ExchangeView::beta_hedge(double target_leverage)
 	for (auto& pair : this->view)
 	{
 		pair.second /= sum;
-		pair.second *= target_leverage;
+		pair.second *= target_leverage.value_or(original_sum);
 	}
 
 	return AgisResult<bool>(true);

@@ -162,6 +162,7 @@
   <ItemGroup>
     <ClInclude Include="AgisAnalysis.h" />
     <ClInclude Include="AgisErrors.h" />
+    <ClInclude Include="AgisOverloads.h" />
     <ClInclude Include="AgisPointers.h" />
     <ClInclude Include="AgisRisk.h" />
     <ClInclude Include="AgisRouter.h" />

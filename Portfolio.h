@@ -218,12 +218,10 @@ public:
     AGIS_API inline std::vector<SharedPositionPtr> const& get_position_history() { return this->position_history; }
     AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() { return this->trade_history; }
     AGIS_API inline std::vector<double> const& get_nlv_history_vec() { return this->nlv_history; }
-    AGIS_API inline std::span<double const> get_nlv_history() { 
-        return std::span<double const>(nlv_history.data(), nlv_history.size());
-    }
-    AGIS_API inline std::span<double const> get_cash_history() const {
-        return std::span<double const>(cash_history.data(), cash_history.size());
-    }
+
+    AGIS_API inline std::vector<double> get_beta_history() const { return beta_history; }
+    AGIS_API inline std::vector<double> get_nlv_history() const { return nlv_history; }
+    AGIS_API inline std::vector<double> get_cash_history() const { return cash_history; }
 
     json to_json() const;
     void restore(json const& strategies);
