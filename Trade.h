@@ -30,7 +30,9 @@ AGIS_API typedef std::reference_wrapper<const SharedTradePtr> TradeRef;
 
 
 struct AGIS_API Trade {
-    AssetPtr __asset;
+    AssetPtr __asset;           ///< pointer to the underlying asset of the trade
+    AgisStrategy* strategy;     ///< raw pointer to the strategy that generated the trade
+
     double units;
     double average_price;
     double open_price;
@@ -49,7 +51,6 @@ struct AGIS_API Trade {
     size_t asset_index;
     size_t strategy_index;
     size_t portfolio_index;
-    MAgisStrategyRef strategy;
 
     /// <summary>
     /// Boolean flag to test if the strategy has allocated touch the trade. Used 
@@ -59,7 +60,7 @@ struct AGIS_API Trade {
 
     std::optional<TradeExitPtr> exit = std::nullopt;
 
-    Trade(MAgisStrategyRef strategy, OrderPtr const& order);
+    Trade(AgisStrategy* strategy, OrderPtr const& order);
 
     void close(OrderPtr const& filled_order);
     void increase(OrderPtr const& filled_order);

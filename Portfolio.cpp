@@ -10,7 +10,10 @@ std::atomic<size_t> Portfolio::portfolio_counter(0);
 
 
 //============================================================================
-Position::Position(MAgisStrategyRef strategy, OrderPtr const& filled_order_) :
+Position::Position(
+    MAgisStrategyRef strategy,
+    OrderPtr const& filled_order_
+) :
     __asset(filled_order_->__asset)
 {
     //populate common position values
@@ -26,13 +29,12 @@ Position::Position(MAgisStrategyRef strategy, OrderPtr const& filled_order_) :
 
     // insert the new trade
     auto trade = std::make_shared<Trade>(
-        strategy,
+        strategy.get().get(),
         filled_order_
     );
     this->trades.insert({trade->strategy_index,trade});
     strategy.get()->__add_trade(trade);
     this->position_id = position_counter++;
-
 }
 
 
@@ -93,7 +95,7 @@ void Position::close(OrderPtr const& order, std::vector<SharedTradePtr>& trade_h
         // Retrieve the unique pointer
         SharedTradePtr trade = element.second;
         trade->close(order);
-        trade->strategy.get()->__remove_trade(trade->asset_index);
+        trade->strategy->__remove_trade(trade->asset_index);
 
         // Add the unique pointer to the vector
         trade_history.push_back(trade);
@@ -133,7 +135,7 @@ void Position::adjust(MAgisStrategyRef strategy, OrderPtr const& order, std::vec
     if (!trade_opt.has_value())
     {
         auto trade = std::make_shared<Trade>(
-            strategy,
+            strategy.get().get(),
             order
         );
         this->trades.insert({ strategy_id,trade });
@@ -168,7 +170,7 @@ void Position::adjust(MAgisStrategyRef strategy, OrderPtr const& order, std::vec
                 // the previous trade
                 order->set_units(units_left);
                 auto trade = std::make_shared<Trade>(
-                    strategy,
+                    strategy.get().get(),
                     order
                 );
                 this->trades.insert({ strategy_id,trade });
@@ -198,11 +200,11 @@ OrderPtr Position::generate_position_inverse()
 
 
 //============================================================================
-void PortfolioMap::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close, bool is_reprice)
+void PortfolioMap::__evaluate(AgisRouter& router, bool on_close, bool is_reprice)
 {
     // Define a lambda function that calls next for each strategy
     auto portfolio_evaluate = [&](auto& portfolio) {
-        portfolio.second->__evaluate(router, exchanges, on_close, is_reprice);
+        portfolio.second->__evaluate(router, on_close, is_reprice);
     };
 
     std::for_each(
@@ -438,9 +440,51 @@ Portfolio::Portfolio(std::string const & portfolio_id_, double cash_)
 
 
 //============================================================================
+void Portfolio::__on_phantom_order(OrderPtr const& order)
+{
+    auto trade = benchmark_strategy->get_trade(order->get_asset_index());
+
+    // opening new trade
+    if (!trade.has_value())
+    {
+        // insert the new trade
+        auto trade = std::make_shared<Trade>(
+            benchmark_strategy,
+            order
+        );
+        benchmark_strategy->__add_trade(trade);
+    }
+    // modifying existing trade
+    else if (trade.value()->units + order->get_units() > 1e-7)
+    {
+	    trade.value()->adjust(order);
+    }
+    // closing existing trade
+    else
+	{
+        trade.value()->close(order);
+		benchmark_strategy->__remove_trade(order->get_asset_index());
+	}
+    // adjust cash levels
+    auto amount = order->get_units() * order->get_average_price();
+    benchmark_strategy->__cash_adjust(-1 * amount);
+}
+
+
+//============================================================================
 void Portfolio::__on_order_fill(OrderPtr const& order)
 {
     LOCK_GUARD
+
+    // check if is benchmark order
+    if (order->phantom_order)
+    {
+        this->__on_phantom_order(order);
+        UNLOCK_GUARD
+        return;
+    }
+
+    // process new incoming order
     auto asset_index = order->get_asset_index();
     if (!this->position_exists(asset_index))
     {
@@ -485,7 +529,7 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
 
 
 //============================================================================
-void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close, bool is_reprice)
+void Portfolio::__evaluate(AgisRouter& router, bool on_close, bool is_reprice)
 {
     LOCK_GUARD
     this->nlv = this->cash;
@@ -498,6 +542,7 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
     {
         strategy.second.get()->__zero_out_tracers();
     }
+    if (benchmark_strategy) benchmark_strategy->__zero_out_tracers();
     
 
     // evalute all open positions and their respective trades
@@ -522,12 +567,19 @@ void Portfolio::__evaluate(AgisRouter& router, ExchangeMap const& exchanges, boo
         }
     }
 
+    // evaluate the benchmark strategy if it exists
+    if (this->benchmark_strategy) {
+        // static cash benchmark to BenchMarkStrategy
+        this->benchmark_strategy->evluate();
+    }
+
     if (is_reprice)
     {
         UNLOCK_GUARD
         return;
     }
 
+    // and orders placed by the portfolio to clean up or force close
     if (orders.size())
     {
         for (int i = 0; i < orders.size(); i++) {
@@ -612,14 +664,21 @@ AGIS_API AgisStrategyRef Portfolio::__get_strategy(std::string const& id)
 AGIS_API void Portfolio::register_strategy(MAgisStrategyRef strategy)
 {
     LOCK_GUARD
-    this->strategies.emplace(
-        strategy.get()->get_strategy_index(),
-        strategy
-    );
-    this->strategy_ids.emplace(
-        strategy.get()->get_strategy_id(),
-        strategy.get()->get_strategy_index()
-    );
+    // if it is benchmark strategy then set it
+    if (strategy.get()->get_strategy_type() == AgisStrategyType::BENCHMARK)
+    {
+        this->benchmark_strategy = static_cast<BenchMarkStrategy*>(strategy.get().get());
+    }
+    else {
+        this->strategies.emplace(
+            strategy.get()->get_strategy_index(),
+            strategy
+        );
+        this->strategy_ids.emplace(
+            strategy.get()->get_strategy_id(),
+            strategy.get()->get_strategy_index()
+        );
+    }
     UNLOCK_GUARD
 }
 

@@ -252,8 +252,19 @@ AgisResult<bool> ExchangeMap::set_market_asset(
 	std::optional<size_t> beta_lookback)
 {
 	if(!this->exchange_exists(exchange_id)) return AgisResult<bool>(AGIS_EXCEP("exchange does not exists"));
+	if(!this->asset_exists(asset_id)) return AgisResult<bool>(AGIS_EXCEP("asset does not exists"));
+
+	// validate that the a market asset has not already been set for this frequency
+	auto asset = this->get_asset(asset_id).unwrap();
+	auto freq = asset->get_frequency();
+	if(this->market_assets.contains(freq)) return AgisResult<bool>(AGIS_EXCEP("market asset already set for frequency: " + freq_to_string(freq)));
+	
+	// set the market asset to the exchange
 	auto res = this->exchanges[exchange_id]->__set_market_asset(asset_id, disable_asset, beta_lookback);
 	if (!res.is_exception()) this->is_built = false;
+
+	// store pointer to the market asset
+	this->market_assets.emplace(freq, asset);
 	return res;
 }
 
@@ -638,6 +649,7 @@ void Exchange::__process_orders(AgisRouter& router, bool on_close)
 
 		if (order->is_filled())
 		{
+			// fill the order's asset pointer then return to router
 			order->__asset = this->assets[order->get_asset_index()];
 			router.place_order(std::move(*orderIter));
 			orderIter = this->orders.erase(orderIter);
@@ -974,6 +986,14 @@ AGIS_API double ExchangeMap::__get_market_price(std::string& asset_id, bool on_c
 	if (!asset) return 0.0f;
 	if (!asset->__is_streaming) return 0.0f;
 	return asset->__get_market_price(on_close);
+}
+
+
+//============================================================================
+AGIS_API AgisResult<AssetPtr const> ExchangeMap::__get_market_asset(Frequency freq) const
+{
+	if(!this->market_assets.contains(freq)) return AgisResult<AssetPtr const>(AGIS_EXCEP("No market asset found for frequency"));
+	return AgisResult<AssetPtr const>(this->market_assets.at(freq));
 }
 
 

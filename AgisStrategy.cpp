@@ -206,7 +206,8 @@ void AgisStrategy::__evaluate(bool on_close)
 		this->cash_history.push_back(this->cash);
 		if (this->net_beta.has_value()) this->beta_history.push_back(this->net_beta.value());
 		if (this->net_leverage_ratio.has_value()) {
-			this->net_leverage_ratio = (this->nlv - this->cash) / this->nlv;
+			if(this->nlv - this->cash < 1e-7) this->net_leverage_ratio =1.0f;
+			else this->net_leverage_ratio = (this->nlv - this->cash) / this->nlv;
 			this->net_leverage_ratio_history.push_back(this->net_leverage_ratio.value());
 		}
 
@@ -234,6 +235,7 @@ void AgisStrategy::to_json(json& j)
 	j["beta_scale"] = this->apply_beta_scale;
 	j["beta_hedge"] = this->apply_beta_hedge;
 	j["beta_trace"] = this->net_beta.has_value();
+	j["net_leverage_trace"] = this->net_leverage_ratio.has_value();
 }
 
 //============================================================================
@@ -398,7 +400,8 @@ void AgisStrategy::place_market_order(
 		units_,
 		this->strategy_index,
 		this->get_portfolio_index(),
-		exit
+		exit,
+		this->strategy_type == AgisStrategyType::BENCHMARK
 	));
 }
 
@@ -414,6 +417,7 @@ void AGIS_API AgisStrategy::place_limit_order(size_t asset_index_, double units_
 		this->get_portfolio_index(),
 		std::move(exit)
 	);
+	order->phantom_order = this->strategy_type == AgisStrategyType::BENCHMARK;
 	order->set_limit(limit);
 	this->router->place_order(std::move(order));
 }
@@ -474,6 +478,7 @@ bool AgisStrategyMap::__next()
 	return flag.load(std::memory_order_relaxed);
 }
 
+
 //============================================================================
 void AgisStrategyMap::__reset()
 {
@@ -481,7 +486,7 @@ void AgisStrategyMap::__reset()
 		strategy.second->__reset();
 	};
 
-	tbb::parallel_for_each(
+	std::for_each(
 		this->strategies.begin(),
 		this->strategies.end(),
 		strategy_reset
@@ -604,6 +609,35 @@ AGIS_API std::string alloc_to_str(AllocType alloc_type)
 
 
 //============================================================================
+void BenchMarkStrategy::evluate()
+{
+	// evaluate the benchmark strategy at the close
+	for (auto& trade_pair : this->trades)
+	{
+		auto& trade = trade_pair.second;
+		auto last_price = trade->__asset->__get_market_price(true);
+		trade->evaluate(last_price, true, false);
+	}
+}
+
+
+//============================================================================
+void BenchMarkStrategy::next()
+{
+	// if the first step then allocate all funds to the asset
+	if (i > 0) i++; return;
+	ExchangeView ev;
+	ev.view.emplace_back(this->asset_index, 1.0);
+	this->strategy_allocate(
+		ev,
+		0.0,
+		true,
+		std::nullopt,
+		AllocType::PCT
+	);
+}
+
+//============================================================================
 void AbstractAgisStrategy::next()
 {
 	auto& ev_lambda_ref = *this->ev_lambda_struct;
@@ -656,6 +690,17 @@ void AbstractAgisStrategy::next()
 		std::nullopt,
 		strat_alloc_ref.alloc_type
 	);
+}
+
+
+//============================================================================
+void BenchMarkStrategy::build()
+{
+	// set the benchmark asset id and index
+	AgisResult<AssetPtr const> asset_response = this->exchange_map->__get_market_asset(this->frequency);
+	if (asset_response.is_exception()) AGIS_THROW(asset_response.get_exception());
+	this->asset_id = asset_response.unwrap()->get_asset_id();
+	this->asset_index = this->exchange_map->get_asset_index(this->asset_id);
 }
 
 
@@ -1028,6 +1073,13 @@ AgisResult<bool> AbstractAgisStrategy::validate_market_asset()
 AgisResult<bool> AgisStrategy::set_beta_trace(bool val, bool check)
 {
 	val ? this->net_beta = 0 : this->net_beta = std::nullopt;
+	return AgisResult<bool>(true);
+}
+
+//============================================================================
+AgisResult<bool> AgisStrategy::set_net_leverage_trace(bool val)
+{
+	val ? this->net_leverage_ratio = 0 : this->net_leverage_ratio = std::nullopt;
 	return AgisResult<bool>(true);
 }
 

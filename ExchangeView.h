@@ -55,7 +55,7 @@ AGIS_API std::string ev_query_type(ExchangeQueryType ev_query);
 struct ExchangeView
 {
 	std::vector<std::pair<size_t, double>> view;
-	Exchange* exchange;
+	Exchange* exchange = nullptr;
 
 	ExchangeView() = default;
 	ExchangeView(Exchange* exchange_, size_t count) {

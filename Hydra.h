@@ -124,7 +124,7 @@ public:
 	/// <param name="strategy">Unique pointer to a AgisStrategy</param>
 	/// <param name="portfolio_id">portfolio id of the strategy</param>
 	/// <returns></returns>
-	AGIS_API void register_strategy(std::unique_ptr<AgisStrategy> strategy);
+	AGIS_API void register_strategy(AgisStrategyPtr strategy);
 
 	/// <summary>
 	/// Get a const ref to the exchange map containing all registered exchanges

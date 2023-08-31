@@ -9,7 +9,7 @@ std::atomic<size_t> Trade::trade_counter(0);
 
 
 //============================================================================
-Trade::Trade(MAgisStrategyRef strategy_, OrderPtr const& filled_order):
+Trade::Trade(AgisStrategy* strategy_, OrderPtr const& filled_order):
     strategy(strategy_),
     __asset(filled_order->__asset)
 {
@@ -66,8 +66,7 @@ void Trade::reduce(OrderPtr const& filled_order)
 {
     auto units_ = filled_order->get_units();
     auto adjustment = -1 * (units_*(filled_order->get_average_price()-this->average_price));
-    auto& strat = this->strategy.get();
-    strat->unrealized_pl -= adjustment;
+    strategy->unrealized_pl -= adjustment;
     this->realized_pl += adjustment;
     this->unrealized_pl -= adjustment;
     this->units += units_;
@@ -98,14 +97,13 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
     auto unrealized_pl_new = this->units*(market_price-this->average_price);
     
     // adjust strategy levels 
-    auto& strat = this->strategy.get();
-    strat->nlv += nlv_new;
-    strat->unrealized_pl += (unrealized_pl_new - this->unrealized_pl);
+    strategy->nlv += nlv_new;
+    strategy->unrealized_pl += (unrealized_pl_new - this->unrealized_pl);
 
     // adjust strategy net beta levels
-    if (strat->net_beta.has_value())
+    if (strategy->net_beta.has_value())
     {
-        strat->net_beta.value() += (
+        strategy->net_beta.value() += (
             this->units * market_price * __asset->get_beta().unwrap_or(0.0f)
         );
     }

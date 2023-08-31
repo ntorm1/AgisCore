@@ -26,7 +26,7 @@ void Hydra::__step()
     auto& expired_index_list = this->exchanges.__get_expired_index_list();
     
     // evaluate the portfolios at the current prices
-    this->portfolios.__evaluate(this->router, this->exchanges, true, true);
+    this->portfolios.__evaluate(this->router, true, true);
 
     // process strategy logic at end of each time step
     bool step = this->strategies.__next();
@@ -37,7 +37,7 @@ void Hydra::__step()
     this->router.__process();
 
     // evaluate the portfolios on close, then remove any position for assets that are expiring.
-    this->portfolios.__evaluate(this->router, this->exchanges, true);
+    this->portfolios.__evaluate(this->router, true);
     this->portfolios.__on_assets_expired(this->router, expired_index_list);
     this->router.__process();
 }
@@ -115,7 +115,6 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
     strategy->__build(&this->router, &this->exchanges);
 
     // register the strategy to the strategy map
-    std::string id = strategy->get_strategy_id();
     this->strategies.register_strategy(std::move(strategy));
     this->portfolios.__reload_strategies(&this->strategies);     // because of pointer invalidation
     this->is_built = false;
@@ -315,6 +314,7 @@ AgisResult<bool> Hydra::restore(json const& j)
 }
 
 
+//============================================================================
 AgisResult<bool> Hydra::set_market_asset(
     std::string const& exchange_id,
     std::string const& asset_id,

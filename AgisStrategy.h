@@ -57,9 +57,10 @@ enum class AGIS_Function {
 
 
 enum class AGIS_API AgisStrategyType {
-	CPP,	// a c++ based strategy directly inheriting from AgisStrategy
-	FLOW,	// a flow strategy used by the Nexus Node Editor to create Abstract strategies
-	PY		// a python strategy tramploine off PyAgisStrategy from AgisCorePy
+	CPP,			// a c++ based strategy directly inheriting from AgisStrategy
+	FLOW,			// a flow strategy used by the Nexus Node Editor to create Abstract strategies
+	PY,				// a python strategy tramploine off PyAgisStrategy from AgisCorePy
+	BENCHMARK,		// a benchmark strategy that does not interfer with portfolio values
 };
 
 
@@ -192,6 +193,7 @@ public:
 	/// </summary>
 	virtual void build() = 0;
 
+
 	/// <summary>
 	/// Base serialization of the AgisStrategy class
 	/// </summary>
@@ -293,6 +295,7 @@ public:
 	/// <param name="check"></param>
 	/// <returns></returns>
 	AGIS_API virtual AgisResult<bool> set_beta_trace(bool val, bool check = true);
+	AGIS_API virtual AgisResult<bool> set_net_leverage_trace(bool val);
 	
 	/// <summary>
 	/// Set the trategy to scale the positions by the beta of the asset when calling strategy_allocate
@@ -325,6 +328,18 @@ public:
 	/// </summary>
 	/// <returns> unique strategy id of a strategy instance</returns>
 	std::string get_strategy_id() { return this->strategy_id; }
+
+	/// <summary>
+	/// Get the unique strategy id of a strategy instance
+	/// </summary>
+	/// <returns> unique strategy id of a strategy instance</returns>
+	AgisStrategyType get_strategy_type() { return this->strategy_type; }
+
+	/// <summary>
+	/// Get the unique strategy id of a strategy instance
+	/// </summary>
+	/// <returns> unique strategy id of a strategy instance</returns>
+	Frequency get_frequency() { return this->frequency; }
 
 	/// <summary>
 	/// Get the index of the portfolio the strategy is registered to 
@@ -363,7 +378,14 @@ public:
 	/// </summary>
 	/// <returns></returns>
 	inline std::optional<TradingWindow> get_trading_window() { return this->trading_window; };
-	
+
+	/// <summary>
+	/// Get current open position in a given asset by asset index
+	/// </summary>
+	/// <param name="asset_index">unique index of the asset to search for</param>
+	/// <returns></returns>
+	AGIS_API std::optional<SharedTradePtr> get_trade(size_t asset_index);
+
 	/// <summary>
 	/// Find out if the class is and Abstract Agis Class
 	/// </summary>
@@ -375,11 +397,17 @@ public:
 	/// Only a strategy that is live will have code gen run. Else it will recompile what is in it.
 	/// </summary>
 	AGIS_API bool __is_live() const { return this->is_live; }
+
+	/// <summary>
+	/// Each unique trade is incrementally evaluated and the trade updates the valuation of it's parent strategy
+	/// As such, at the start of an evaluation, the strategy valuation is zeroed out so the trades can increment it properly
+	/// </summary>
 	void __zero_out_tracers();
 
 	bool __is_beta_scaling() const { return this->apply_beta_scale; }
 	bool __is_beta_hedged() const { return this->apply_beta_hedge; }
 	bool __is_beta_trace() const { return this->net_beta.has_value(); }
+	bool __is_net_lev_trace() const {return this->net_leverage_ratio.has_value(); } 
 
 	void __set_allocation(double allocation) { this->portfolio_allocation = allocation; }
 	void __set_net_beta(double beta_) { this->net_beta = beta_; }
@@ -393,9 +421,16 @@ public:
 	AGIS_API inline std::vector<double> get_cash_history() const { return cash_history;}
 	AGIS_API inline std::vector<double> get_net_leverage_ratio_history() const { return net_leverage_ratio_history; }
 
-
 protected:
+	/// <summary>
+	/// Type of AgisStrategy
+	/// </summary>
 	AgisStrategyType strategy_type = AgisStrategyType::CPP;
+
+	/// <summary>
+	/// Frequency of strategy updates
+	/// </summary>
+	Frequency frequency = Frequency::Day1;
 
 	void AGIS_API place_market_order(
 		size_t asset_index,
@@ -414,12 +449,6 @@ protected:
 		std::optional<TradeExitPtr> exit = std::nullopt
 	);
 
-	/// <summary>
-	/// Get current open position in a given asset by asset index
-	/// </summary>
-	/// <param name="asset_index">unique index of the asset to search for</param>
-	/// <returns></returns>
-	AGIS_API std::optional<SharedTradePtr> get_trade(size_t asset_index);
 
 	/// <summary>
 	/// Get a trade by asset id
@@ -465,6 +494,11 @@ protected:
 	/// </summary>
 	std::optional<double> target_leverage = std::nullopt;
 
+	/// <summary>
+	/// Mapping between asset_index and trade owned by the strategy
+	/// </summary>
+	ankerl::unordered_dense::map<size_t, SharedTradePtr> trades;
+
 private:
 	/// <summary>
 	/// Counter of strategy instances
@@ -486,11 +520,6 @@ private:
 	/// </summary>
 	std::vector<SharedOrderPtr> order_history;
 
-	/// <summary>
-	/// Mapping between asset_index and trade owned by the strategy
-	/// </summary>
-	ankerl::unordered_dense::map<size_t, SharedTradePtr> trades;
-
 	double unrealized_pl = 0;
 	double realized_pl = 0;
 	double portfolio_allocation = 0;
@@ -506,7 +535,14 @@ private:
 	/// </summary>
 	bool* __exchange_step = nullptr;
 	
+	/// <summary>
+	/// Unique numerical rep of the strategy id to prevent string copies everywhere
+	/// </summary>
 	size_t strategy_index;
+
+	/// <summary>
+	/// Unique id of the strategy
+	/// </summary>
 	std::string strategy_id;
 
 
@@ -592,6 +628,31 @@ private:
 	/// strategy next() method is called
 	/// </summary>
 	size_t warmup = 0;
+};
+
+
+class BenchMarkStrategy : public AgisStrategy {
+public:
+	BenchMarkStrategy(
+		PortfolioPtr const& portfolio_,
+		std::string const& strategy_id_
+	) : AgisStrategy(strategy_id_, portfolio_, 1.0) {
+		this->strategy_type = AgisStrategyType::BENCHMARK;
+	}
+
+	AGIS_API void evluate();
+
+	AGIS_API void next() override;
+
+	AGIS_API void build() override;
+
+	AGIS_API inline void reset() override {}
+
+	AGIS_API inline void set_asset_id(std::string const& asset_id) { this->asset_id = asset_id; }
+
+	std::string asset_id = "";
+	size_t asset_index = 0;
+	int i = 0;
 };
 
 AGIS_API std::string trading_window_to_key_str(std::optional<TradingWindow> input_window_opt);

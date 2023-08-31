@@ -21,6 +21,7 @@
 class Portfolio;
 class PortfolioMap;
 class AgisStrategy;
+class BenchMarkStrategy;
 class AgisStrategyMap;
 struct Position;
 
@@ -108,7 +109,15 @@ struct Position
     /// </summary>
     size_t bars_held = 0;
 
-    Position(MAgisStrategyRef strategy, OrderPtr const& order);
+    /// <summary>
+    /// Constructor for a new position based on an order
+    /// </summary>
+    /// <param name="strategy">Mutable ref to the strategy that placed the order</param>
+    /// <param name="order">the order that tirggered the new position call</param>
+    Position(
+        MAgisStrategyRef strategy,
+        OrderPtr const& order
+    );
 
     std::optional<TradeRef> __get_trade(size_t strategy_index) const;
     size_t __get_trade_count() const { return this->trades.size(); }
@@ -157,6 +166,13 @@ public:
 	void __on_order_fill(OrderPtr const& order);
 
     /// <summary>
+    /// Function called when an order is placed that is not mean to affect he portfolio. Used for 
+    /// benchmark strategies that shouldn't affect the portfolio's value
+    /// </summary>
+    /// <param name="order"></param>
+    void __on_phantom_order(OrderPtr const& order);
+
+    /// <summary>
     /// Get the unique index of the portfolio
     /// </summary>
     /// <returns></returns>
@@ -169,7 +185,7 @@ public:
     /// <param name="exchanges">Const ref to a Hydra's exchange map instance</param>
     /// <param name="on_close">Are we on close</param>
     /// <param name="is_reprice">Is this a reprice, i.e. just evaluate the portfolio at current prices</param>
-    void __evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close, bool is_reprice = false);
+    void __evaluate(AgisRouter& router, bool on_close, bool is_reprice = false);
 
     /// <summary>
     /// Get the unique id of the portfolio
@@ -213,6 +229,7 @@ public:
     double inline get_cash() const { return this->cash; }
     double inline get_nlv() const { return this->nlv; }
     double inline get_unrealized_pl() const { return this->unrealized_pl; }
+    Frequency inline get_frequency() const { return this->frequency; }
 
     AGIS_API inline std::vector<SharedPositionPtr> const& get_position_history() { return this->position_history; }
     AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() { return this->trade_history; }
@@ -237,7 +254,17 @@ protected:
     /// Map between strategy index and ref to AgisStrategy
     /// </summary>
     ankerl::unordered_dense::map<size_t, MAgisStrategyRef> strategies;
+
+    /// <summary>
+    /// Map between strategy id and strategy index
+    /// </summary>
     ankerl::unordered_dense::map<std::string, size_t> strategy_ids;
+
+    /// <summary>
+    /// Optional benchmark strategy that is given the same starting value as the portfolio
+    /// but is evaluated eniterly separately
+    /// </summary>
+    BenchMarkStrategy* benchmark_strategy = nullptr;
 
     /// <summary>
     /// Mutex lock on the portfolio instance
@@ -283,6 +310,16 @@ private:
     size_t portfolio_index;
 
     /// <summary>
+    /// Optional strategy index of the benchmark portfolio
+    /// </summary>
+    int benchmark_strategy_index = -1;
+
+    /// <summary>
+    /// Frequency of the portfolio updates. Default is daily, allows for market asset matching
+    /// </summary>
+    Frequency frequency = Frequency::Day1;
+
+    /// <summary>
     /// The unique id of the portfolio
     /// </summary>
     std::string portfolio_id;
@@ -304,7 +341,7 @@ class PortfolioMap
 public:
 	PortfolioMap() = default;
 
-    void __evaluate(AgisRouter& router, ExchangeMap const& exchanges, bool on_close, bool is_reprice = false);
+    void __evaluate(AgisRouter& router, bool on_close, bool is_reprice = false);
     void __clear();
     void __reset();
     void __build(size_t size);

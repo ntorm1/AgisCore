@@ -132,8 +132,9 @@ private:
     std::optional<TradeExitPtr> exit = std::nullopt;
 
 public:
-    bool force_close = false;                   /// force an order to close out a position
-    AssetPtr __asset = nullptr;							    /// pointer to the asset the order is for
+    bool phantom_order = false;     /// is the order a phantom order (placed by benchmark strategy)
+    bool force_close = false;       /// force an order to close out a position
+    AssetPtr __asset = nullptr;		/// pointer to the asset the order is for
 
     typedef std::shared_ptr<Order> order_sp_t;
 
@@ -142,7 +143,8 @@ public:
         double units_,
         size_t strategy_index_,
         size_t portfolio_index_,
-        std::optional<TradeExitPtr> exit = std::nullopt
+        std::optional<TradeExitPtr> exit = std::nullopt,
+        bool phantom = false
     );
 
     [[nodiscard]] std::optional<double> get_limit() const { return this->limit; }

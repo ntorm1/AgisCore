@@ -353,6 +353,7 @@ public:
 	AGIS_API long long get_datetime() const;
 	AGIS_API double __get_market_price(size_t asset_index, bool on_close) const;
 	AGIS_API double __get_market_price(std::string& asset_id, bool on_close) const;
+	AGIS_API AgisResult<AssetPtr const> __get_market_asset(Frequency freq) const;
 	
 	AGIS_API std::span<long long> const __get_dt_index(bool cutoff = false) const;
 	AGIS_API inline long long __get_market_time() const { return this->current_time; }
@@ -381,6 +382,7 @@ private:
 	std::mutex _mutex;
 	ankerl::unordered_dense::map<std::string, ExchangePtr> exchanges;
 	ankerl::unordered_dense::map<std::string, size_t> asset_map;
+	ankerl::unordered_dense::map<Frequency, AssetPtr> market_assets;
 	std::vector<std::shared_ptr<Asset>> assets;
 	std::vector<std::shared_ptr<Asset>> assets_expired;
 	ThreadSafeVector<size_t> expired_asset_index;

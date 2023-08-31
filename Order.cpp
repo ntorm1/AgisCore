@@ -13,7 +13,8 @@ Order::Order(OrderType order_type_,
     double units_,
     size_t strategy_index_,
     size_t portfolio_index_,
-    std::optional<TradeExitPtr> exit_
+    std::optional<TradeExitPtr> exit_,
+    bool phantom_order_
     )
 {   
     this->order_type = order_type_;
@@ -21,6 +22,7 @@ Order::Order(OrderType order_type_,
     this->units = units_;
     this->strategy_index = strategy_index_;
     this->portfolio_index = portfolio_index_;
+    this->phantom_order = phantom_order_;
 
     this->exit = std::move(exit_);
     this->order_id = order_counter++;
