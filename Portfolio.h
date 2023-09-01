@@ -217,7 +217,8 @@ public:
     AGIS_API std::vector<size_t> get_strategy_positions(size_t strategy_index) const;
     AGIS_API std::vector<std::string> get_strategy_ids() const;
     AGIS_API AgisStrategy const* __get_strategy(std::string const& id);
-
+    AGIS_API BenchMarkStrategy const* __get_benchmark_strategy() const { return this->benchmark_strategy; }
+    
     /// <summary>
     /// Register a new stratey to the portfolio instance
     /// </summary>

@@ -67,6 +67,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(AgisStrategyType, {
 	{AgisStrategyType::CPP, "CPP"},
 	{AgisStrategyType::FLOW, "FLOW"},
 	{AgisStrategyType::PY, "PY"},
+	{AgisStrategyType::BENCHMARK, "BENCHMARK"}
 	})
 
 
@@ -396,6 +397,7 @@ public:
 	/// </summary>
 	void __zero_out_tracers();
 
+	bool __is_exchange_subscribed() const { return this->exchange_subsrciption == ""; }
 	bool __is_beta_scaling() const { return this->apply_beta_scale; }
 	bool __is_beta_hedged() const { return this->apply_beta_hedge; }
 	bool __is_beta_trace() const { return this->net_beta.has_value(); }
@@ -513,7 +515,7 @@ private:
 	bool is_live = true;
 	bool is_subsribed = false; 
 
-	std::string exchange_subsrciption;
+	std::string exchange_subsrciption = "";
 
 	/// <summary>
 	/// Pointer to the exchange's step boolean telling us wether or not the subscribed 
@@ -639,7 +641,7 @@ public:
 
 	AGIS_API void build() override;
 
-	AGIS_API inline void reset() override {}
+	AGIS_API inline void reset() override { this->i = 0; }
 
 	AGIS_API inline void set_asset_id(std::string const& asset_id) { this->asset_id = asset_id; }
 

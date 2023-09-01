@@ -370,6 +370,11 @@ json Portfolio::to_json() const
         strategy.second->to_json(strat_json);
         strategies.push_back(strat_json);
     }
+    if (this->benchmark_strategy) {
+        json strat_json;
+        this->benchmark_strategy->to_json(strat_json);
+        strategies.push_back(strat_json);
+    }
 
     auto j = json{
         {"starting_cash", this->starting_cash},
@@ -568,12 +573,6 @@ void Portfolio::__evaluate(AgisRouter& router, bool on_close, bool is_reprice)
         }
     }
 
-    // evaluate the benchmark strategy if it exists
-    if (this->benchmark_strategy) {
-        // static cash benchmark to BenchMarkStrategy
-        this->benchmark_strategy->evluate();
-    }
-
     if (is_reprice)
     {
         UNLOCK_GUARD
@@ -599,6 +598,7 @@ void Portfolio::__evaluate(AgisRouter& router, bool on_close, bool is_reprice)
     {
         strat.second->__evaluate(on_close);
     }
+    if (this->benchmark_strategy)  this->benchmark_strategy->evluate();
     UNLOCK_GUARD
 }
 
@@ -649,6 +649,7 @@ AGIS_API std::vector<std::string> Portfolio::get_strategy_ids() const
     {
         v.push_back(pair.first);
     }
+    if(this->benchmark_strategy) v.push_back(this->benchmark_strategy->get_strategy_id());
     return v;
 }
 
@@ -724,7 +725,9 @@ void Portfolio::__remove_strategy(size_t index)
 void Portfolio::__remember_order(SharedOrderPtr order)
 {
     LOCK_GUARD
-    auto& strategy = this->strategies.at(order.get()->get_strategy_index());
+    AgisStrategy* strategy = nullptr;
+    if (order->phantom_order) strategy = this->benchmark_strategy;
+    else strategy = this->strategies.at(order.get()->get_strategy_index());
     strategy->__remember_order(order);
     UNLOCK_GUARD
 }

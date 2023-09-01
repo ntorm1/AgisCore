@@ -99,7 +99,7 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
 {
     // Only benchmark strategies can have spaces in their names
     if (strategy->get_strategy_type() != AgisStrategyType::BENCHMARK &&
-        strategy->get_strategy_id().find(' ') != std::string::npos)
+        !is_valid_class_name(strategy->get_strategy_id()))
 	{
 		AGIS_THROW("Strategy ID must not contain spaces");
 	}
@@ -107,10 +107,6 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
     if (this->strategies.__strategy_exists(strategy->get_strategy_id()))
     {
         AGIS_THROW("strategy already exsits");
-    }
-    if (!is_valid_class_name(strategy->get_strategy_id()))
-    {
-        AGIS_THROW("Strategy ID must contain characters that are letters, digits, or underscores");
     }
 
     // build the strategy instance
@@ -274,6 +270,57 @@ void Hydra::save_state(json& j)
 }
 
 
+AgisResult<AgisStrategyPtr> strategy_from_json(
+    PortfolioPtr const & portfolio,
+    json const& strategy_json)
+{
+    AgisStrategyType strategy_type = strategy_json["strategy_type"];
+    std::string strategy_id = strategy_json.at("strategy_id");
+    std::string trading_window = strategy_json.at("trading_window");
+
+    bool beta_scale = strategy_json.value("beta_scale", false);
+    bool beta_hedge = strategy_json.value("beta_hedge", false);
+    bool beta_trace = strategy_json.value("beta_trace", false);
+    bool net_leverage_trace = strategy_json.value("net_leverage_trace", false);
+
+    bool is_live = strategy_json.at("is_live");
+    double allocation = strategy_json.at("allocation");
+
+    AgisStrategyPtr strategy = nullptr;
+    // create new strategy pointer based on the strategy type
+    if (strategy_type == AgisStrategyType::FLOW)
+    {
+        strategy = std::make_unique<AbstractAgisStrategy>(
+            portfolio,
+            strategy_id,
+            allocation
+        );
+    }
+    else if (strategy_type == AgisStrategyType::BENCHMARK)
+    {
+        strategy = std::make_unique<BenchMarkStrategy>(
+            portfolio,
+            strategy_id
+        );
+    }
+    else return AgisResult<AgisStrategyPtr>(AGIS_EXCEP("Invalid strategy type"));
+
+    // set stored flags on the strategy
+    try {
+        strategy->set_trading_window(trading_window).unwrap();
+        strategy->set_beta_scale_positions(beta_scale, false).unwrap();
+        strategy->set_beta_hedge_positions(beta_hedge, false).unwrap();
+        strategy->set_beta_trace(beta_trace, false).unwrap();
+        strategy->set_net_leverage_trace(net_leverage_trace).unwrap();
+    }
+    catch (std::exception& e) {
+        return AgisResult<AgisStrategyPtr>(AGIS_EXCEP(e.what()));
+    }
+
+    return AgisResult<AgisStrategyPtr>(std::move(strategy));
+}
+
+
 //============================================================================
 AgisResult<bool> Hydra::restore(json const& j)
 {
@@ -292,31 +339,11 @@ AgisResult<bool> Hydra::restore(json const& j)
         for (const auto& strategy_json : strategies)
         {
             AgisStrategyType strategy_type = strategy_json["strategy_type"];
-            if (strategy_type != AgisStrategyType::FLOW) continue;
+            if (strategy_type == AgisStrategyType::CPP) continue;
 
-            std::string strategy_id = strategy_json.at("strategy_id");
-            std::string trading_window = strategy_json.at("trading_window");
-            
-            bool beta_scale = strategy_json.value("beta_scale", false);
-            bool beta_hedge = strategy_json.value("beta_hedge", false);
-            bool beta_trace = strategy_json.value("beta_trace", false);
-            
-            bool is_live = strategy_json.at("is_live");
-            double allocation = strategy_json.at("allocation");
-
-            if (strategy_type == AgisStrategyType::FLOW)
-            {
-                auto strategy = std::make_unique<AbstractAgisStrategy>(
-                    portfolio,
-                    strategy_id,
-                    allocation
-                );
-                strategy->set_trading_window(trading_window).unwrap();
-                AGIS_DO_OR_RETURN(strategy->set_beta_scale_positions(beta_scale, false), bool);
-                AGIS_DO_OR_RETURN(strategy->set_beta_hedge_positions(beta_hedge, false), bool);
-                AGIS_DO_OR_RETURN(strategy->set_beta_trace(beta_trace, false), bool);
-                this->register_strategy(std::move(strategy));
-            }
+            auto strategy = strategy_from_json(portfolio, strategy_json);
+            if(strategy.is_exception()) return AgisResult<bool>(strategy.get_exception());
+            this->register_strategy(std::move(strategy.unwrap()));
         }
     }
     return AgisResult<bool>(true);

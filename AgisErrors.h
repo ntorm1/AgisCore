@@ -54,7 +54,7 @@ public:
     {
         if (std::holds_alternative<T>(this->value))
         {
-            return std::get<T>(this->value);
+            return std::move(std::get<T>(this->value));
         }
         if (panic)
         {

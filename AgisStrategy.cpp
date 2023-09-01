@@ -617,35 +617,6 @@ AGIS_API std::string alloc_to_str(AllocType alloc_type)
 
 
 //============================================================================
-void BenchMarkStrategy::evluate()
-{
-	// evaluate the benchmark strategy at the close
-	for (auto& trade_pair : this->trades)
-	{
-		auto& trade = trade_pair.second;
-		auto last_price = trade->__asset->__get_market_price(true);
-		trade->evaluate(last_price, true, false);
-	}
-}
-
-
-//============================================================================
-void BenchMarkStrategy::next()
-{
-	// if the first step then allocate all funds to the asset
-	if (i > 0) i++; return;
-	ExchangeView ev;
-	ev.view.emplace_back(this->asset_index, 1.0);
-	this->strategy_allocate(
-		ev,
-		0.0,
-		true,
-		std::nullopt,
-		AllocType::PCT
-	);
-}
-
-//============================================================================
 void AbstractAgisStrategy::next()
 {
 	auto& ev_lambda_ref = *this->ev_lambda_struct;
@@ -698,17 +669,6 @@ void AbstractAgisStrategy::next()
 		std::nullopt,
 		strat_alloc_ref.alloc_type
 	);
-}
-
-
-//============================================================================
-void BenchMarkStrategy::build()
-{
-	// set the benchmark asset id and index
-	AgisResult<AssetPtr const> asset_response = this->exchange_map->__get_market_asset(this->frequency);
-	if (asset_response.is_exception()) AGIS_THROW(asset_response.get_exception());
-	this->asset_id = asset_response.unwrap()->get_asset_id();
-	this->asset_index = this->exchange_map->get_asset_index(this->asset_id);
 }
 
 
@@ -793,6 +753,53 @@ void AbstractAgisStrategy::restore(fs::path path)
 void AbstractAgisStrategy::to_json(json& j)
 {
 	AgisStrategy::to_json(j);
+}
+
+
+//============================================================================
+void BenchMarkStrategy::build()
+{
+	// set the benchmark asset id and index
+	AgisResult<AssetPtr const> asset_response = this->exchange_map->__get_market_asset(this->frequency);
+	if (asset_response.is_exception()) AGIS_THROW(asset_response.get_exception());
+	this->asset_id = asset_response.unwrap()->get_asset_id();
+	this->asset_index = this->exchange_map->get_asset_index(this->asset_id);
+
+	// subscrive to the benchmark asset's exchange
+	auto& exchange_id = asset_response.unwrap()->get_exchange_id();
+	this->exchange_subscribe(exchange_id);
+}
+
+
+//============================================================================
+void BenchMarkStrategy::evluate()
+{
+	// evaluate the benchmark strategy at the close
+	for (auto& trade_pair : this->trades)
+	{
+		auto& trade = trade_pair.second;
+		auto last_price = trade->__asset->__get_market_price(true);
+		trade->evaluate(last_price, true, false);
+	}
+	AgisStrategy::__evaluate(true);
+}
+
+
+//============================================================================
+void BenchMarkStrategy::next()
+{
+	// if the first step then allocate all funds to the asset
+	if (this->i == 1) return;
+	ExchangeView ev;
+	ev.view.emplace_back(this->asset_index, 1.0);
+	this->strategy_allocate(
+		ev,
+		0.0,
+		true,
+		std::nullopt,
+		AllocType::PCT
+	);
+	this->i++;
 }
 
 
