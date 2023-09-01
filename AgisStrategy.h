@@ -31,6 +31,7 @@ AGIS_API std::string opp_to_str(const AgisOperation& func);
 AGIS_API typedef std::pair<AgisOperation, std::function<AgisResult<double>(const std::shared_ptr<Asset>&)>> AssetLambda;
 struct AGIS_API AssetLambdaScruct {
 	AssetLambda l;
+	AgisOperation opp;
 	std::string column;
 	int row;
 };

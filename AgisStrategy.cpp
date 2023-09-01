@@ -949,14 +949,15 @@ private:
 	R"(this->exchange = this->get_exchange()" + exchange_str + R"(); 
 	this->exchange_subscribe(exchange->get_exchange_id());)";
 
-
-	std::string asset_lambda = R"()";
+	// build the vector of asset lambdas to be used when calling next
+	std::string asset_lambda = R"(std::vector<AssetLambda> operations = { )";
+	int i = 0;
 	for (auto& pair : ev_lambda_ref.asset_lambda)
 	{
 		//TODO fix this
-		std::string lambda_mid = R"(operations.emplace_back({OPP}, [&](const AssetPtr& asset) {
-			return asset_feature_lambda(asset, "{COL}", {INDEX}).unwrap();
-		});
+		std::string lambda_mid = R"(AssetLambda({OPP}, [&](const AssetPtr& asset) {
+			return asset->get_asset_feature("{COL}", {INDEX});
+		})
 )";
 		auto pos = lambda_mid.find("{OPP}");
 		lambda_mid.replace(pos, 5, opp_to_str(pair.l.first));
@@ -965,16 +966,20 @@ private:
 		pos = lambda_mid.find("{INDEX}");
 		lambda_mid.replace(pos, 7, std::to_string(pair.row));
 		asset_lambda = asset_lambda + lambda_mid;
-	}
-	std::string next_method = R"(auto next_lambda = [](const AssetPtr& asset) -> double {
-		static std::vector<AssetLambda> operations;
-		if (operations.empty()) {
-		{LAMBDA_CHAIN}
+		if(i < ev_lambda_ref.asset_lambda.size() - 1)
+		{
+			asset_lambda = asset_lambda + ", ";
 		}
-			
-		double result = concrete_lambda_chain(
+		else {
+			asset_lambda = asset_lambda + "};";
+		}
+		i++;
+	}
+	// agis strategy next method
+	std::string next_method = R"(auto next_lambda = [&operationsRef](const AssetPtr& asset) -> AgisResult<double> {			
+		AgisResult<double> result = concrete_lambda_chain(
 			asset, 
-			operations
+			operationsRef
 		);
 		return result;
 	};
@@ -1003,10 +1008,6 @@ private:
 
 	pos = next_method.find("{N}");
 	next_method.replace(pos, 3, std::to_string(ev_lambda_ref.N));
-
-	// Replace the lambda chain
-	pos = next_method.find("{LAMBDA_CHAIN}");
-	next_method.replace(pos, 14, asset_lambda);
 
 	auto& strat_alloc_struct = *ev_lambda_ref.strat_alloc_struct;
 	// Replace epsilon
@@ -1040,6 +1041,9 @@ private:
 // EDIT IT AT YOUR OWN RISK 
 
 #include "{STRATEGY_ID}Class.h"
+#include <functional> // for std::reference_wrapper
+
+{LAMBDA_CHAIN}
 
 void {STRATEGY_ID}Class::build(){
 	// set the strategies target exchanges
@@ -1048,6 +1052,9 @@ void {STRATEGY_ID}Class::build(){
 
 void {STRATEGY_ID}Class::next(){
 	if (this->exchange->__get_exchange_index() < this->warmup) { return; }
+
+    auto& operationsRef = operations; // Create a reference to operations
+
 	// define the lambda function the strategy will apply
 	{NEXT_METHOD}
 };
@@ -1060,6 +1067,10 @@ void {STRATEGY_ID}Class::next(){
 	// Replace the placeholder with the NEXT_METHOD
 	pos = strategy_source.find("{NEXT_METHOD}");
 	strategy_source.replace(pos, 13, next_method);
+
+	// Replace the lambda chain
+	pos = strategy_source.find("{LAMBDA_CHAIN}");
+	strategy_source.replace(pos, 14, asset_lambda);
 
 	// Replace strategy class name
 	str_replace_all(strategy_source, place_holder, strategy_id);
