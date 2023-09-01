@@ -885,11 +885,11 @@ void AbstractAgisStrategy::code_gen(fs::path strat_folder)
 // EDIT IT AT YOUR OWN RISK 
 #include "AgisStrategy.h"
 
-class {STRATEGY_ID}Class : public AgisStrategy {
+class {STRATEGY_ID}_CPP : public AgisStrategy {
 public:
-	AGIS_STRATEGY_API {STRATEGY_ID}Class (
+	AGIS_STRATEGY_API {STRATEGY_ID}_CPP (
         PortfolioPtr const portfolio_
-    ) : AgisStrategy("{STRATEGY_ID}Class", portfolio_, {ALLOC}) {
+    ) : AgisStrategy("{STRATEGY_ID}_CPP", portfolio_, {ALLOC}) {
 		this->strategy_type = AgisStrategyType::CPP;
 		this->trading_window = {TRADING_WINDOW};
 	};
@@ -898,7 +898,7 @@ public:
         PortfolioPtr const& portfolio_
     ) 
 	{
-        return std::make_unique<{STRATEGY_ID}Class>(portfolio_);
+        return std::make_unique<{STRATEGY_ID}_CPP>(portfolio_);
     }
 
 	AGIS_STRATEGY_API inline void reset() override {}
@@ -1040,17 +1040,22 @@ private:
 // the following code is generated from an abstract strategy flow graph.
 // EDIT IT AT YOUR OWN RISK 
 
-#include "{STRATEGY_ID}Class.h"
+#include "{STRATEGY_ID}_CPP.h"
 #include <functional> // for std::reference_wrapper
 
 {LAMBDA_CHAIN}
 
-void {STRATEGY_ID}Class::build(){
+void {STRATEGY_ID}_CPP::build(){
 	// set the strategies target exchanges
 	{BUILD_METHOD}
+	
+	this->set_beta_trace({BETA_TRACE});
+	this->set_beta_scale({BETA_SCALE});
+	this->set_beta_hedge({BETA_HEDGE});
+	this->set_net_leverage_trace({NET_LEV});
 };
 
-void {STRATEGY_ID}Class::next(){
+void {STRATEGY_ID}_CPP::next(){
 	if (this->exchange->__get_exchange_index() < this->warmup) { return; }
 
     auto& operationsRef = operations; // Create a reference to operations
@@ -1072,12 +1077,27 @@ void {STRATEGY_ID}Class::next(){
 	pos = strategy_source.find("{LAMBDA_CHAIN}");
 	strategy_source.replace(pos, 14, asset_lambda);
 
+	// Replace the lambda chain
+	pos = strategy_source.find("{BETA_TRACE}");
+	strategy_source.replace(pos, 14, (this->net_beta.has_value()) ? "true" : "false");
+
+	// Replace the lambda chain
+	pos = strategy_source.find("{BETA_SCALE}");
+	strategy_source.replace(pos, 14, (apply_beta_scale) ? "true" : "false");
+
+	// Replace the lambda chain
+	pos = strategy_source.find("{BETA_HEDGE}");
+	strategy_source.replace(pos, 14, (apply_beta_hedge) ? "true" : "false");
+
+	// Replace the lambda chain
+	pos = strategy_source.find("{NET_LEV}");
+	strategy_source.replace(pos, 14, (this->net_leverage_ratio.has_value()) ? "true" : "false");
+
 	// Replace strategy class name
 	str_replace_all(strategy_source, place_holder, strategy_id);
 
-
-	auto header_path = strat_folder / (strategy_id + "Class.h");
-	auto source_path = strat_folder / (strategy_id + "Class.cpp");
+	auto header_path = strat_folder / (strategy_id + "_CPP.h");
+	auto source_path = strat_folder / (strategy_id + "_CPP.cpp");
 	AGIS_TRY(code_gen_write(header_path, strategy_header))
 	AGIS_TRY(code_gen_write(source_path, strategy_source))
 }

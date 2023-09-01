@@ -52,7 +52,14 @@ public:
 	/// </summary>
 	/// <param name="j">Json object describin a Hydra instance</param>
 	/// <returns></returns>
-	AGIS_API AgisResult<bool> restore(json const& j);
+	AGIS_API AgisResult<bool> restore_portfolios(json const& j);
+
+	/// <summary>
+	/// Restore the underlying data of the hydra instance
+	/// </summary>
+	/// <param name="j"></param>
+	/// <returns></returns>
+	AGIS_API AgisResult<bool> restore_exchanges(json const& j);
 
 	/// <summary>
 	/// Remove everything from the instance

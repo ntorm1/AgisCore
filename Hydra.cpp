@@ -223,6 +223,18 @@ AGIS_API bool Hydra::strategy_exists(std::string const& strategy_id) const
 }
 
 
+AGIS_API AgisResult<bool> Hydra::restore_exchanges(json const& j)
+{
+    try{
+        this->exchanges.restore(j);
+    }
+	catch (std::exception& e)
+	{
+		return AgisResult<bool>(AGIS_EXCEP(e.what()));
+	}
+    return AgisResult<bool>(true);
+}
+
 //============================================================================
 void Hydra::clear()
 {
@@ -322,9 +334,8 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
 
 
 //============================================================================
-AgisResult<bool> Hydra::restore(json const& j)
+AgisResult<bool> Hydra::restore_portfolios(json const& j)
 {
-    this->exchanges.restore(j);
     this->portfolios.restore(j);
 
 

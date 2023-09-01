@@ -296,6 +296,12 @@ public:
 	/// <param name="check"></param>
 	/// <returns></returns>
 	AGIS_API virtual AgisResult<bool> set_beta_trace(bool val, bool check = true);
+	
+	/// <summary>
+	/// Trace the net leverage ratio of the strategy at every time step
+	/// </summary>
+	/// <param name="val"></param>
+	/// <returns></returns>
 	AGIS_API virtual AgisResult<bool> set_net_leverage_trace(bool val);
 	
 	/// <summary>
