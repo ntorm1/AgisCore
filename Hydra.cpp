@@ -376,7 +376,7 @@ AgisResult<bool> Hydra::set_market_asset(
 }
 
 
-template class AGIS_API AgisResult<bool>;
-template class AGIS_API AgisResult<json>;
-template class AGIS_API AgisResult<std::string>;
-template class AGIS_API AgisResult<size_t>;
+template struct AGIS_API AgisResult<bool>;
+template struct AGIS_API AgisResult<json>;
+template struct AGIS_API AgisResult<std::string>;
+template struct AGIS_API AgisResult<size_t>;

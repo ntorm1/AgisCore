@@ -36,7 +36,7 @@ public:
 };
 
 template <typename T>
-class AGIS_API AgisResult {
+struct AGIS_API AgisResult {
 public:
     // Define the variant type with T and AgisException
     using ValueType = std::variant<T, AgisException>;
@@ -82,7 +82,7 @@ public:
     }
 
 private:
-    bool is_value_exception;
+    bool is_value_exception = false;
     ValueType value;
 };
 
