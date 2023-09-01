@@ -181,6 +181,41 @@ public:
 	}
 
 	/// <summary>
+	/// Pure virtual function to be called on every time step
+	/// Note: must be public for trampoline Py Class and AgisStrategy.dll classes
+	/// </summary> 
+	virtual void next() = 0;
+
+	/// <summary>
+	/// Pure virtual function to be called on reset of Hydra instance
+	/// Note: must be public for trampoline Py Class and AgisStrategy.dll classes
+	/// </summary>
+	virtual void reset() = 0;
+
+	/// <summary>
+	/// Pure virtual function to be called after the portfolio and exchangemap have beend built
+	/// Note: must be public for trampoline Py Class and AgisStrategy.dll classes
+	/// </summary>
+	virtual void build() = 0;
+
+	/// <summary>
+	/// Allocate a strategie's portfolio give a vector of pairs of <asset index, allocation>
+	/// </summary>
+	/// <param name="allocation">A vector of pairs representing the allocaitons</param>
+	/// <param name="epsilon">Minimum % difference in units needed to trigger new order</param>
+	/// <param name="clear_missing">Clear existing positions not in the allocation</param>
+	/// <param name="exit">Optional trade exit pointer</param>
+	/// <param name="alloc_type">Type of allocation represented</param>
+	/// <returns></returns>
+	AGIS_API void strategy_allocate(
+		ExchangeView& allocation,
+		double epsilon,
+		bool clear_missing = true,
+		std::optional<TradeExitPtr> exit = std::nullopt,
+		AllocType alloc_type = AllocType::UNITS
+	);
+
+	/// <summary>
 	/// Base serialization of the AgisStrategy class
 	/// </summary>
 	/// <param name="j"></param>
@@ -398,38 +433,6 @@ protected:
 		double units,
 		double limit,
 		std::optional<TradeExitPtr> exit = std::nullopt
-	);
-
-	/// <summary>
-	/// Pure virtual function to be called on every time step
-	/// </summary> 
-	virtual void next() = 0;
-
-	/// <summary>
-	/// Pure virtual function to be called on reset of Hydra instance
-	/// </summary>
-	virtual void reset() = 0;
-
-	/// <summary>
-	/// Pure virtual function to be called after the portfolio and exchangemap have beend built
-	/// </summary>
-	virtual void build() = 0;
-
-	/// <summary>
-	/// Allocate a strategie's portfolio give a vector of pairs of <asset index, allocation>
-	/// </summary>
-	/// <param name="allocation">A vector of pairs representing the allocaitons</param>
-	/// <param name="epsilon">Minimum % difference in units needed to trigger new order</param>
-	/// <param name="clear_missing">Clear existing positions not in the allocation</param>
-	/// <param name="exit">Optional trade exit pointer</param>
-	/// <param name="alloc_type">Type of allocation represented</param>
-	/// <returns></returns>
-	AGIS_API void strategy_allocate(
-		ExchangeView& allocation,
-		double epsilon,
-		bool clear_missing = true,
-		std::optional<TradeExitPtr> exit = std::nullopt,
-		AllocType alloc_type = AllocType::UNITS
 	);
 
 	/// <summary>

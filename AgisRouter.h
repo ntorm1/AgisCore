@@ -1,8 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <thread>
-#include <mutex>
 #include <atomic>
 
 #include "Order.h"
@@ -13,8 +11,15 @@ struct AgisRouterPrivate;
 
 class AgisRouter {
 private:
+    /// <summary>
+    /// Private implementationg for the order channel
+    /// </summary>
     AgisRouterPrivate* p = nullptr;
-    std::mutex _mutex;
+
+    /// <summary>
+    /// Wether or not to log orders
+    /// </summary>
+    bool is_logging_orders = true;
     
     /// <summary>
     /// Reference to an exsiting exchange map that handles new orders
@@ -26,12 +31,23 @@ private:
     /// </summary>
     PortfolioMap* portfolios;
 
-    std::vector<SharedOrderPtr> order_history;
+    /// <summary>
+    /// Container for holding past orders that were processed
+    /// </summary>
+    ThreadSafeVector<SharedOrderPtr> order_history;
 
+    /// <summary>
+    /// Process and incoming order either placed by a strategy or filled by an exchange and route it
+    /// </summary>
+    /// <param name="order"></param>
     void processOrder(OrderPtr order);
 
 public:
-    AgisRouter(ExchangeMap& exchanges_, PortfolioMap* portfolios_);
+    AgisRouter(
+        ExchangeMap& exchanges_,
+        PortfolioMap* portfolios_,
+        bool is_logging_orders = true
+    );
     ~AgisRouter();
 
     void place_order(OrderPtr order);
@@ -40,5 +56,5 @@ public:
 
     void __process();
 
-    std::vector<SharedOrderPtr> const& get_order_history() { return this->order_history; }
+    ThreadSafeVector<SharedOrderPtr> const& get_order_history() { return this->order_history; }
 };

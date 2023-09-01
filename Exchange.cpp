@@ -817,7 +817,17 @@ AgisResult<bool> ExchangeMap::new_exchange(
 //============================================================================
 std::vector<std::string> ExchangeMap::get_asset_ids(std::string const& exchange_id_) const
 {
-	return this->exchanges.at(exchange_id_)->get_asset_ids();
+	if (exchange_id_ != "") {
+		return this->exchanges.at(exchange_id_)->get_asset_ids();
+	}
+	// else get vector of combined asset ids 
+	std::vector<std::string> asset_ids;
+	for (const auto& pair : this->exchanges) {
+		ExchangePtr exchange = pair.second;
+		auto ids = exchange->get_asset_ids();
+		asset_ids.insert(asset_ids.end(), ids.begin(), ids.end());
+	}
+	return asset_ids;
 }
 
 

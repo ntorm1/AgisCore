@@ -6,7 +6,6 @@
 #include <tbb/parallel_for_each.h>
 #endif
 
-
 #include "AgisRouter.h"
 #include "Portfolio.h"
 
@@ -25,12 +24,16 @@ struct AgisRouterPrivate
 
 
 //============================================================================
-AgisRouter::AgisRouter(ExchangeMap& exchanges_, PortfolioMap* portfolios_) :
+AgisRouter::AgisRouter(
+    ExchangeMap& exchanges_,
+    PortfolioMap* portfolios_,
+    bool is_logging_orders_) :
     exchanges(exchanges_),
     portfolios(portfolios_),
     p(new AgisRouterPrivate)
-{}
-
+{
+    this->is_logging_orders = is_logging_orders_;
+}
 
 
 //============================================================================
@@ -58,12 +61,11 @@ void AgisRouter::processOrder(OrderPtr order) {
         break;
     }
 
-    LOCK_GUARD
+    if (!is_logging_orders) return;
+
     SharedOrderPtr order_ptr = std::move(order);
     this->order_history.push_back(order_ptr);
-    this->portfolios->__remember_order(order_ptr);
-    UNLOCK_GUARD
-    
+    this->portfolios->__remember_order(order_ptr);    
 }
 
 
