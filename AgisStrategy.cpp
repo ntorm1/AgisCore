@@ -225,7 +225,7 @@ void AgisStrategy::__zero_out_tracers()
 
 
 //============================================================================
-void AgisStrategy::to_json(json& j)
+void AgisStrategy::to_json(json& j) const
 {
 	j["is_live"] = this->is_live;
 	j["strategy_id"] = this->strategy_id;
@@ -237,6 +237,7 @@ void AgisStrategy::to_json(json& j)
 	j["beta_trace"] = this->net_beta.has_value();
 	j["net_leverage_trace"] = this->net_leverage_ratio.has_value();
 }
+
 
 //============================================================================
 AgisResult<bool> AgisStrategy::exchange_subscribe(std::string const& exchange_id)

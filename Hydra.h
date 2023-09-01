@@ -40,6 +40,11 @@ private:
 	/// </summary>
 	AgisRouter router;
 
+	/// <summary>
+	/// Current index of the backtest
+	/// </summary>
+	size_t current_index = 0;
+
 	int logging;
 	bool is_built = false;
 

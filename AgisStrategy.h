@@ -159,6 +159,7 @@ class AgisStrategy
 {
 	friend struct Trade;
 	friend class Portfolio;
+	friend class AgisStrategyMap;
 public:
 	virtual ~AgisStrategy() = default;
 	AgisStrategy() = default;
@@ -180,26 +181,10 @@ public:
 	}
 
 	/// <summary>
-	/// Pure virtual function to be called on every time step
-	/// </summary> 
-	virtual void next() = 0;
-
-	/// <summary>
-	/// Pure virtual function to be called on reset of Hydra instance
-	/// </summary>
-	virtual void reset() = 0;
-
-	/// <summary>
-	/// Pure virtual function to be called after the portfolio and exchangemap have beend built
-	/// </summary>
-	virtual void build() = 0;
-
-
-	/// <summary>
 	/// Base serialization of the AgisStrategy class
 	/// </summary>
 	/// <param name="j"></param>
-	AGIS_API virtual void to_json(json& j);
+	AGIS_API virtual void to_json(json& j) const;
 
 	/// <summary>
 	/// Restore a strategy from a give filepath 
@@ -215,11 +200,6 @@ public:
 	AGIS_API [[nodiscard]] AgisResult<bool> exchange_subscribe(std::string const& exchange_id);
 
 	/// <summary>
-	/// Clear existing containers of all historical information
-	/// </summary>
-	AGIS_API virtual void __reset();
-
-	/// <summary>
 	/// Set wether or not the strategy is currently running
 	/// </summary>
 	/// <returns></returns>
@@ -232,33 +212,7 @@ public:
 	/// <returns></returns>
 	AGIS_API inline void set_strategy_type(AgisStrategyType t) { this->strategy_type = t; }
 
-	/// <summary>
-	/// Allocate a strategie's portfolio give a vector of pairs of <asset index, allocation>
-	/// </summary>
-	/// <param name="allocation">A vector of pairs representing the allocaitons</param>
-	/// <param name="epsilon">Minimum % difference in units needed to trigger new order</param>
-	/// <param name="clear_missing">Clear existing positions not in the allocation</param>
-	/// <param name="exit">Optional trade exit pointer</param>
-	/// <param name="alloc_type">Type of allocation represented</param>
-	/// <returns></returns>
-	AGIS_API void strategy_allocate(
-		ExchangeView& allocation,
-		double epsilon,
-		bool clear_missing = true,
-		std::optional<TradeExitPtr> exit = std::nullopt,
-		AllocType alloc_type = AllocType::UNITS
-	);
-
-
 	AGIS_API inline static void __reset_counter() { strategy_counter.store(0); }
-
-	/// <summary>
-	/// Build the strategy, called once registered to a hydra instance
-	/// </summary>
-	/// <param name="router_"></param>
-	/// <param name="portfolo_map"></param>
-	/// <param name="exchange_map"></param>
-	void __build(AgisRouter* router_, ExchangeMap* exchange_map);
 
 	/// <summary>
 	/// Function called before step() to validate wether the strategy will make a step
@@ -274,12 +228,6 @@ public:
 	void __add_trade(SharedTradePtr trade) { this->trades.insert({ trade->asset_index, trade }); };
 	void __remove_trade(size_t asset_index) { this->trades.erase(asset_index); }
 	void __remember_trade(SharedTradePtr trade) { this->trade_history.push_back(trade); }
-
-	/// <summary>
-	/// Evaluate the portfolio at the current levels
-	/// </summary>
-	/// <param name="on_close">On the close of a time period</param>
-	void __evaluate(bool on_close);
 
 	/// <summary>
 	/// Get all orders that have been  placed by the strategy
@@ -358,7 +306,7 @@ public:
 	/// Get the id of the portfolio the strategy is registered to 
 	/// </summary>
 	/// <returns>Unique id of the portfolio the strategy is registered to</returns>
-	std::string get_portfolio_id() { return this->portfolio->__get_portfolio_id(); }
+	std::string get_portfolio_id() const { return this->portfolio->__get_portfolio_id(); }
 
 	/// <summary>
 	/// Get an exchange ptr by unique id 
@@ -384,7 +332,7 @@ public:
 	/// Get the strategies current trading window
 	/// </summary>
 	/// <returns></returns>
-	inline std::optional<TradingWindow> get_trading_window() { return this->trading_window; };
+	inline std::optional<TradingWindow> get_trading_window() const { return this->trading_window; };
 
 	/// <summary>
 	/// Find out if the class is and Abstract Agis Class
@@ -403,6 +351,14 @@ public:
 	/// As such, at the start of an evaluation, the strategy valuation is zeroed out so the trades can increment it properly
 	/// </summary>
 	void __zero_out_tracers();
+
+	/// <summary>
+	/// Build the strategy, called once registered to a hydra instance
+	/// </summary>
+	/// <param name="router_"></param>
+	/// <param name="portfolo_map"></param>
+	/// <param name="exchange_map"></param>
+	void __build(AgisRouter* router_, ExchangeMap* exchange_map);
 
 	bool __is_exchange_subscribed() const { return this->exchange_subsrciption == ""; }
 	bool __is_beta_scaling() const { return this->apply_beta_scale; }
@@ -444,6 +400,48 @@ protected:
 		std::optional<TradeExitPtr> exit = std::nullopt
 	);
 
+	/// <summary>
+	/// Pure virtual function to be called on every time step
+	/// </summary> 
+	virtual void next() = 0;
+
+	/// <summary>
+	/// Pure virtual function to be called on reset of Hydra instance
+	/// </summary>
+	virtual void reset() = 0;
+
+	/// <summary>
+	/// Pure virtual function to be called after the portfolio and exchangemap have beend built
+	/// </summary>
+	virtual void build() = 0;
+
+	/// <summary>
+	/// Allocate a strategie's portfolio give a vector of pairs of <asset index, allocation>
+	/// </summary>
+	/// <param name="allocation">A vector of pairs representing the allocaitons</param>
+	/// <param name="epsilon">Minimum % difference in units needed to trigger new order</param>
+	/// <param name="clear_missing">Clear existing positions not in the allocation</param>
+	/// <param name="exit">Optional trade exit pointer</param>
+	/// <param name="alloc_type">Type of allocation represented</param>
+	/// <returns></returns>
+	AGIS_API void strategy_allocate(
+		ExchangeView& allocation,
+		double epsilon,
+		bool clear_missing = true,
+		std::optional<TradeExitPtr> exit = std::nullopt,
+		AllocType alloc_type = AllocType::UNITS
+	);
+
+	/// <summary>
+	/// Clear existing containers of all historical information
+	/// </summary>
+	AGIS_API virtual void __reset();
+
+	/// <summary>
+	/// Evaluate the portfolio at the current levels
+	/// </summary>
+	/// <param name="on_close">On the close of a time period</param>
+	void __evaluate(bool on_close);
 
 	/// <summary>
 	/// Get a trade by asset id

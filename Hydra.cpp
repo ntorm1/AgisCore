@@ -56,9 +56,10 @@ AGIS_API AgisResult<bool> Hydra::__run()
     this->__reset();
 
     size_t step_count = this->exchanges.__get_dt_index().size();
-    for (size_t i = 0; i < step_count; i++)
+    for (size_t i = this->current_index; i < step_count; i++)
     {
         this->__step();
+        this->current_index++;
     }
     return AgisResult<bool>(true);
 }
@@ -267,6 +268,7 @@ AGIS_API AgisResult<bool> Hydra::build()
 //============================================================================
 AGIS_API void Hydra::__reset()
 {
+    this->current_index = 0;
     this->exchanges.__reset();
     this->portfolios.__reset();
     this->router.__reset();
