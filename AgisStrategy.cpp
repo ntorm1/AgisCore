@@ -435,6 +435,21 @@ void AgisStrategy::place_market_order(
 }
 
 
+//============================================================================
+AgisStrategyMap::~AgisStrategyMap()
+{
+	// if strategy was created by the AgisStrategy.dll, release ownership.
+	// idk if correct but without this get read access violation when calling destructor
+	// of strategies created by AgisStrategy.dll
+	for (auto& [id, strategy] : this->strategies)
+	{
+		if (strategy->get_strategy_type() == AgisStrategyType::CPP) {
+			AgisStrategyPtr strategy = std::move(this->strategies.at(id));
+			AgisStrategy* raw_ptr = strategy.release();
+		}
+	}
+}
+
 
 //============================================================================
 void AgisStrategyMap::register_strategy(AgisStrategyPtr strategy)
@@ -1050,8 +1065,8 @@ void {STRATEGY_ID}_CPP::build(){
 	{BUILD_METHOD}
 	
 	this->set_beta_trace({BETA_TRACE});
-	this->set_beta_scale({BETA_SCALE});
-	this->set_beta_hedge({BETA_HEDGE});
+	this->set_beta_scale_positions({BETA_SCALE});
+	this->set_beta_hedge_positions({BETA_HEDGE});
 	this->set_net_leverage_trace({NET_LEV});
 };
 
@@ -1079,19 +1094,19 @@ void {STRATEGY_ID}_CPP::next(){
 
 	// Replace the lambda chain
 	pos = strategy_source.find("{BETA_TRACE}");
-	strategy_source.replace(pos, 14, (this->net_beta.has_value()) ? "true" : "false");
+	strategy_source.replace(pos, 12, (this->net_beta.has_value()) ? "true" : "false");
 
 	// Replace the lambda chain
 	pos = strategy_source.find("{BETA_SCALE}");
-	strategy_source.replace(pos, 14, (apply_beta_scale) ? "true" : "false");
+	strategy_source.replace(pos, 12, (apply_beta_scale) ? "true" : "false");
 
 	// Replace the lambda chain
 	pos = strategy_source.find("{BETA_HEDGE}");
-	strategy_source.replace(pos, 14, (apply_beta_hedge) ? "true" : "false");
+	strategy_source.replace(pos, 12, (apply_beta_hedge) ? "true" : "false");
 
 	// Replace the lambda chain
 	pos = strategy_source.find("{NET_LEV}");
-	strategy_source.replace(pos, 14, (this->net_leverage_ratio.has_value()) ? "true" : "false");
+	strategy_source.replace(pos, 9, (this->net_leverage_ratio.has_value()) ? "true" : "false");
 
 	// Replace strategy class name
 	str_replace_all(strategy_source, place_holder, strategy_id);

@@ -555,6 +555,7 @@ class AgisStrategyMap
 {
 public:
 	AgisStrategyMap() = default;
+	~AgisStrategyMap();
 
 	AGIS_API void __remove_strategy(std::string const& id);
 	AGIS_API AgisResult<std::string> __get_strategy_id(size_t index) const;
