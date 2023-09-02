@@ -93,7 +93,6 @@ const std::function<AgisResult<double>(
 	for (const auto& operation : operations) {
 
 		// apply the lambda function to the asset and extract the value
-		auto& asset_lambda = operation.opp.value();
 		if (!operation.is_filter())
 		{
 			auto& asset_lambda = operation.get_asset_operation();
@@ -103,7 +102,7 @@ const std::function<AgisResult<double>(
 		else {
 			auto& asset_filter = operation.get_asset_filter();
 			auto res = asset_filter(result);
-			if (std::isnan(res.unwrap())) return AgisResult<double>(AGIS_NAN);
+			if (!res) return AgisResult<double>(AGIS_NAN);
 		}
 		// if operation is filter then also check for Nan results meaning to exclude the asset
 		result = operation.l.first(result, asset_lambda_res.unwrap());

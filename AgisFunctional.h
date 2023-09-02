@@ -71,21 +71,30 @@ public:
             throw e;
         }
     }
+    
+    // function thar returns a lambda function that captures the within_range function by value
+    AGIS_API std::function<bool(double)> get_filter() const {
+        double lowerBound = lowerBound_;
+        double upperBound = upperBound_;
+        bool lowerInclusive = lowerInclusive_;
+        bool upperInclusive = upperInclusive_;
 
-    AGIS_API bool within_range(double value) const {
-        if (lowerInclusive_ && upperInclusive_) {
-            return value >= lowerBound_ && value <= upperBound_;
-        }
-        else if (lowerInclusive_ && !upperInclusive_) {
-            return value >= lowerBound_ && value < upperBound_;
-        }
-        else if (!lowerInclusive_ && upperInclusive_) {
-            return value > lowerBound_ && value <= upperBound_;
-        }
-        else { // Both bounds are exclusive
-            return value > lowerBound_ && value < upperBound_;
-        }
+        return [=](double value) {
+            if (lowerInclusive && upperInclusive) {
+                return value >= lowerBound && value <= upperBound;
+            }
+            else if (lowerInclusive && !upperInclusive) {
+                return value >= lowerBound && value < upperBound;
+            }
+            else if (!lowerInclusive && upperInclusive) {
+                return value > lowerBound && value <= upperBound;
+            }
+            else { // Both bounds are exclusive
+                return value > lowerBound && value < upperBound;
+            }
+        };
     }
+
 
 private:
     double lowerBound_;
@@ -123,7 +132,7 @@ private:
 
 
 AGIS_API typedef std::function<AgisResult<double>(const std::shared_ptr<Asset>&)> AssetOpperation;
-AGIS_API typedef std::function<AgisResult<double>(double)> AssetFilter;
+AGIS_API typedef std::function<bool(double)> AssetFilter;
 
 
 /**
@@ -138,13 +147,18 @@ AGIS_API typedef std::pair<AgisOperation, std::variant<AssetOpperation, AssetFil
  * @brief A struct containing information needed to execute a single opperation on an asset
 */
 struct AGIS_API AssetLambdaScruct {
-    AssetLambdaScruct() = default;
+    AssetLambdaScruct(AssetFilter filter) {
+        AssetLambda filter_struct{ agis_identity, filter };
+        this->l = filter_struct;
+    }
+
     AssetLambdaScruct(AssetLambda l, AgisOperation opp, std::string column, int row) {
 		this->l = l;
 		this->opp = opp;
 		this->column = column;
 		this->row = row;
 	}
+
 
     AssetOpperation const& get_asset_operation() const{
         return std::get<AssetOpperation>(l.second);
