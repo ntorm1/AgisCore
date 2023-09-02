@@ -75,6 +75,9 @@
     <ClInclude Include="AgisOverloads.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AgisFunctional.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -117,6 +120,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AgisAnalysis.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AgisFunctional.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

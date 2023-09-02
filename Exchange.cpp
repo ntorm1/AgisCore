@@ -168,17 +168,21 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 	auto number_assets = (N == -1) ? this->assets.size() : static_cast<size_t>(N);
 	ExchangeView exchange_view(this, number_assets);
 	auto& view = exchange_view.view;
+	AgisResult<double> val;
 	for (auto const& asset : this->assets)
 	{
 		if (!asset || !asset->__in_exchange_view) continue;		// asset not in view, or disabled
 		if (!asset->__is_streaming) continue;				// asset is not streaming
-		AgisResult<double> val = func(asset);
+		val = func(asset);
 		if (val.is_exception()) {
 			if (panic) throw val.get_exception();
 			else continue;
 		}
-
-		view.push_back(std::make_pair(asset->get_asset_index(), val.unwrap()));
+		auto x = val.unwrap();
+			
+		// check if x is nan (asset filter operations will cause this)
+		if(std::isnan(x)) continue;
+		view.push_back(std::make_pair(asset->get_asset_index(), x));
 	}
 
 	exchange_view.sort(number_assets, query_type);

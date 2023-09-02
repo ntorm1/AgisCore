@@ -202,6 +202,26 @@ public:
         return vector_.end();
     }
 
+    // Indexing operator
+    T& operator[](size_t index) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (index < vector_.size()) {
+            return vector_[index];
+        }
+        // Handle out-of-range access as needed (e.g., throw an exception)
+        throw std::out_of_range("Index out of range");
+    }
+
+    // Const version of the indexing operator
+    const T& operator[](size_t index) const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (index < vector_.size()) {
+            return vector_[index];
+        }
+        // Handle out-of-range access as needed (e.g., throw an exception)
+        throw std::out_of_range("Index out of range");
+    }
+
 private:
     std::vector<T> vector_;
     mutable std::mutex mutex_;

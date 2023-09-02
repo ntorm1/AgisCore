@@ -7,6 +7,7 @@
 #include "pch.h"
 #include <utility>
 #include <filesystem>
+#include "AgisFunctional.h"
 #include "AgisRouter.h"
 #include "AgisAnalysis.h"
 #include "Order.h"
@@ -19,41 +20,6 @@ class AgisStrategy;
 
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
 
-AGIS_API typedef std::function<double(double, double)> AgisOperation;
-AGIS_API extern const AgisOperation agis_init;
-AGIS_API extern const AgisOperation agis_identity;
-AGIS_API extern const AgisOperation agis_add;
-AGIS_API extern const AgisOperation agis_subtract;
-AGIS_API extern const AgisOperation agis_multiply;
-AGIS_API extern const AgisOperation agis_divide;
-AGIS_API std::string opp_to_str(const AgisOperation& func);
-
-AGIS_API typedef std::pair<AgisOperation, std::function<AgisResult<double>(const std::shared_ptr<Asset>&)>> AssetLambda;
-struct AGIS_API AssetLambdaScruct {
-	AssetLambda l;
-	AgisOperation opp;
-	std::string column;
-	int row;
-};
-
-AGIS_API typedef std::vector<AssetLambdaScruct> AgisAssetLambdaChain;
-AGIS_API typedef std::function<double(AssetPtr const&)> ExchangeViewOperation;
-AGIS_API typedef std::function<ExchangeView(
-	AgisAssetLambdaChain const&,
-	ExchangePtr const,
-	ExchangeQueryType,
-	int)
-> ExchangeViewLambda;
-
-
-enum class AGIS_Function {
-	INIT,		// returns the element in the second position
-	IDENTITY,	// returns the element in the first position
-	ADD,		// addition
-	SUBTRACT,	// subtraction
-	MULTIPLY,	// multiply
-	DIVIDE		// divide
-};
 
 
 enum class AGIS_API AgisStrategyType {
@@ -79,20 +45,6 @@ enum class AGIS_API AllocType
 	PCT			// set strategy portfolio to have %N worth of units (% of nlv)
 };
 AGIS_API std::string alloc_to_str(AllocType alloc_type);
-
-
-AGIS_API typedef const std::pair<TimePoint, TimePoint> TradingWindow;
-
-extern AGIS_API TradingWindow us_equity_reg_hrs;
-extern AGIS_API TradingWindow all_hrs;
-
-extern AGIS_API std::unordered_map<std::string, AgisOperation> agis_function_map;
-extern AGIS_API std::vector<std::string> agis_function_strings;
-extern AGIS_API std::unordered_map<std::string, ExchangeQueryType> agis_query_map;
-extern AGIS_API std::vector<std::string> agis_query_strings;
-extern AGIS_API std::vector<std::string> agis_strat_alloc_strings;
-extern AGIS_API std::vector<std::string> agis_trading_windows;
-extern AGIS_API std::unordered_map<std::string, TradingWindow> agis_trading_window_map;
 
 
 struct AGIS_API StrategyAllocLambdaStruct {

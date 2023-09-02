@@ -1,162 +1,15 @@
-#include "AgisStrategy.h"
-#include "AgisStrategy.h"
 #include "pch.h"
 #include <fstream>
-#include <sstream>
+
 #include <tbb/parallel_for_each.h>
 
 #include "AgisAnalysis.h"
-#include "AgisStrategy.h"
 #include "AgisErrors.h"
-
+#include "AgisStrategy.h"
 
 std::atomic<size_t> AgisStrategy::strategy_counter(0);
 
-//============================================================================
-const std::function<double(double, double)> agis_init = [](double a, double b) { return b; };
-const std::function<double(double, double)> agis_identity = [](double a, double b) { return a; };
-const std::function<double(double, double)> agis_add = [](double a, double b) { return a + b; };
-const std::function<double(double, double)> agis_subtract = [](double a, double b) { return a - b; };
-const std::function<double(double, double)> agis_multiply = [](double a, double b) { return a * b; };
-const std::function<double(double, double)> agis_divide = [](double a, double b) { return a / b; };
 
-
-
-//============================================================================
-std::unordered_map<std::string, AgisOperation> agis_function_map = {
-   {"INIT", agis_init},
-   {"IDENTITY", agis_identity},
-   {"ADD", agis_add},
-   {"SUBTRACT", agis_subtract},
-   {"MULTIPLY", agis_multiply},
-   {"DIVIDE", agis_divide}
-};
-
-
-//============================================================================
-std::unordered_map<std::string, ExchangeQueryType> agis_query_map = {
-   {"Default", ExchangeQueryType::Default},
-   {"NLargest", ExchangeQueryType::NLargest},
-   {"NSmallest", ExchangeQueryType::NSmallest },
-   {"NExtreme", ExchangeQueryType::NExtreme},
-};
-
-
-//============================================================================
-std::vector<std::string>  agis_query_strings =
-{
-	"Default",	/// return all assets in view
-	"NLargest",	/// return the N largest
-	"NSmallest",/// return the N smallest
-	"NExtreme"	/// return the N/2 smallest and largest
-};
-
-
-//============================================================================
-std::vector<std::string> agis_function_strings = {
-	"INIT",
-	"IDENTITY",
-	"ADD",
-	"SUBTRACT",
-	"MULTIPLY",
-	"DIVIDE"
-};
-
-
-//============================================================================
-std::vector<std::string> agis_strat_alloc_strings = {
-	//"UNITS",
-	//"DOLLARS",
-	"PCT"
-};
-
-
-//============================================================================
-std::vector<std::string> agis_trading_windows = {
-	"",
-	"US_EQUITY_REG_HRS"
-};
-
-
-//============================================================================
-std::unordered_map<std::string, TradingWindow> agis_trading_window_map = {
-	{"US_EQUITY_REG_HRS", us_equity_reg_hrs}
-};
-
-
-//============================================================================
-std::string trading_window_to_key_str(std::optional<TradingWindow> input_window_opt) {
-	if (!input_window_opt.has_value()) { return ""; }
-	auto input_window = input_window_opt.value();
-	for (const auto& entry : agis_trading_window_map) {
-		const TradingWindow& window = entry.second;
-		if (window.second == input_window.second)
-		{
-			return entry.first;
-		}
-	}
-	return ""; // Return an empty string if no match is found
-}
-
-
-TradingWindow us_equity_reg_hrs  = {
-	{9,30},
-	{16,0}
-};
-
-
-//============================================================================
-TradingWindow all_hrs  = {
-	{0,0},
-	{23,59}
-};
-
-
-//============================================================================
-const std::function<AgisResult<double>(
-	const std::shared_ptr<Asset>&,
-	const std::vector<AssetLambdaScruct>& operations)> asset_feature_lambda_chain = [](
-		const std::shared_ptr<Asset>& asset,
-		const std::vector<AssetLambdaScruct>& operations
-		)
-{
-	double result = 0;
-	for (const auto& operation : operations) {
-		auto& lambda = operation.l;
-		const auto& op = lambda.first;
-		AgisResult<double> val = lambda.second(asset);
-		if (val.is_exception()) return val;
-		result = op(result, val.unwrap());
-	}
-	return AgisResult<double>(result);
-};
-
-//============================================================================
-const std::function<AgisResult<double>(
-	const std::shared_ptr<Asset>&,
-	const std::vector<AssetLambda>& operations)> concrete_lambda_chain = [](
-		const std::shared_ptr<Asset>& asset,
-		const std::vector<AssetLambda>& operations
-		)
-{
-	double result = 0;
-	for (const auto& lambda : operations) {
-		const auto& op = lambda.first;
-		const auto& assetFeatureLambda = lambda.second;
-		AgisResult<double> val = lambda.second(asset);
-		if (val.is_exception()) return val;
-		result = op(result, val.unwrap());
-	}
-	return AgisResult<double>(result);
-};
-
-
-//============================================================================
-std::unordered_map<std::string, AllocType> agis_strat_alloc_map = {
-   {"UNITS", AllocType::UNITS},
-   {"DOLLARS", AllocType::DOLLARS},
-   {"PCT", AllocType::PCT},
-};
 
 //============================================================================
 void AgisStrategy::__reset()
@@ -970,17 +823,17 @@ private:
 	int i = 0;
 	for (auto& pair : ev_lambda_ref.asset_lambda)
 	{
-		//TODO fix this
 		std::string lambda_mid = R"(AssetLambda({OPP}, [&](const AssetPtr& asset) {
 			return asset->get_asset_feature("{COL}", {INDEX});
 		})
 )";
 		auto pos = lambda_mid.find("{OPP}");
-		lambda_mid.replace(pos, 5, opp_to_str(pair.l.first));
+		// TODO allow for this to be asset filter
+		lambda_mid.replace(pos, 5, opp_to_str(pair.opp()));
 		pos = lambda_mid.find("{COL}");
-		lambda_mid.replace(pos, 5, pair.column);
+		lambda_mid.replace(pos, 5, pair.column());
 		pos = lambda_mid.find("{INDEX}");
-		lambda_mid.replace(pos, 7, std::to_string(pair.row));
+		lambda_mid.replace(pos, 7, std::to_string(pair.row()));
 		asset_lambda = asset_lambda + lambda_mid;
 		if(i < ev_lambda_ref.asset_lambda.size() - 1)
 		{
