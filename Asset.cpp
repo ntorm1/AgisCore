@@ -600,6 +600,8 @@ AGIS_API std::vector<std::string> Asset::get_column_names() const
 //============================================================================
 AgisResult<double> Asset::get_asset_feature(std::string const& col, int index) const
 {
+#ifdef _DEBUG
+
     if (abs(index) > static_cast<int>(current_index - 1) || index > 0) 
     {
         return AgisResult<double>(AGIS_EXCEP("Invalid row index: " + std::to_string(index)));
@@ -612,6 +614,7 @@ AgisResult<double> Asset::get_asset_feature(std::string const& col, int index) c
 	{
 		return AgisResult<double>(AGIS_EXCEP("Column does not exist: " + col));
 	}
+#endif
 
     size_t col_offset = this->headers.at(col) * this->rows;
     size_t row_offset = this->current_index + index - 1;
@@ -622,6 +625,7 @@ AgisResult<double> Asset::get_asset_feature(std::string const& col, int index) c
 //============================================================================
 AgisResult<double> Asset::get_asset_feature(size_t col, int index) const
 {
+#ifdef _DEBUG
     if (abs(index) > static_cast<int>(current_index - 1) || index > 0)
     {
         return AgisResult<double>(AGIS_EXCEP("Invalid row index: " + std::to_string(index)));
@@ -630,6 +634,7 @@ AgisResult<double> Asset::get_asset_feature(size_t col, int index) const
     {
         return AgisResult<double>(AGIS_EXCEP("Asset is not streaming"));
     }
+#endif
 
     size_t col_offset = col * this->rows;
     size_t row_offset = this->current_index + index - 1;

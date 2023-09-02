@@ -829,11 +829,11 @@ private:
 )";
 		auto pos = lambda_mid.find("{OPP}");
 		// TODO allow for this to be asset filter
-		lambda_mid.replace(pos, 5, opp_to_str(pair.opp()));
+		lambda_mid.replace(pos, 5, opp_to_str(pair.opp.value()));
 		pos = lambda_mid.find("{COL}");
-		lambda_mid.replace(pos, 5, pair.column());
+		lambda_mid.replace(pos, 5, pair.column);
 		pos = lambda_mid.find("{INDEX}");
-		lambda_mid.replace(pos, 7, std::to_string(pair.row()));
+		lambda_mid.replace(pos, 7, std::to_string(pair.row));
 		asset_lambda = asset_lambda + lambda_mid;
 		if(i < ev_lambda_ref.asset_lambda.size() - 1)
 		{

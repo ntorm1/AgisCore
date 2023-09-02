@@ -57,21 +57,13 @@ AGIS_API extern const AgisOperation agis_divide;
 AGIS_API std::string opp_to_str(const AgisOperation& func);
 
 /**
- * @brief An AssetLambda is a pair of an AgisOperation and a lambda function that takes a shared_ptr to an Asset.
- * It first applies the function to the asset and the applies the opperations to the output of the function. They
- * can be strung together in a sequence to extract a single value from an asset (i.e. the 1d % return)
-*/
-AGIS_API typedef std::pair<AgisOperation, std::function<AgisResult<double>(const std::shared_ptr<Asset>&)>> AssetLambda;
-
-
-/**
  * @brief A an agis range is parses a string representation of range like [0.2,.3) and
  * defines a bool function that returns wether or not a passed number is within the range
 */
-struct AssetFilter {
+struct AssetFilterStruct {
 public:
-    AGIS_API AssetFilter() = default;
-    AGIS_API AssetFilter(const std::string& rangeStr) {
+    AGIS_API AssetFilterStruct() = default;
+    AGIS_API AssetFilterStruct(const std::string& rangeStr) {
         try {
             parse_range(rangeStr);
         }
@@ -129,69 +121,48 @@ private:
     }
 };
 
+
+AGIS_API typedef std::function<AgisResult<double>(const std::shared_ptr<Asset>&)> AssetOpperation;
+AGIS_API typedef std::function<AgisResult<double>(double)> AssetFilter;
+
+
+/**
+ * @brief An AssetLambda is a pair of an AgisOperation and a lambda function that takes a shared_ptr to an Asset.
+ * It first applies the function to the asset and the applies the opperations to the output of the function. They
+ * can be strung together in a sequence to extract a single value from an asset (i.e. the 1d % return)
+*/
+AGIS_API typedef std::pair<AgisOperation, std::variant<AssetOpperation, AssetFilter>> AssetLambda;
+
+
 /**
  * @brief A struct containing information needed to execute a single opperation on an asset
 */
-struct AGIS_API AssetOpperation {
-    AssetOpperation() = default;
-    AssetOpperation(AssetLambda l, AgisOperation opp, std::string column, int row) {
+struct AGIS_API AssetLambdaScruct {
+    AssetLambdaScruct() = default;
+    AssetLambdaScruct(AssetLambda l, AgisOperation opp, std::string column, int row) {
 		this->l = l;
 		this->opp = opp;
 		this->column = column;
 		this->row = row;
 	}
-    AssetLambda l;
-    AgisOperation opp;
-    std::string column;
-    int row;
-};
 
-/**
- * @brief A struct containing information needed to execute either a Asset Lambda operation or an
- * asset filter operation
-*/
-struct AGIS_API AssetLambdaScruct {
-    ~AssetLambdaScruct() {}
-    AssetLambdaScruct() = default;
-    AssetLambdaScruct(AssetFilter asset_filter_) {
-        this->asset_lambda = asset_filter_;
+    AssetOpperation const& get_asset_operation() const{
+        return std::get<AssetOpperation>(l.second);
     }
-    AssetLambdaScruct(AssetOpperation asset_operation_) {
-        this->asset_lambda = asset_operation_;
+
+    AssetFilter const& get_asset_filter() const {
+        return std::get<AssetFilter>(l.second);
     }
 
     bool is_filter() const {
-		return std::holds_alternative<AssetFilter>(this->asset_lambda);
+		return !opp.has_value();
 	}
 
-    bool valid_asset(double x) const {
-        assert(this->is_filter());
-        return std::get<AssetFilter>(this->asset_lambda).within_range(x);
-    }
-
-    int row() const {
-        assert(!this->is_filter());
-        return std::get<AssetOpperation>(this->asset_lambda).row;
-    }
-
-    std::string const& column() const {
-        assert(!this->is_filter());
-        return std::get<AssetOpperation>(this->asset_lambda).column;
-    }
-
-    AssetLambda const& l() const {
-		assert(!this->is_filter());
-		return std::get<AssetOpperation>(this->asset_lambda).l;
-	}
-
-    AgisOperation opp() const {
-        assert(!this->is_filter());
-        return std::get<AssetOpperation>(this->asset_lambda).opp;
-    }
-
-    std::variant<AssetFilter , AssetOpperation> asset_lambda;
+    AssetLambda l;
+    std::optional<AgisOperation> opp;
+    std::string column;
+    int row;
 };
-
 
 AGIS_API typedef std::vector<AssetLambdaScruct> AgisAssetLambdaChain;
 AGIS_API typedef std::function<double(AssetPtr const&)> ExchangeViewOperation;

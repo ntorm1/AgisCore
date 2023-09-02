@@ -5,7 +5,7 @@
 #define AGIS_API __declspec(dllimport)
 #endif
 
-#define AGIS_SLOW
+//#define AGIS_SLOW
 
 #include <exception>
 #include <string>
