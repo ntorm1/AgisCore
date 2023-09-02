@@ -25,7 +25,7 @@ Trade::Trade(AgisStrategy* strategy_, OrderPtr const& filled_order):
     this->unrealized_pl = 0;
     this->realized_pl = 0;
     this->close_price = 0;
-    this->last_price = filled_order->get_average_price();
+    this->last_price = this->average_price;
 
     if (filled_order->has_exit()) {
         this->exit = filled_order->move_exit();

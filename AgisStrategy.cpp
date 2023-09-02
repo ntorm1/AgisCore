@@ -471,7 +471,44 @@ std::string opp_to_str(const AgisOperation& func)
 
 
 //============================================================================
-AGIS_API std::string alloc_to_str(AllocType alloc_type)
+AgisResult<TradeExitPtr> parse_trade_exit(
+	TradeExitType trade_exit_type, 
+	const std::string& trade_exit_params)
+{
+	try {
+		switch (trade_exit_type)
+		{
+		case TradeExitType::BARS: {
+			size_t result = std::stoull(trade_exit_params);
+			return AgisResult<TradeExitPtr>(std::make_shared<ExitBars>(result));
+
+		}
+		case TradeExitType::THRESHOLD: {
+			// expects string line [-.05,.1] (5% stop loss, 10% take profit)
+			// Remove leading '[' and trailing ']'
+			std::string trimmedStr = trade_exit_params.substr(1, trade_exit_params.size() - 2);
+			// Split the string by ','
+			std::istringstream ss(trimmedStr);
+			std::string lowerStr, upperStr;
+			std::getline(ss, lowerStr, ',');
+			std::getline(ss, upperStr, ',');
+			auto stop_loss = std::stod(lowerStr);
+			auto take_profit = std::stod(upperStr);
+			return AgisResult<TradeExitPtr>(std::make_shared<ExitThreshold>(stop_loss, take_profit));
+
+		}
+		default:
+			return AgisResult<TradeExitPtr>(AGIS_EXCEP("invalid trade exit type"));
+		}
+	}
+	catch (const std::exception& ex) {
+		return AgisResult<TradeExitPtr>(AgisException(AGIS_EXCEP(ex.what())));
+	}
+}
+
+
+//============================================================================
+std::string alloc_to_str(AllocType alloc_type)
 {
 	static const std::map<AllocType, std::string> typeStrings = {
 		{AllocType::UNITS, "UNITS"},

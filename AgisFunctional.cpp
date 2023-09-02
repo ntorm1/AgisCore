@@ -66,6 +66,13 @@ std::vector<std::string> agis_strat_alloc_strings = {
 
 
 //============================================================================
+std::vector<std::string> agis_trade_exit_strings = {
+	"BARS",
+	"THRESHOLD"
+};
+
+
+//============================================================================
 std::vector<std::string> agis_trading_windows = {
 	"",
 	"US_EQUITY_REG_HRS"
@@ -105,6 +112,8 @@ const std::function<AgisResult<double>(
 			if (!res) return AgisResult<double>(AGIS_NAN);
 		}
 		// if operation is filter then also check for Nan results meaning to exclude the asset
+		auto x = asset_lambda_res.unwrap();
+		if(std::isnan(x)) return AgisResult<double>(AGIS_NAN);
 		result = operation.l.first(result, asset_lambda_res.unwrap());
 
 	}

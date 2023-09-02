@@ -83,12 +83,19 @@ private:
 };
 
 
+enum class AGIS_API TradeExitType
+{
+   BARS,
+   THRESHOLD,
+};
+
+
 class TradeExit {
 public:
     virtual ~TradeExit() = default;
     TradeExit() : trade(nullptr) {}
 
-    void build(Trade const* trade_) { this->trade = trade_; }
+    virtual void build(Trade const* trade_) { this->trade = trade_; }
 
     AGIS_API virtual bool exit() = 0;
 
@@ -97,13 +104,16 @@ protected:
 };
 
 
+/**
+ * @brief Exit a trade when the number of bars held is equal to the number of bar defined
+*/
 class ExitBars : public TradeExit {
 public:
     ExitBars(size_t bars_) : TradeExit() {
         this->bars = bars_;
     }
 
-    AGIS_API inline bool  exit() override {
+    AGIS_API inline bool exit() override {
         auto res = this->bars == this->trade->bars_held; 
         return res;
     }
@@ -114,6 +124,55 @@ private:
 };
 
 
+/**
+ * @brief Exit a trade when the % change in price is greater than the specified value
+*/
+class ExitThreshold : public TradeExit {
+public:
+    /**
+     * @brief Exit threshould constructor
+     * @param stop_loss_pct_ % decline in the price that will trigger a trade close (-.05) = 5% decline
+     * @param take_profit_pct_ % increase in the price that will trigger a trade close (.05) = 5% increase
+    */
+    ExitThreshold(std::optional<double> stop_loss_pct_, std::optional<double> take_profit_pct_) : TradeExit() {
+        this->stop_loss_pct = stop_loss_pct_;
+        this->take_profit_pct = take_profit_pct_;
+    }
+
+    AGIS_API void build(Trade const* trade_) override {
+        if (this->stop_loss_pct.has_value()) {
+            this->stop_loss_pct = (1 + this->stop_loss_pct.value()) * trade->last_price;
+        }
+        if (this->take_profit_pct.has_value()) {
+            this->take_profit_pct = (1 + this->take_profit_pct.value()) * trade->last_price;
+        }
+        TradeExit::build(trade_);
+    }
+
+
+    AGIS_API inline bool exit() override {
+        if (this->trade->last_price <= this->stop_loss_pct) { return true; }
+        if (this->trade->last_price >= this->take_profit_pct) { return true; }
+        return false;
+    }
+
+private:
+    /**
+     * @brief Stop loss pct is initial defined as a the % decline from the open price 
+     * that will trigger a trade close. After it is built it is reassigned to the actual threshould 
+    */
+    std::optional<double> stop_loss_pct;
+
+    /**
+     * @brief Take profit pct is initial defined as a the % increase from the open price
+     * that will trigger a trade close. After it is built it is reassigned to the actual threshould
+    */
+    std::optional<double> take_profit_pct;
+};
+
+/**
+ * @brief Exit a trade if the last price falls outside of the specified bounds
+*/
 class ExitBand : public TradeExit {
 public:
     ExitBand(double ub_, double lb_) : TradeExit() {
