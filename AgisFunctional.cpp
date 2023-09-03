@@ -97,24 +97,25 @@ const std::function<AgisResult<double>(
 	// loop through the asset lambda structs and apply the operations
 	double result = 0;
 	AgisResult<double> asset_lambda_res;
-	for (const auto& operation : operations) {
+	for (const auto& asset_lambda : operations) {
 
 		// apply the lambda function to the asset and extract the value
-		if (!operation.is_filter())
+		if (!asset_lambda.is_filter())
 		{
-			auto& asset_lambda = operation.get_asset_operation();
-			asset_lambda_res = asset_lambda(asset);
+			auto& asset_opperation = asset_lambda.get_asset_operation();
+			asset_lambda_res = asset_opperation(asset);
 			if (asset_lambda_res.is_exception()) return asset_lambda_res;
 		}
 		else {
-			auto& asset_filter = operation.get_asset_filter();
+			auto& asset_filter = asset_lambda.get_asset_filter();
 			auto res = asset_filter(result);
 			if (!res) return AgisResult<double>(AGIS_NAN);
+			continue;
 		}
 		// if operation is filter then also check for Nan results meaning to exclude the asset
 		auto x = asset_lambda_res.unwrap();
 		if(std::isnan(x)) return AgisResult<double>(AGIS_NAN);
-		result = operation.l.first(result, asset_lambda_res.unwrap());
+		result = asset_lambda.get_agis_operation()(result, asset_lambda_res.unwrap());
 
 	}
 	asset_lambda_res.set_value(result);
@@ -134,7 +135,7 @@ const std::function<AgisResult<double>(
 	for (const auto& lambda : operations) {
 		const auto& op = lambda.first;
 		const auto& assetFeatureLambda = lambda.second;
-		AgisResult<double> val = std::get<AssetOpperation>(assetFeatureLambda)(asset);
+		AgisResult<double> val = assetFeatureLambda(asset);
 		// test to see if the lambda returned an exception
 		if (val.is_exception()) return val;
 		// test to see if the lambda returned NaN

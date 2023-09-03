@@ -72,17 +72,25 @@ AGIS_API AgisResult<TradeExitPtr> parse_trade_exit(
  * @brief A an agis range is parses a string representation of range like [0.2,.3) and
  * defines a bool function that returns wether or not a passed number is within the range
 */
-struct AssetFilterStruct {
+struct AssetFilterRange {
 public:
-    AGIS_API AssetFilterStruct() = default;
-    AGIS_API AssetFilterStruct(const std::string& rangeStr) {
+    AGIS_API AssetFilterRange() = default;
+    AGIS_API AssetFilterRange(const std::string& range_str_) {
         // ugly try catch but it works, prevents invalid range strings from being use
         try {
-            parse_range(rangeStr);
+            parse_range(range_str_);
+            this->range_str = range_str_;
         }
         catch (std::exception& e) {
             throw e;
         }
+    }
+
+    AGIS_API std::string code_gen() const {
+        std::string filter_str = R"(AssetLambdaScruct(AssetFilterRange({FILTER_STR})))";
+        auto pos = filter_str.find("{FILTER_STR}");
+        filter_str.replace(pos, 12, this->range_str);
+        return filter_str;
     }
     
     // function thar returns a lambda function that captures the within_range function by value
@@ -114,7 +122,7 @@ private:
     double upperBound_;
     bool lowerInclusive_;
     bool upperInclusive_;
-
+    std::string range_str;
     void parse_range(const std::string& rangeStr) {
         try {
             // Check if the first character is '[' (inclusive) or '(' (exclusive)
@@ -156,43 +164,70 @@ AGIS_API typedef std::function<bool(double)> AssetFilter;
  * Optionally if can be a filter operation that takes a double that is the result of the previous operation
  * and returns a bool indicating wether or not the asset should be included in the result set.
 */
-AGIS_API typedef std::pair<AgisOperation, std::variant<AssetOpperation, AssetFilter>> AssetLambda;
+AGIS_API typedef std::pair<AgisOperation, AssetOpperation> AssetLambda;
+
+
+struct AssetOpperationStruct {
+    AssetLambda asset_lambda;
+    std::string column;
+    int row;
+};
+
+
+struct AssetFilterStruct {
+    std::pair<AgisOperation, AssetFilter> asset_lambda;
+    AssetFilter filter;
+    AssetFilterRange asset_filter_range;
+};
 
 
 /**
  * @brief A struct containing information needed to execute a single opperation on an asset
 */
 struct AGIS_API AssetLambdaScruct {
-    AssetLambdaScruct(AssetFilter filter) {
-        AssetLambda filter_struct{ agis_identity, filter };
+    AssetLambdaScruct(AssetFilterRange asset_filter_range) {
+        auto asset_lambda = std::make_pair(agis_identity, asset_filter_range.get_filter());
+        AssetFilterStruct filter_struct{ asset_lambda, asset_filter_range.get_filter(), asset_filter_range};
         this->l = filter_struct;
     }
 
-    AssetLambdaScruct(AssetLambda l, AgisOperation opp, std::string column, int row) {
-		this->l = l;
-		this->opp = opp;
-		this->column = column;
-		this->row = row;
+    AssetLambdaScruct(AssetLambda asset_lambda, AgisOperation opp, std::string column, int row) {
+        auto x = AssetOpperationStruct{ asset_lambda, column, row };
+        this->l = std::move(x);
 	}
 
 
     AssetOpperation const& get_asset_operation() const{
-        return std::get<AssetOpperation>(l.second);
+        return std::get<AssetOpperationStruct>(l).asset_lambda.second;
     }
 
-    AssetFilter const& get_asset_filter() const {
-        return std::get<AssetFilter>(l.second);
+    auto const& get_asset_operation_struct() const {
+        return std::get<AssetOpperationStruct>(l);
+    }
+
+    auto const& get_asset_filter() const {
+        return std::get<AssetFilterStruct>(l).asset_lambda.second;
+    }
+
+    auto const& get_asset_filter_struct() const {
+        return std::get<AssetFilterStruct>(l);
+    }
+
+    auto const& get_agis_operation() const {
+        return std::get<AssetOpperationStruct>(l).asset_lambda.first;
     }
 
     bool is_filter() const {
-		return !opp.has_value();
+		return std::holds_alternative<AssetFilterStruct>(l);
 	}
 
-    AssetLambda l;
-    std::optional<AgisOperation> opp;
-    std::string column;
-    int row;
+	bool is_operation() const {
+		return std::holds_alternative<AssetOpperationStruct>(l);
+	}
+
+    std::variant<AssetOpperationStruct, AssetFilterStruct> l;
 };
+
 
 AGIS_API typedef std::vector<AssetLambdaScruct> AgisAssetLambdaChain;
 AGIS_API typedef std::function<double(AssetPtr const&)> ExchangeViewOperation;

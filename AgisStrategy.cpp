@@ -856,21 +856,28 @@ private:
 	this->exchange_subscribe(exchange->get_exchange_id());)";
 
 	// build the vector of asset lambdas to be used when calling next
-	std::string asset_lambda = R"(std::vector<AssetLambda> operations = { )";
+	std::string asset_lambda = R"(std::vector<AssetLambdaScruct> operations = { )";
 	int i = 0;
 	for (auto& pair : ev_lambda_ref.asset_lambda)
 	{
-		std::string lambda_mid = R"(AssetLambda({OPP}, [&](const AssetPtr& asset) {
+		std::string lambda_mid;
+		if (pair.is_operation()) {
+			lambda_mid = R"(AssetLambdaScruct(AssetLambda({OPP}, [&](const AssetPtr& asset) {
 			return asset->get_asset_feature("{COL}", {INDEX});
-		})
+		}),{OPP}, "{COL}", {INDEX})
 )";
-		auto pos = lambda_mid.find("{OPP}");
-		// TODO allow for this to be asset filter
-		lambda_mid.replace(pos, 5, opp_to_str(pair.opp.value()));
-		pos = lambda_mid.find("{COL}");
-		lambda_mid.replace(pos, 5, pair.column);
-		pos = lambda_mid.find("{INDEX}");
-		lambda_mid.replace(pos, 7, std::to_string(pair.row));
+			auto pos = lambda_mid.find("{OPP}");
+			auto& asset_operation = pair.get_asset_operation_struct();
+			lambda_mid.replace(pos, 5, opp_to_str(pair.get_agis_operation()));
+
+			str_replace_all(lambda_mid, "{COL}", asset_operation.column);
+			str_replace_all(lambda_mid, "{OPP}", opp_to_str(pair.get_agis_operation()));
+			str_replace_all(lambda_mid, "{INDEX}", std::to_string(asset_operation.row));
+		}
+		else {
+			lambda_mid = pair.get_asset_filter_struct().asset_filter_range.code_gen();
+		}
+		// append the asset lambda str rep to the vector containing the operations
 		asset_lambda = asset_lambda + lambda_mid;
 		if(i < ev_lambda_ref.asset_lambda.size() - 1)
 		{
@@ -883,11 +890,10 @@ private:
 	}
 	// agis strategy next method
 	std::string next_method = R"(auto next_lambda = [&operationsRef](const AssetPtr& asset) -> AgisResult<double> {			
-		AgisResult<double> result = concrete_lambda_chain(
+		return asset_feature_lambda_chain(
 			asset, 
 			operationsRef
 		);
-		return result;
 	};
 		
 	auto ev = this->exchange->get_exchange_view(
