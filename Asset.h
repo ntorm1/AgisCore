@@ -170,6 +170,7 @@ public:
     AGIS_API std::span<double const> get_beta_column() const;
 
     AGIS_API bool __get_is_valid_next_time() const { return __is_valid_next_time; }
+    AGIS_API bool __is_last_row() const {return this->current_index == this->rows + 1;}
     AGIS_API double __get(std::string col, size_t row) const;
     AGIS_API inline long long __get_dt(size_t row) const { return *(this->dt_index + row); };
     AGIS_API inline size_t __get_open_index() const {return this->open_index;}

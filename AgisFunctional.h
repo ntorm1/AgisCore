@@ -87,7 +87,7 @@ public:
     }
 
     AGIS_API std::string code_gen() const {
-        std::string filter_str = R"(AssetLambdaScruct(AssetFilterRange({FILTER_STR})))";
+        std::string filter_str = R"(AssetLambdaScruct(AssetFilterRange("{FILTER_STR}")))";
         auto pos = filter_str.find("{FILTER_STR}");
         filter_str.replace(pos, 12, this->range_str);
         return filter_str;

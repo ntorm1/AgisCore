@@ -119,6 +119,8 @@ struct Position
     );
 
     std::optional<TradeRef> __get_trade(size_t strategy_index) const;
+    ankerl::unordered_dense::map<size_t, SharedTradePtr> const& __get_trades() const { return this->trades; }
+
     size_t __get_trade_count() const { return this->trades.size(); }
     size_t __trade_exits(size_t strategy_index) const { return this->trades.count(strategy_index) > 0; }
 
@@ -214,6 +216,7 @@ public:
     /// <returns></returns>
     AGIS_API std::optional<TradeRef> get_trade(size_t asset_index, std::string const& strategy_id);
 
+    AGIS_API ankerl::unordered_dense::map<size_t, PositionPtr> const& __get_positions() const { return this->positions; }
     AGIS_API std::vector<size_t> get_strategy_positions(size_t strategy_index) const;
     AGIS_API std::vector<std::string> get_strategy_ids() const;
     AGIS_API AgisStrategy const* __get_strategy(std::string const& id);

@@ -564,7 +564,7 @@ void Portfolio::__evaluate(AgisRouter& router, bool on_close, bool is_reprice)
         if (is_reprice) continue;
 
         // if asset expire next step clear from the portfolio
-        if (!position->__asset->__get_is_valid_next_time())
+        if (position->__asset->__is_last_row())
         {
             auto order = position->generate_position_inverse();
             order->__set_state(OrderState::CHEAT);
