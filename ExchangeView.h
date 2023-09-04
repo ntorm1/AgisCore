@@ -53,9 +53,32 @@ AGIS_API extern std::vector<std::string> exchange_view_opps;
 AGIS_API std::string ev_opp_to_str(ExchangeViewOpp ev_opp);
 AGIS_API std::string ev_query_type(ExchangeQueryType ev_query);
 
+struct ExchangeViewAllocation {
+	ExchangeViewAllocation(size_t asset_index_, double allocation_amount_) {
+		this->asset_index = asset_index_;
+		this->allocation_amount = allocation_amount_;
+	}
+	/**
+	 * @brief unique if if of the asset
+	*/
+	size_t asset_index;
+
+	/**
+	 * @brief size of the allocation
+	*/
+	double allocation_amount = 0.0f;
+
+	/**
+	 * @brief optional beta hedge size linked to the allocation
+	*/
+	std::optional<double> beta_hedge_size = std::nullopt;
+};
+
 struct ExchangeView
 {
-	std::vector<std::pair<size_t, double>> view;
+	std::vector<ExchangeViewAllocation> view;
+	std::optional<double> market_asset_price = std::nullopt;
+	std::optional<size_t> market_asset_index = std::nullopt;
 	Exchange* exchange = nullptr;
 
 	ExchangeView() = default;
@@ -81,7 +104,7 @@ struct ExchangeView
 	/// Sum of all weights in the exchange view
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API double sum_weights(bool _abs = false) const;
+	AGIS_API double sum_weights(bool _abs = false, bool include_beta_hedge = false) const;
 
 	/// <summary>
 	/// Get the neta beta of the exchange view allocation
@@ -111,13 +134,14 @@ struct ExchangeView
 	/// </summary>
 	AGIS_API void realloc(double c);
 
+
 	/// <summary>
 	/// Take an exchange view, then sort the pairs based on the second element in the pair
 	/// </summary>
 	void sort_pairs() {
 		// sort the view based on the second argument in the pair
 		std::sort(this->view.begin(), this->view.end(), [](auto const& lhs, auto const& rhs) {
-			return lhs.second < rhs.second;
+			return lhs.allocation_amount < rhs.allocation_amount;
 			});
 	}
 
@@ -140,7 +164,7 @@ struct ExchangeView
 	void uniform_weights(double c) {
 		auto weight = c / static_cast<double>(view.size());
 		for (auto& pair : view) {
-			pair.second = weight;
+			pair.allocation_amount = weight;
 		}
 	}
 
@@ -150,7 +174,7 @@ struct ExchangeView
 	*/
 	void constant_weights(double c){
 		for (auto& pair : view) {
-			pair.second = c;
+			pair.allocation_amount = c;
 		}
 	}
 
@@ -164,16 +188,16 @@ struct ExchangeView
 		auto weight = c / static_cast<double>(view.size());
 		for (size_t i = 0; i < view.size(); ++i) {
 			// note the <= cutoff, this is to make sure that the cutoff value is included in the negative side
-			if (view[i].second <= cutoff) {
-				view[i].second = -weight;
+			if (view[i].allocation_amount <= cutoff) {
+				view[i].allocation_amount = -weight;
 			}
 			else {
-				view[i].second = weight;
+				view[i].allocation_amount = weight;
 			}
 		}
 	}
 
-	AGIS_API std::pair<size_t, double>& get_allocation_by_asset_index(size_t index);
+	AGIS_API ExchangeViewAllocation& get_allocation_by_asset_index(size_t index);
 
 	void uniform_split(double c)
 	{
@@ -181,10 +205,10 @@ struct ExchangeView
 		auto cutoff = view.size() / 2;
 		for (size_t i = 0; i < view.size(); ++i) {
 			if (i < cutoff) {
-				view[i].second = weight;
+				view[i].allocation_amount = weight;
 			}
 			else {
-				view[i].second = -weight;
+				view[i].allocation_amount = -weight;
 			}
 		}
 	}
@@ -194,7 +218,7 @@ struct ExchangeView
 		size_t N = view.size();
 		double sum = static_cast<double>(N * (N + 1)) / 2; // Sum of numbers from 1 to N (cast to double)
 		for (size_t i = 0; i < N; ++i) {
-			view[i].second = (_sum * (N - i) / sum);
+			view[i].allocation_amount = (_sum * (N - i) / sum);
 		}
 	}
 
@@ -203,7 +227,7 @@ struct ExchangeView
 		size_t N = view.size();
 		double sum = static_cast<double>(N * (N + 1)) / 2; // Sum of numbers from 1 to N (cast to double)
 		for (size_t i = 0; i < N; ++i) {
-			view[i].second = (_sum * (i + 1) / sum);
+			view[i].allocation_amount = (_sum * (i + 1) / sum);
 		}
 	}
 
@@ -212,8 +236,8 @@ struct ExchangeView
 		CHECK_SIZE_MATCH(*this, other);
 		ExchangeView result(this->exchange, this->view.size());
 		for (size_t i = 0; i < other.size(); ++i) {
-			double sum = view[i].second + other.view[i].second;
-			result.view.emplace_back(view[i].first, sum);
+			double sum = view[i].allocation_amount + other.view[i].allocation_amount;
+			result.view.emplace_back(view[i].asset_index, sum);
 		}
 		return result;
 	}
@@ -222,8 +246,8 @@ struct ExchangeView
 		CHECK_SIZE_MATCH(*this, other);
 		ExchangeView result(this->exchange, this->view.size());
 		for (size_t i = 0; i < other.size(); ++i) {
-			double sum = view[i].second - other.view[i].second;
-			result.view.emplace_back(view[i].first, sum);
+			double sum = view[i].allocation_amount - other.view[i].allocation_amount;
+			result.view.emplace_back(view[i].asset_index, sum);
 		}
 		return result;
 	}
@@ -232,8 +256,8 @@ struct ExchangeView
 		CHECK_SIZE_MATCH(*this, other);
 		ExchangeView result(this->exchange, this->view.size());
 		for (size_t i = 0; i < other.size(); ++i) {
-			double sum = view[i].second * other.view[i].second;
-			result.view.emplace_back(view[i].first, sum);
+			double sum = view[i].allocation_amount * other.view[i].allocation_amount;
+			result.view.emplace_back(view[i].asset_index, sum);
 		}
 		return result;
 	}
@@ -242,8 +266,8 @@ struct ExchangeView
 		CHECK_SIZE_MATCH(*this, other);
 		ExchangeView result(this->exchange, this->view.size());
 		for (size_t i = 0; i < other.size(); ++i) {
-			double sum = view[i].second / other.view[i].second;
-			result.view.emplace_back(view[i].first, sum);
+			double sum = view[i].allocation_amount / other.view[i].allocation_amount;
+			result.view.emplace_back(view[i].asset_index, sum);
 		}
 		return result;
 	}
@@ -252,7 +276,7 @@ struct ExchangeView
 		CHECK_INDEX_MATCH(*this, other);
 		CHECK_SIZE_MATCH(*this, other);
 		for (size_t i = 0; i < other.size(); ++i) {
-			view[i].second += other.view[i].second;
+			view[i].allocation_amount += other.view[i].allocation_amount;
 		}
 		return *this;
 	}
@@ -260,7 +284,7 @@ struct ExchangeView
 		CHECK_INDEX_MATCH(*this, other);
 		CHECK_SIZE_MATCH(*this, other);
 		for (size_t i = 0; i < other.size(); ++i) {
-			view[i].second -= other.view[i].second;
+			view[i].allocation_amount -= other.view[i].allocation_amount;
 		}
 		return *this;
 	}
@@ -268,7 +292,7 @@ struct ExchangeView
 		CHECK_INDEX_MATCH(*this, other);
 		CHECK_SIZE_MATCH(*this, other);
 		for (size_t i = 0; i < other.size(); ++i) {
-			view[i].second *= other.view[i].second;
+			view[i].allocation_amount *= other.view[i].allocation_amount;
 		}
 		return *this;
 	}
@@ -276,7 +300,7 @@ struct ExchangeView
 		CHECK_INDEX_MATCH(*this, other);
 		CHECK_SIZE_MATCH(*this, other);
 		for (size_t i = 0; i < other.size(); ++i) {
-			view[i].second /= other.view[i].second;
+			view[i].allocation_amount /= other.view[i].allocation_amount;
 		}
 		return *this;
 	}

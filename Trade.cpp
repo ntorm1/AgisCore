@@ -107,11 +107,16 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
             this->units * market_price * __asset->get_beta().unwrap_or(0.0f)
         );
     }
+    // adjust the strategy net leverage ratio to the abs of the position value
+    if (strategy->net_leverage_ratio.has_value()) {
+        strategy->net_leverage_ratio.value() += (
+			abs(this->units) * market_price
+		);
+    }
 
     this->nlv = nlv_new;
     this->unrealized_pl = unrealized_pl_new;
     this->last_price = market_price;
-
     if (on_close && !is_reprice) { this->bars_held++; }
 }
 

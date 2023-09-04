@@ -61,12 +61,8 @@ void AgisStrategy::__evaluate(bool on_close)
 		if (this->net_leverage_ratio.has_value()) {
 			if (this->nlv - this->cash < 1e-7) this->net_leverage_ratio = 1.0f;
 			else this->net_leverage_ratio = (this->nlv - this->cash) / this->nlv;
-			if (this->net_leverage_ratio.value() > 1.25f) {
-				auto y = 2;
-			}
 			this->net_leverage_ratio_history.push_back(this->net_leverage_ratio.value());
 		}
-
 	}
 }
 
@@ -158,7 +154,15 @@ void AgisStrategy::__validate_order(OrderPtr& order)
 	double cash_estimate = 0.0f;
 	if (this->limits.max_leverage.has_value()) {
 		auto x = this->exchange_map->__get_market_price(order->get_asset_index(), true);
-		cash_estimate = order->get_units() * x;
+		cash_estimate = abs(order->get_units()) * x;
+
+		// get cash required for child orders
+		if (order->has_child_order()) {
+			auto& child_order_ref = order->get_child_order_ref();
+			auto market_price = this->exchange_map->__get_market_price(child_order_ref->get_asset_index(), true);
+			cash_estimate += abs(child_order_ref->get_units()) * market_price;
+		}
+
 		x = (this->nlv - (this->cash - this->limits.phantom_cash - cash_estimate)) / this->nlv;
 		if (x > this->limits.max_leverage.value())
 		{
@@ -212,8 +216,8 @@ AGIS_API void AgisStrategy::strategy_allocate(
 	// generate orders based on the allocation passed
 	for (auto& alloc : allocation)
 	{
-		size_t asset_index = alloc.first;
-		double size = alloc.second;
+		size_t asset_index = alloc.asset_index;
+		double size = alloc.allocation_amount;
 		switch (alloc_type)
 		{
 			case AllocType::UNITS:
@@ -258,7 +262,31 @@ AGIS_API void AgisStrategy::strategy_allocate(
 			auto exit_raw_ptr = exit.value()->clone();
 			exit_copy = std::make_optional<TradeExitPtr>(exit_raw_ptr);
 		}
-		this->place_market_order(asset_index,size, exit_copy);
+
+		// add beta hedge order if needed
+		auto order = this->create_market_order(asset_index,size, exit_copy);
+		if (!alloc.beta_hedge_size.has_value())this->place_order(std::move(order));
+		else {
+			// generate the beta hedge child order
+			auto beta_hedge_order = this->create_market_order(
+				exchange_view.market_asset_index.value(),
+				alloc.beta_hedge_size.value() * (this->nlv / exchange_view.market_asset_price.value()),
+				std::nullopt
+			);
+
+			// insert the inverse child order into the trade exit to be filled on trade exit.
+			// this will close the beta hedge once the main trade is closed
+			if (exit_copy.has_value()) {
+				auto inverse_child_order = beta_hedge_order->generate_inverse_order();
+				exit_copy.value()->insert_child_order(std::move(inverse_child_order.release()));
+			}
+
+			// insert the child order into the main order to be filled on main order fill
+			order->insert_child_order(std::move(beta_hedge_order));
+
+			// place the main order
+			this->place_order(std::move(order));
+		}
 	}
 
 	// if clear_missing, clear and trades with asset index not in the allocation
@@ -301,6 +329,23 @@ void AGIS_API AgisStrategy::place_order(OrderPtr order)
 	this->router->place_order(std::move(order));
 }
 
+
+//============================================================================
+OrderPtr AgisStrategy::create_market_order(
+	size_t asset_index_,
+	double units_,
+	std::optional<TradeExitPtr> exit)
+{
+	return std::make_unique<Order>(
+		OrderType::MARKET_ORDER,
+		asset_index_,
+		units_,
+		this->strategy_index,
+		this->get_portfolio_index(),
+		exit,
+		this->strategy_type == AgisStrategyType::BENCHMARK
+	);
+}
 
 //============================================================================
 void AgisStrategy::place_market_order(

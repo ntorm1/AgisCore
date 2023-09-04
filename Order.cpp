@@ -29,6 +29,7 @@ Order::Order(OrderType order_type_,
 }
 
 
+//============================================================================
 AgisResult<json> Order::serialize(json& order, HydraPtr hydra) const
 {
     if (order.size()) { order.clear(); }
@@ -50,6 +51,21 @@ AgisResult<json> Order::serialize(json& order, HydraPtr hydra) const
     return AgisResult<json>(order);
 }
 
+
+//============================================================================
+OrderPtr Order::generate_inverse_order()
+{
+    auto order = std::make_unique<Order>(
+        OrderType::MARKET_ORDER,
+        this->asset_index,
+        -1 * this->units,
+        this->strategy_index,
+        this->portfolio_index
+    );
+    order->__asset = this->__asset;
+    return std::move(order);
+}
+
 //============================================================================
 void Order::fill(double avg_price_, long long fill_time)
 {
@@ -57,6 +73,7 @@ void Order::fill(double avg_price_, long long fill_time)
     this->order_fill_time = fill_time;
     this->order_state = OrderState::FILLED;
 }
+
 
 //============================================================================
 void Order::cancel(long long order_cancel_time_)

@@ -150,7 +150,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 			continue;
 		}
 		auto v = val.unwrap();
-		view.push_back(std::make_pair(asset->get_asset_index(), v));
+		view.emplace_back( asset->get_asset_index(), v );
 	}
 	if (view.size() == 1) { return exchange_view; }
 	exchange_view.sort(number_assets, query_type);
@@ -182,7 +182,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 		auto x = val.unwrap();			
 		// check if x is nan (asset filter operations will cause this)
 		if(std::isnan(x)) continue;
-		view.push_back(std::make_pair(asset->get_asset_index(), x));
+		view.emplace_back(asset->get_asset_index(), x);
 	}
 
 	exchange_view.sort(number_assets, query_type);
@@ -663,7 +663,6 @@ void Exchange::__process_orders(AgisRouter& router, bool on_close)
 		if (order->is_filled())
 		{
 			// fill the order's asset pointer then return to router
-			order->__asset = this->assets[order->get_asset_index()];
 			router.place_order(std::move(*orderIter));
 			orderIter = this->orders.erase(orderIter);
 		}
@@ -692,6 +691,10 @@ void Exchange::__process_order(bool on_close, OrderPtr& order) {
 		break;
 	default:
 		break;
+	}
+	// if the order is filled set the asset pointer
+	if (order->get_order_state() == OrderState::FILLED) {
+		order->__asset = this->assets[order->get_asset_index() - this->exchange_offset];
 	}
 }
 
@@ -1242,12 +1245,12 @@ void ExchangeMap::__clear()
 }
 
 
-bool compareBySecondValueAsc(const std::pair<size_t, double>& a, const std::pair<size_t, double>& b) {
-	return a.second < b.second;  // Compare in ascending order
+bool compareBySecondValueAsc(const ExchangeViewAllocation& a, const ExchangeViewAllocation& b) {
+	return a.allocation_amount < b.allocation_amount;  // Compare in ascending order
 }
 
-bool compareBySecondValueDesc(const std::pair<size_t, double>& a, const std::pair<size_t, double>& b) {
-	return a.second > b.second;  // Compare in descending order
+bool compareBySecondValueDesc(const ExchangeViewAllocation& a, const ExchangeViewAllocation& b) {
+	return a.allocation_amount > b.allocation_amount;  // Compare in descending order
 }
 
 void ExchangeView::sort(size_t N, ExchangeQueryType sort_type)

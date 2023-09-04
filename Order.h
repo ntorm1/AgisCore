@@ -131,6 +131,12 @@ private:
     /// <returns></returns>
     std::optional<TradeExitPtr> exit = std::nullopt;
 
+    /**
+     * @brief On optional child order that is linked to this order is to be place on fill 
+     * of the parent order
+    */
+    std::optional<OrderPtr> child_order;
+
 public:
     bool phantom_order = false;     /// is the order a phantom order (placed by benchmark strategy)
     bool force_close = false;       /// force an order to close out a position
@@ -148,6 +154,9 @@ public:
     );
 
     [[nodiscard]] std::optional<double> get_limit() const { return this->limit; }
+    [[nodiscard]] bool has_child_order() const { return this->child_order.has_value(); }
+    [[nodiscard]] OrderPtr const& get_child_order_ref() { return this->child_order.value(); }
+    [[nodiscard]] OrderPtr get_child_order() { return std::move(this->child_order.value()); }
     [[nodiscard]] size_t get_order_id() const { return this->order_id; }
     [[nodiscard]] size_t get_asset_index() const { return this->asset_index; }
     [[nodiscard]] size_t get_strategy_index() const { return this->strategy_index; }
@@ -157,6 +166,7 @@ public:
     [[nodiscard]] std::optional<TradeExitPtr> move_exit() { return std::move(this->exit); }
     [[nodiscard]] bool has_exit() const { return this->exit.has_value(); }
 
+    void insert_child_order(OrderPtr child_order_) { this->child_order = std::move(child_order_); }
     void set_limit(double limit_) { this->limit = limit_; }
     void set_create_time(long long t) { this->order_create_time = t; }
     void set_units(double units) { this->units = units; }
@@ -172,6 +182,7 @@ public:
     void __set_state(OrderState state) { this->order_state = state; }
     void __set_force_close(bool force_close_) { this->force_close = force_close_; }
 
+    OrderPtr generate_inverse_order();
     void fill(double market_price, long long fill_time);
     void cancel(long long cancel_time);
     void reject(long long reject_time);

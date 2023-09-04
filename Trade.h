@@ -99,10 +99,22 @@ public:
 
     AGIS_API virtual bool exit() = 0;
 
-    virtual TradeExit* clone() const = 0;
+    virtual TradeExit* clone() const { 
+        // not good idea, but have to get the py trampoline class to work
+        return nullptr; 
+    };
+
+    Order* take_child_order() { return std::move(this->child_order.value()); }
+    bool has_child_order() const { return this->child_order.has_value(); }
+    void insert_child_order(Order* child_order_) { this->child_order = std::move(child_order_); }
 
 protected:
     Trade const* trade;
+
+    /**
+     * @brief an optional child order to be placed on trade exit
+    */
+    std::optional<Order*> child_order = std::nullopt;
 };
 
 
@@ -116,7 +128,7 @@ public:
     }
 
     AGIS_API inline bool exit() override {
-        auto res = this->bars == this->trade->bars_held; 
+        auto res = (this->trade->bars_held >= this->bars);
         return res;
     }
 

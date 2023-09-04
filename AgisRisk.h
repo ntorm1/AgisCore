@@ -2,6 +2,7 @@
 #include <cmath> // For std::sqrt
 #include <vector>
 #include <span>
+#include <optional>
 
 class Asset;
 
@@ -126,7 +127,6 @@ struct AgisRiskStruct
 	* @brief The max portfolio leverage allowed for the strategy
 	*/
 	std::optional<double> max_leverage = std::nullopt;
-
 
 	/**
 	 * @brief phantom cash traces the amount of cash required to execure the orders during the current

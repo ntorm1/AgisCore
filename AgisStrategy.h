@@ -351,10 +351,13 @@ public:
 		std::pair<TimePoint, TimePoint> const> w) {this->trading_window = w;}
 
 	/**
-	 * @brief set the max leverage of the strategy
+	 * @brief set the max leverage of the strategy, requires net leverage tracing
 	 * @param max_leverage max leverage of the strategy
 	*/
-	AGIS_API inline void set_max_leverage(std::optional<double> max_leverage) { this->limits.max_leverage = max_leverage; }
+	AGIS_API inline void set_max_leverage(std::optional<double> max_leverage) { 
+		this->limits.max_leverage = max_leverage; 
+		this->set_net_leverage_trace(true);
+	}
 
 	/**
 	 * @brief set the frequency in which the strategy calls virtual next method
@@ -420,11 +423,18 @@ protected:
 	*/
 	void AGIS_API place_order(OrderPtr order);
 
+	OrderPtr AGIS_API create_market_order(
+		size_t asset_index,
+		double units,
+		std::optional<TradeExitPtr> exit = std::nullopt
+	);
+
 	void AGIS_API place_market_order(
 		size_t asset_index,
 		double units,
 		std::optional<TradeExitPtr> exit = std::nullopt
 	);
+
 	void AGIS_API place_market_order(
 		std::string const& asset_id,
 		double units,

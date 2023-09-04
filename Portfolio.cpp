@@ -76,6 +76,15 @@ void Position::__evaluate(ThreadSafeVector<OrderPtr>& orders, bool on_close, boo
             // the portfolio in a single call to order router
             order->__set_state(OrderState::CHEAT);
             orders.push_back(std::move(order));
+
+            // if trade exit has additional child order send that as well. It is a raw poitner so
+            // take ownership of it.
+            if (trade->exit.value()->has_child_order()) {
+                auto child_order = trade->exit.value()->take_child_order();
+                auto child_order_ptr = std::unique_ptr<Order>(std::move(child_order));
+                child_order_ptr->__set_state(OrderState::CHEAT);
+				orders.push_back(std::move(child_order_ptr));
+            }
         }
     }
 }
@@ -573,19 +582,20 @@ void Portfolio::__evaluate(AgisRouter& router, bool on_close, bool is_reprice)
         }
     }
 
+    // and orders placed by the portfolio to clean up or force close
+    if (orders.size())
+    {
+        size_t count = orders.size();
+        for (int i = 0; i < count; i++) {
+            std::optional<OrderPtr> order = orders.pop_back();
+            router.place_order(std::move(order.value()));
+        }
+    }
+
     if (is_reprice)
     {
         UNLOCK_GUARD
         return;
-    }
-
-    // and orders placed by the portfolio to clean up or force close
-    if (orders.size())
-    {
-        for (int i = 0; i < orders.size(); i++) {
-            std::optional<OrderPtr> order = orders.pop_back();
-            router.place_order(std::move(order.value()));
-        }
     }
 
     // store portfolio stats at the current level

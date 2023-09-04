@@ -42,6 +42,10 @@ private:
     /// <param name="order"></param>
     void processOrder(OrderPtr order);
 
+    void cheat_order(OrderPtr& order);
+
+    void remeber_order(OrderPtr order);
+
 public:
     AgisRouter(
         ExchangeMap& exchanges_,
