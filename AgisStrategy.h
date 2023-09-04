@@ -298,6 +298,7 @@ public:
 	double get_nlv() const { return this->nlv; }
 	double get_cash() const { return this->cash; }
 	double get_allocation() const { return this->portfolio_allocation; }
+	std::optional<double> get_max_leverage() const { return this->limits.max_leverage; }
 
 	/// <summary>
 	/// Get the unique strategy index of a strategy instance
@@ -349,6 +350,18 @@ public:
 	void set_trading_window(std::optional<
 		std::pair<TimePoint, TimePoint> const> w) {this->trading_window = w;}
 
+	/**
+	 * @brief set the max leverage of the strategy
+	 * @param max_leverage max leverage of the strategy
+	*/
+	AGIS_API inline void set_max_leverage(std::optional<double> max_leverage) { this->limits.max_leverage = max_leverage; }
+
+	/**
+	 * @brief set the frequency in which the strategy calls virtual next method
+	 * @param step_frequency_ frequency in which the strategy calls virtual next method
+	*/
+	void set_step_frequency(std::optional<size_t> step_frequency_) { this->step_frequency = step_frequency_; }
+
 	/// <summary>
 	/// Set the trading window from prefined string 
 	/// </summary>
@@ -392,7 +405,7 @@ public:
 	bool __is_beta_hedged() const { return this->apply_beta_hedge; }
 	bool __is_beta_trace() const { return this->net_beta.has_value(); }
 	bool __is_net_lev_trace() const {return this->net_leverage_ratio.has_value(); } 
-	void __set_allocation(double allocation) { this->portfolio_allocation = allocation; }
+	AGIS_API inline void __set_allocation(double allocation_) { this->portfolio_allocation = allocation_; }
 
 	AGIS_API inline std::vector<double> get_beta_history() const { return beta_history; }
 	AGIS_API inline std::vector<double> get_nlv_history() const { return nlv_history; }
@@ -400,16 +413,6 @@ public:
 	AGIS_API inline std::vector<double> get_net_leverage_ratio_history() const { return net_leverage_ratio_history; }
 
 protected:
-	/// <summary>
-	/// Type of AgisStrategy
-	/// </summary>
-	AgisStrategyType strategy_type = AgisStrategyType::CPP;
-
-	/// <summary>
-	/// Frequency of strategy updates
-	/// </summary>
-	Frequency frequency = Frequency::Day1;
-
 	/**
 	 * @brief Attempts to send order to the router after validating it
 	 * @param order unique pointer to the new order being placed
@@ -451,6 +454,16 @@ protected:
 	/// <param name="asset_id">unique id of the asset to search for</param>
 	/// <returns></returns>
 	AGIS_API std::optional<SharedTradePtr> get_trade(std::string const& asset_id);
+
+	/// <summary>
+	/// Type of AgisStrategy
+	/// </summary>
+	AgisStrategyType strategy_type = AgisStrategyType::CPP;
+
+	/// <summary>
+	/// Frequency of strategy updates
+	/// </summary>
+	Frequency frequency = Frequency::Day1;
 
 	/// <summary>
 	/// Valid window in which the strategy next function is called

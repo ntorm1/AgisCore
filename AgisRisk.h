@@ -125,7 +125,15 @@ struct AgisRiskStruct
 	/**
 	* @brief The max portfolio leverage allowed for the strategy
 	*/
-	std::optional<double> max_portfolio_leverage = std::nullopt;
+	std::optional<double> max_leverage = std::nullopt;
+
+
+	/**
+	 * @brief phantom cash traces the amount of cash required to execure the orders during the current
+	 * call to the strategies update function. This is used to calculate the max leverage in the 
+	 * middle of the update function to prevent the strategy from going over the max leverage.
+	*/
+	double phantom_cash = 0.0f;
 
 	/**
 	 * @brief wether or not to allow shorting

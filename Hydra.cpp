@@ -301,6 +301,15 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
     bool is_live = strategy_json.at("is_live");
     double allocation = strategy_json.at("allocation");
 
+    std::optional<double> max_leverage = std::nullopt;
+    std::optional<size_t> step_frequency = std::nullopt;
+    if (strategy_json.contains("max_leverage")) {
+        max_leverage = strategy_json.at("max_leverage");
+    }
+    if (strategy_json.contains("step_frequency")) {
+        step_frequency = strategy_json.at("step_frequency");
+    }
+
     AgisStrategyPtr strategy = nullptr;
     // create new strategy pointer based on the strategy type
     if (strategy_type == AgisStrategyType::FLOW)
@@ -327,6 +336,8 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
         strategy->set_beta_hedge_positions(beta_hedge, false).unwrap();
         strategy->set_beta_trace(beta_trace, false).unwrap();
         strategy->set_net_leverage_trace(net_leverage_trace).unwrap();
+        strategy->set_max_leverage(max_leverage);
+        strategy->set_step_frequency(step_frequency);
     }
     catch (std::exception& e) {
         return AgisResult<AgisStrategyPtr>(AGIS_EXCEP(e.what()));

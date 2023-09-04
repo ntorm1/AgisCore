@@ -99,6 +99,8 @@ public:
 
     AGIS_API virtual bool exit() = 0;
 
+    virtual TradeExit* clone() const = 0;
+
 protected:
     Trade const* trade;
 };
@@ -116,6 +118,11 @@ public:
     AGIS_API inline bool exit() override {
         auto res = this->bars == this->trade->bars_held; 
         return res;
+    }
+
+    // Implement the clone function to create a deep copy
+    ExitBars* clone() const override {
+        return new ExitBars(*this);
     }
 
 private:
@@ -156,6 +163,12 @@ public:
         return false;
     }
 
+    // Implement the clone function to create a deep copy
+    ExitThreshold* clone() const override {
+        return new ExitThreshold(*this);
+    }
+
+
 private:
     /**
      * @brief Stop loss pct is initial defined as a the % decline from the open price 
@@ -184,6 +197,11 @@ public:
         if (this->trade->last_price <= lb) { return true; }
         if (this->trade->last_price >= ub) { return true; }
         return false;
+    }
+
+    // Implement the clone function to create a deep copy
+    ExitBand* clone() const override {
+        return new ExitBand(*this);
     }
 
 private:

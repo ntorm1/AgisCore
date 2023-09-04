@@ -1,3 +1,4 @@
+#include "AgisStrategy.h"
 #include "pch.h"
 #include <fstream>
 
@@ -49,7 +50,6 @@ void AgisStrategy::__build(
 	if (this->net_leverage_ratio.has_value()) this->net_leverage_ratio_history.reserve(n);
 }
 
-
 //============================================================================
 void AgisStrategy::__evaluate(bool on_close)
 {
@@ -61,6 +61,9 @@ void AgisStrategy::__evaluate(bool on_close)
 		if (this->net_leverage_ratio.has_value()) {
 			if (this->nlv - this->cash < 1e-7) this->net_leverage_ratio = 1.0f;
 			else this->net_leverage_ratio = (this->nlv - this->cash) / this->nlv;
+			if (this->net_leverage_ratio.value() > 1.25f) {
+				auto y = 2;
+			}
 			this->net_leverage_ratio_history.push_back(this->net_leverage_ratio.value());
 		}
 
@@ -74,6 +77,7 @@ void AgisStrategy::__zero_out_tracers()
 	this->nlv = this->cash;
 	if (this->net_beta.has_value()) this->net_beta = 0.0f;
 	if (this->net_leverage_ratio.has_value()) this->net_leverage_ratio = 0.0f;
+	if (this->limits.max_leverage.has_value()) this->limits.phantom_cash = 0.0f;
 }
 
 
@@ -89,6 +93,13 @@ void AgisStrategy::to_json(json& j) const
 	j["beta_hedge"] = this->apply_beta_hedge;
 	j["beta_trace"] = this->net_beta.has_value();
 	j["net_leverage_trace"] = this->net_leverage_ratio.has_value();
+
+	if (this->limits.max_leverage.has_value()) {
+		j["max_leverage"] = this->limits.max_leverage.value();
+	}
+	if (this->step_frequency.has_value()) {
+		j["step_frequency"] = this->step_frequency.value();
+	}
 }
 
 
@@ -102,7 +113,6 @@ AgisResult<bool> AgisStrategy::exchange_subscribe(std::string const& exchange_id
 	auto exchange = this->exchange_map->get_exchange(exchange_id);
 
 	this->exchange_subsrciption = exchange_id;
-	this->is_subsribed = true;
 	this->__exchange_step = &exchange->__took_step;
 	return AgisResult<bool>(true);
 }
@@ -145,19 +155,27 @@ std::optional<SharedTradePtr> AgisStrategy::get_trade(size_t asset_index)
 void AgisStrategy::__validate_order(OrderPtr& order)
 {
 	// test if the order will cause the portfolio leverage to exceede it's limit
-	if (this->limits.max_portfolio_leverage.has_value()) {
+	double cash_estimate = 0.0f;
+	if (this->limits.max_leverage.has_value()) {
 		auto x = this->exchange_map->__get_market_price(order->get_asset_index(), true);
-		x = order->get_units() * x;
-		x = ((this->nlv - this->cash) - x) / this->nlv;
-		if (x > this->limits.max_portfolio_leverage.value())
+		cash_estimate = order->get_units() * x;
+		x = (this->nlv - (this->cash - this->limits.phantom_cash - cash_estimate)) / this->nlv;
+		if (x > this->limits.max_leverage.value())
 		{
 			order->__set_state(OrderState::REJECTED);
+			return;
 		}
 	}
 	// test to see if shorting is allowed for the strategy
 	if (!this->limits.allow_shorting && order->get_units() < 0)
 	{
 		order->__set_state(OrderState::REJECTED);
+		return;
+	}
+
+	// order is valid, reflect the estimated cost in the phantom cash balance
+	if (this->limits.max_leverage.has_value()) {
+		this->limits.phantom_cash += cash_estimate;
 	}
 }
 
@@ -233,7 +251,14 @@ AGIS_API void AgisStrategy::strategy_allocate(
 
 		// minimum required units in order to place an order
 		if (abs(size) < 1e-10) { continue; }
-		this->place_market_order(asset_index,size, exit);
+
+		// make deep copy of the exit if needed
+		std::optional<TradeExitPtr> exit_copy = std::nullopt;
+		if (exit.has_value()) {
+			auto exit_raw_ptr = exit.value()->clone();
+			exit_copy = std::make_optional<TradeExitPtr>(exit_raw_ptr);
+		}
+		this->place_market_order(asset_index,size, exit_copy);
 	}
 
 	// if clear_missing, clear and trades with asset index not in the allocation
@@ -597,6 +622,7 @@ void AbstractAgisStrategy::next()
 		case ExchangeViewOpp::CONSTANT: {
 			auto c = this->ev_opp_param.value() * strat_alloc_ref.target_leverage;
 			ev.constant_weights(c);
+			break;
 		}
 		default: {
 			throw std::runtime_error("invalid exchange view operation");

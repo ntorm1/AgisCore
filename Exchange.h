@@ -410,7 +410,7 @@ public:
 
 	/**
 	 * @brief get the current index location of the simulation
-	 * @return 
+	 * @return current index location of the simulation
 	*/
 	AGIS_API inline size_t __get_current_index() const { return this->current_index - 1; }
 
