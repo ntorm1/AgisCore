@@ -45,13 +45,19 @@ void AgisRouter::processOrder(OrderPtr order) {
     if (!order) { return; }
     switch (order->get_order_state())
     {
+    case OrderState::REJECTED:
+        break;
     case OrderState::PENDING:
+        // order has been placed by a strategy and is routed to the correct exchange
         this->exchanges.__place_order(std::move(order));
         return;
     case OrderState::FILLED:
+        // order has been filled by the exchange and is routed to the portfolio
         this->portfolios->__on_order_fill(order);
         break;
     case OrderState::CHEAT:
+        // order was placed using the cheat method that allows the router to process
+        // the order on the exchange and route the order to the portfolio in the same step
         this->exchanges.__process_order(true, order);
         if (order->get_order_state() != OrderState::FILLED) { break; }
         this->portfolios->__on_order_fill(order);

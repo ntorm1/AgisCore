@@ -380,3 +380,4 @@ template struct AGIS_API AgisResult<bool>;
 template struct AGIS_API AgisResult<json>;
 template struct AGIS_API AgisResult<std::string>;
 template struct AGIS_API AgisResult<size_t>;
+template struct AGIS_API AgisResult<TradeExitPtr>;

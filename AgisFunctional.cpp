@@ -181,3 +181,26 @@ std::unordered_map<std::string, AllocType> agis_strat_alloc_map = {
    {"DOLLARS", AllocType::DOLLARS},
    {"PCT", AllocType::PCT},
 };
+
+
+//============================================================================
+std::unordered_map<std::string, TradeExitType> trade_exit_type_map = {
+	{ "BARS", TradeExitType::BARS},
+	{ "THRESHOLD", TradeExitType::THRESHOLD}
+};
+
+
+
+//============================================================================
+std::string alloc_to_str(AllocType alloc_type)
+{
+	static const std::map<AllocType, std::string> typeStrings = {
+		{AllocType::UNITS, "UNITS"},
+		{AllocType::DOLLARS, "DOLLARS"},
+		{AllocType::PCT, "PCT"}
+	};
+
+	auto it = typeStrings.find(alloc_type);
+	if (it != typeStrings.end()) return it->second;
+	return "UNKNOWN";
+}

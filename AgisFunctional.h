@@ -57,6 +57,25 @@ AGIS_API extern const AgisOperation agis_divide;
 */
 AGIS_API std::string opp_to_str(const AgisOperation& func);
 
+enum class AGIS_API AllocType
+{
+    UNITS,		// set strategy portfolio to have N units
+    DOLLARS,	// set strategy portfolio to have $N worth of units
+    PCT			// set strategy portfolio to have %N worth of units (% of nlv)
+};
+
+/**
+ * @brief Takes in a alloc type and returns string rep of it
+ * @param alloc_type portfolio allocation type
+ * @return string rep of it
+*/
+AGIS_API std::string alloc_to_str(AllocType alloc_type);
+
+/**
+ * @brief mapping between string and a trade exit type
+*/
+extern AGIS_API std::unordered_map<std::string, TradeExitType> trade_exit_type_map;
+
 /**
  * @brief Function that takes in str information about a trade exit and returns a TradeExitPtr
  * @param trade_exit_type type of trade exit "BARS", "THRESHOLD"
@@ -67,6 +86,7 @@ AGIS_API AgisResult<TradeExitPtr> parse_trade_exit(
     TradeExitType trade_exit_type,
     const std::string& trade_exit_params
 );
+
 
 /**
  * @brief A an agis range is parses a string representation of range like [0.2,.3) and

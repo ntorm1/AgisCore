@@ -9,6 +9,7 @@
 #include <filesystem>
 #include "AgisFunctional.h"
 #include "AgisRouter.h"
+#include "AgisRisk.h"
 #include "AgisAnalysis.h"
 #include "Order.h"
 #include "Portfolio.h"
@@ -38,15 +39,6 @@ NLOHMANN_JSON_SERIALIZE_ENUM(AgisStrategyType, {
 	})
 
 
-enum class AGIS_API AllocType
-{
-	UNITS,		// set strategy portfolio to have N units
-	DOLLARS,	// set strategy portfolio to have $N worth of units
-	PCT			// set strategy portfolio to have %N worth of units (% of nlv)
-};
-AGIS_API std::string alloc_to_str(AllocType alloc_type);
-
-
 struct AGIS_API StrategyAllocLambdaStruct {
 	/// <summary>
 	/// The minimum % difference between target position size and current position size
@@ -63,6 +55,11 @@ struct AGIS_API StrategyAllocLambdaStruct {
 	/// Optional extra param to pass to ev weight application function
 	/// </summary>
 	std::optional<double> ev_extra_opp = std::nullopt;
+
+	/**
+	 * @brief Option trade exit point to apply to new trades
+	*/
+	std::optional<TradeExitPtr> trade_exit = std::nullopt;
 
 	/// <summary>
 	/// Clear any positions that are currently open but not in the allocation
@@ -81,12 +78,40 @@ struct AGIS_API StrategyAllocLambdaStruct {
 };
 
 struct AGIS_API ExchangeViewLambdaStruct {
+	/**
+	 * @brief The number of assets to query for
+	*/
 	int N;
+
+	/**
+	 * @brief The warmup period needed for the lambda chain to be valid
+	*/
 	size_t warmup;
+
+	/**
+	 * @brief the lambda chain representing the operation to apply to each asset
+	*/
 	AgisAssetLambdaChain asset_lambda;
+
+	/**
+	 * @brief the lambda function that executes the get_exchange_view function
+	*/
 	ExchangeViewLambda exchange_view_labmda;
+
+	/**
+	 * @brief shred pointer to the underlying exchange 
+	*/
 	ExchangePtr exchange;
+
+	/**
+	 * @brief type of query to do, used for sorting asset values
+	*/
 	ExchangeQueryType query_type;
+
+	/**
+	* @brief optional strategy alloc struct containing info about how to process the 
+	* exchange view into portfolio weights
+	*/
 	std::optional<StrategyAllocLambdaStruct> strat_alloc_struct = std::nullopt;
 };
 
@@ -370,6 +395,13 @@ protected:
 	/// </summary>
 	Frequency frequency = Frequency::Day1;
 
+	/**
+	 * @brief Attempts to send order to the router after validating it
+	 * @param order unique pointer to the new order being placed
+	 * @return 
+	*/
+	void AGIS_API place_order(OrderPtr order);
+
 	void AGIS_API place_market_order(
 		size_t asset_index,
 		double units,
@@ -418,14 +450,14 @@ protected:
 	std::vector<double> cash_history;
 	std::vector<double> net_leverage_ratio_history;
 
-	/// <summary>
-	/// Defined as the net beta dollars of the portfolio. I.e. units*share_price*beta
-	/// </summary>
+	/**
+	 * @brief Defined as the net beta dollars of the portfolio. I.e. units*share_price*beta
+	*/
 	std::optional<double> net_beta = std::nullopt;
 
-	/// <summary>
-	/// Defined as the net leverage ratio of the portfolio. I.e. (nlv - cash)/nlv
-	/// </summary>
+	/**
+	 * @brief Defined as the net leverage ratio of the portfolio. I.e. (nlv - cash)/nlv
+	*/
 	std::optional<double> net_leverage_ratio = std::nullopt;
 
 	double nlv = 0;
@@ -472,6 +504,7 @@ private:
 	double realized_pl = 0;
 	double portfolio_allocation = 0;
 
+	bool is_order_validating = true;
 	bool is_live = true;
 	bool is_subsribed = false; 
 
@@ -493,12 +526,24 @@ private:
 	/// </summary>
 	std::string strategy_id;
 
+	/**
+	 * @brief struct containing all risk parameters and limitations of the strategy 
+	*/
+	AgisRiskStruct limits;
+
 	/// <summary>
 	/// Get current open position in a given asset by asset index
 	/// </summary>
 	/// <param name="asset_index">unique index of the asset to search for</param>
 	/// <returns></returns>
 	AGIS_API std::optional<SharedTradePtr> get_trade(size_t asset_index);
+
+	/**
+	 * @brief Validates a new pending order attempting to be placed by the strategy
+	 * @param order that is being attempt to be placed
+	 * @return wether or not the order is valid
+	*/
+	void __validate_order(OrderPtr& order);
 
 	std::vector<SharedTradePtr> trade_history;
 };

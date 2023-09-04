@@ -10,7 +10,8 @@
 
 std::atomic<size_t> Exchange::exchange_counter(0);
 std::vector<std::string> exchange_view_opps = {
-	"UNIFORM", "LINEAR_DECREASE", "LINEAR_INCREASE","CONDITIONAL_SPLIT","UNIFORM_SPLIT" 
+	"UNIFORM", "LINEAR_DECREASE", "LINEAR_INCREASE","CONDITIONAL_SPLIT","UNIFORM_SPLIT",
+	"CONSTANT"
 };
 
 

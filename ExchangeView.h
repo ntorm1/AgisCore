@@ -39,11 +39,12 @@ enum ExchangeQueryType
 
 enum class ExchangeViewOpp
 {
-	UNIFORM,
-	LINEAR_DECREASE,
-	LINEAR_INCREASE,
-	CONDITIONAL_SPLIT,
-	UNIFORM_SPLIT
+	UNIFORM,			/// applies 1/N weight to each pair
+	LINEAR_DECREASE,	/// applies a linear decrease in weight from 1 to 0
+	LINEAR_INCREASE,	/// applies a linear increase in weight from 0 to 1
+	CONDITIONAL_SPLIT,	/// -1/N for values below c, 1/N for values above c
+	UNIFORM_SPLIT,		/// -1/N for first N/2 , 1/N for last N/2
+	CONSTANT			/// applies a constant weight to each pair
 };
 
 
@@ -140,6 +141,16 @@ struct ExchangeView
 		auto weight = c / static_cast<double>(view.size());
 		for (auto& pair : view) {
 			pair.second = weight;
+		}
+	}
+
+	/**
+	 * @brief Applies a constant weight to every value in the exchange view
+	 * @param c constant weight to be applied
+	*/
+	void constant_weights(double c){
+		for (auto& pair : view) {
+			pair.second = c;
 		}
 	}
 

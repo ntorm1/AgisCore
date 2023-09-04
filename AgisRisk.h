@@ -118,3 +118,17 @@ std::vector<double> rolling_beta(
 	const std::vector<double>& marketReturns,
 	size_t windowSize
 );
+
+
+struct AgisRiskStruct
+{
+	/**
+	* @brief The max portfolio leverage allowed for the strategy
+	*/
+	std::optional<double> max_portfolio_leverage = std::nullopt;
+
+	/**
+	 * @brief wether or not to allow shorting
+	*/
+	bool allow_shorting = true;
+};

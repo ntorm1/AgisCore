@@ -59,7 +59,7 @@ void AgisStrategy::__evaluate(bool on_close)
 		this->cash_history.push_back(this->cash);
 		if (this->net_beta.has_value()) this->beta_history.push_back(this->net_beta.value());
 		if (this->net_leverage_ratio.has_value()) {
-			if(this->nlv - this->cash < 1e-7) this->net_leverage_ratio =1.0f;
+			if (this->nlv - this->cash < 1e-7) this->net_leverage_ratio = 1.0f;
 			else this->net_leverage_ratio = (this->nlv - this->cash) / this->nlv;
 			this->net_leverage_ratio_history.push_back(this->net_leverage_ratio.value());
 		}
@@ -95,7 +95,7 @@ void AgisStrategy::to_json(json& j) const
 //============================================================================
 AgisResult<bool> AgisStrategy::exchange_subscribe(std::string const& exchange_id)
 {
-	if(!this->exchange_map->exchange_exists(exchange_id))
+	if (!this->exchange_map->exchange_exists(exchange_id))
 	{
 		return AgisResult<bool>(AGIS_EXCEP("Invalid exchange id: " + exchange_id));
 	}
@@ -127,11 +127,33 @@ bool AgisStrategy::__is_step()
 	return true;
 }
 
+
 //============================================================================
 std::optional<SharedTradePtr> AgisStrategy::get_trade(size_t asset_index)
 {
 	if (!this->trades.contains(asset_index)) { return std::nullopt; }
 	return this->trades.at(asset_index);
+}
+
+
+//============================================================================
+void AgisStrategy::__validate_order(OrderPtr& order)
+{
+	// test if the order will cause the portfolio leverage to exceede it's limit
+	if (this->limits.max_portfolio_leverage.has_value()) {
+		auto x = this->exchange_map->__get_market_price(order->get_asset_index(), true);
+		x = order->get_units() * x;
+		x = ((this->nlv - this->cash) - x) / this->nlv;
+		if (x > this->limits.max_portfolio_leverage.value())
+		{
+			order->__set_state(OrderState::REJECTED);
+		}
+	}
+	// test to see if shorting is allowed for the strategy
+	if (!this->limits.allow_shorting && order->get_units() < 0)
+	{
+		order->__set_state(OrderState::REJECTED);
+	}
 }
 
 
@@ -243,12 +265,20 @@ AgisResult<bool> AgisStrategy::set_trading_window(std::string const& window_name
 
 
 //============================================================================
+void AGIS_API AgisStrategy::place_order(OrderPtr order)
+{
+	if(is_order_validating) this->__validate_order(order);
+	this->router->place_order(std::move(order));
+}
+
+
+//============================================================================
 void AgisStrategy::place_market_order(
 	size_t asset_index_,
 	double units_,
 	std::optional<TradeExitPtr> exit)
 {
-	this->router->place_order(std::make_unique<Order>(
+	this->place_order(std::make_unique<Order>(
 		OrderType::MARKET_ORDER,
 		asset_index_,
 		units_,
@@ -273,7 +303,7 @@ void AGIS_API AgisStrategy::place_limit_order(size_t asset_index_, double units_
 	);
 	order->phantom_order = this->strategy_type == AgisStrategyType::BENCHMARK;
 	order->set_limit(limit);
-	this->router->place_order(std::move(order));
+	this->place_order(std::move(order));
 }
 
 
@@ -469,6 +499,15 @@ std::string opp_to_str(const AgisOperation& func)
 	}
 }
 
+bool is_numeric(const std::string& str) {
+	for (char c : str) {
+		if (!std::isdigit(c)) {
+			return false;
+		}
+	}
+	return true;
+}
+
 
 //============================================================================
 AgisResult<TradeExitPtr> parse_trade_exit(
@@ -479,9 +518,12 @@ AgisResult<TradeExitPtr> parse_trade_exit(
 		switch (trade_exit_type)
 		{
 		case TradeExitType::BARS: {
+			if (!is_numeric(trade_exit_params))
+			{
+				return AgisResult<TradeExitPtr>(AGIS_EXCEP("invalid exit bars"));
+			}
 			size_t result = std::stoull(trade_exit_params);
 			return AgisResult<TradeExitPtr>(std::make_shared<ExitBars>(result));
-
 		}
 		case TradeExitType::THRESHOLD: {
 			// expects string line [-.05,.1] (5% stop loss, 10% take profit)
@@ -495,7 +537,6 @@ AgisResult<TradeExitPtr> parse_trade_exit(
 			auto stop_loss = std::stod(lowerStr);
 			auto take_profit = std::stod(upperStr);
 			return AgisResult<TradeExitPtr>(std::make_shared<ExitThreshold>(stop_loss, take_profit));
-
 		}
 		default:
 			return AgisResult<TradeExitPtr>(AGIS_EXCEP("invalid trade exit type"));
@@ -504,21 +545,6 @@ AgisResult<TradeExitPtr> parse_trade_exit(
 	catch (const std::exception& ex) {
 		return AgisResult<TradeExitPtr>(AgisException(AGIS_EXCEP(ex.what())));
 	}
-}
-
-
-//============================================================================
-std::string alloc_to_str(AllocType alloc_type)
-{
-	static const std::map<AllocType, std::string> typeStrings = {
-		{AllocType::UNITS, "UNITS"},
-		{AllocType::DOLLARS, "DOLLARS"},
-		{AllocType::PCT, "PCT"}
-	};
-
-	auto it = typeStrings.find(alloc_type);
-	if (it != typeStrings.end()) return it->second;
-	return "UNKNOWN";
 }
 
 
@@ -563,6 +589,10 @@ void AbstractAgisStrategy::next()
 			ev.uniform_split(strat_alloc_ref.target_leverage);
 			break;
 		}
+		case ExchangeViewOpp::CONSTANT: {
+			auto c = this->ev_opp_param.value() * strat_alloc_ref.target_leverage;
+			ev.constant_weights(c);
+		}
 		default: {
 			throw std::runtime_error("invalid exchange view operation");
 		}
@@ -572,7 +602,7 @@ void AbstractAgisStrategy::next()
 		ev,
 		strat_alloc_ref.epsilon,
 		strat_alloc_ref.clear_missing,
-		std::nullopt,
+		strat_alloc_ref.trade_exit,
 		strat_alloc_ref.alloc_type
 	);
 }
@@ -635,12 +665,13 @@ AgisResult<bool> AbstractAgisStrategy::extract_ev_lambda()
 		this->ev_opp_type = ExchangeViewOpp::UNIFORM_SPLIT;
 	else AGIS_THROW("invalid exchange view opp type");
 
-	if (this->ev_opp_type == ExchangeViewOpp::CONDITIONAL_SPLIT)
+	if (this->ev_opp_type == ExchangeViewOpp::CONDITIONAL_SPLIT || 
+		this->ev_opp_type == ExchangeViewOpp::CONSTANT)
 	{
 		std::optional<double> val = strat_alloc_ref.ev_extra_opp.value();
 		if (!val.has_value())
 		{
-			return AgisResult<bool>(AGIS_EXCEP("conditional split expected extrat ev parameters"));
+			return AgisResult<bool>(AGIS_EXCEP("exchange view opperation expected extra ev parameters"));
 		}
 		else
 		{
