@@ -1055,7 +1055,7 @@ void ExchangeMap::__goto(long long datetime)
 	// move the exchanges dt index to the correct position
 	for (size_t i = this->current_index; i < this->dt_index_size; i++)
 	{
-		if (this->dt_index[i] == datetime)
+		if (this->dt_index[i] >= datetime)
 		{
 			this->current_index = i;
 			break;

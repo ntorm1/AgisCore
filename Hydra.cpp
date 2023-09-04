@@ -248,8 +248,9 @@ void Hydra::clear()
 //============================================================================
 AGIS_API AgisResult<bool> Hydra::build()
 {
+    size_t n = this->exchanges.__get_dt_index().size();
     this->exchanges.__build();
-    this->portfolios.__build(this->exchanges.__get_dt_index().size());
+    this->portfolios.__build(n);
     AGIS_DO_OR_RETURN(this->strategies.__build(), bool);
 
     // register the strategies to the portfolio after they have all been added to prevent

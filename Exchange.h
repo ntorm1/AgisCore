@@ -347,18 +347,84 @@ public:
 		std::optional<size_t> beta_lookback
 	);
 
+	/**
+	 * @brief does an exchange with this id exist already
+	 * @param id unique id of the exchange to search for
+	 * @return does an exchange with this id exist already
+	*/
 	AGIS_API bool exchange_exists(std::string const& id) const { return this->exchanges.count(id) > 0; };
+	
+	/**
+	 * @brief Get a vector of all exchange ids
+	 * @return vector of all exchange ids
+	*/
 	AGIS_API std::vector<std::string> get_exchange_ids() const;
+
+	/**
+	 * @brief get the total number of rows of asset data currently loaded in 
+	 * @return total number of rows of asset data currently loaded in
+	*/
 	AGIS_API size_t get_candle_count() const { return this->candles; }
+
+	/**
+	 * @brief get the current datetime of the exchange
+	 * @return current datetime of the exchange
+	*/
 	AGIS_API long long get_datetime() const;
+
+	/**
+	 * @brief get the current market price of an asset by its index and wether or not at the close step.
+	 * @param asset_index index of the asset to get the price of
+	 * @param on_close get the price at the close step
+	 * @return current market price 
+	*/
 	AGIS_API double __get_market_price(size_t asset_index, bool on_close) const;
+
+	/**
+	 * @brief get the current market price of an asset by its id and wether or not at the close step.
+	 * @param asset_id id of the asset to get the price of
+	 * @param on_close get the price at the close step
+	 * @return current market price
+	*/
 	AGIS_API double __get_market_price(std::string& asset_id, bool on_close) const;
+
+	/**
+	 * @brief get the market asset for a given frequency if it exists 
+	 * @param freq frequency to get the market asset for
+	 * @return market asset for a given frequency if it exists
+	*/
 	AGIS_API AgisResult<AssetPtr const> __get_market_asset(Frequency freq) const;
 	
+	/**
+	 * @brief get the datetime index of the exchange
+	 * @param cutoff wether or not to move the start forward by the warmup period
+	 * @return datetime index of the exchange
+	*/
 	AGIS_API std::span<long long> const __get_dt_index(bool cutoff = false) const;
+
+	/**
+	 * @brief get the datetime index of the exchange
+	 * @return datetime index of the exchange
+	*/
 	AGIS_API inline long long __get_market_time() const { return this->current_time; }
 
+	/**
+	 * @brief get the current index location of the simulation
+	 * @return 
+	*/
+	AGIS_API inline size_t __get_current_index() const { return this->current_index - 1; }
+
+	/**
+	 * @brief run the exchange till a specific datetime 
+	 * @param datetime datetime to run the exchange till
+	 * @return 
+	*/
 	AGIS_API void __goto(long long datetime);
+
+	/**
+	 * @brief reset the exchange to the start including all assets listed on the exchange
+	 * @return 
+	*/
 	AGIS_API void __reset();
 	
 	/// <summary>
@@ -369,10 +435,31 @@ public:
 	TimePoint epoch_to_tp(long long epoch);
 	TimePoint const& get_tp() const {return this->time_point;}
 	
+	/**
+	 * @brief place an asset in the the assets vector
+	 * @param asset_index unique index of the asset
+	 * @param asset asset to place in the vector
+	*/
 	void __set_asset(size_t asset_index, std::shared_ptr<Asset> asset);
 
+	/**
+	 * @brief place an incoming order on the exchange order queue to be evaluated at the next step
+	 * @param order unique pointer to the order to place on the exchange
+	*/
 	void __place_order(std::unique_ptr<Order> order);
+
+	/**
+	 * @brief process all open orders on the exchange and send rejects and fills back to the router
+	 * @param router ref to the router to send the rejects and fills to
+	 * @param on_close wether or not to process the orders at the close step
+	*/
 	void __process_orders(AgisRouter& router, bool on_close);
+
+	/**
+	 * @brief process an indivual order according to its type
+	 * @param on_close wether or not to process the orders at the close step
+	 * @param order order to process
+	*/
 	void __process_order(bool on_close, OrderPtr& order);
 
 

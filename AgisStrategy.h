@@ -157,6 +157,8 @@ public:
 		this->starting_cash = this->cash;
 	}
 
+	AGIS_API inline static void __reset_counter() { strategy_counter.store(0); }
+
 	/// <summary>
 	/// Pure virtual function to be called on every time step
 	/// Note: must be public for trampoline Py Class and AgisStrategy.dll classes
@@ -224,8 +226,6 @@ public:
 	/// <returns></returns>
 	AGIS_API inline void set_strategy_type(AgisStrategyType t) { this->strategy_type = t; }
 
-	AGIS_API inline static void __reset_counter() { strategy_counter.store(0); }
-
 	/// <summary>
 	/// Function called before step() to validate wether the strategy will make a step
 	/// forward in time.
@@ -237,8 +237,23 @@ public:
 	/// </summary>
 	/// <param name="order"></param>
 	void __remember_order(SharedOrderPtr order) { this->order_history.push_back(order); }
+	
+	/**
+	 * @brief function to allow for a portfolio to insert a new trade into it's parent strategy
+	 * @param trade new trade to insert
+	*/
 	void __add_trade(SharedTradePtr trade) { this->trades.insert({ trade->asset_index, trade }); };
-	void __remove_trade(size_t asset_index) { this->trades.erase(asset_index); }
+	
+	/**
+	 * @brief remove an existing trade from a strategy's portfolio, used by the parent portfolio for managing trades.
+	 * @param asset_index unique index of the asset to remove
+	*/
+	void __remove_trade(size_t asset_index) { this->trades.erase(asset_index); };
+
+	/**
+	 * @brief Take a closed trade and insert it into the strategy's trade history
+	 * @param trade closed trade to insert
+	*/
 	void __remember_trade(SharedTradePtr trade) { this->trade_history.push_back(trade); }
 
 	/// <summary>
@@ -504,26 +519,42 @@ private:
 	double realized_pl = 0;
 	double portfolio_allocation = 0;
 
+	/**
+	 * @brief wether or not to validate each incoming order
+	*/
 	bool is_order_validating = true;
-	bool is_live = true;
-	bool is_subsribed = false; 
 
+	/**
+	 * @brief is the strategy currently live
+	*/
+	bool is_live = true; 
+
+	/**
+	 * @brief unique id of the exchange the strategy is subscribed to
+	*/
 	std::string exchange_subsrciption = "";
 
-	/// <summary>
-	/// Pointer to the exchange's step boolean telling us wether or not the subscribed 
-	/// exchange stepped forward in time
-	/// </summary>
+	/**
+	* @brief Pointer to the exchange's step boolean telling us wether or not the subscribed 
+	* exchange stepped forward in time
+	*/
 	bool* __exchange_step = nullptr;
-	
-	/// <summary>
-	/// Unique numerical rep of the strategy id to prevent string copies everywhere
-	/// </summary>
-	size_t strategy_index;
 
-	/// <summary>
-	/// Unique id of the strategy
-	/// </summary>
+	/**
+	 * @brief the frequency in which to call the strategy next function. I.e. 5 will call 
+	 * the strategy when the exchange map steps forward 5 times
+	*/
+	std::optional<size_t> step_frequency = std::nullopt;
+	
+	/**
+	 * @brief Unique numerical rep of the strategy id to prevent string copies in new orders
+	 * and trades created.
+	*/
+	size_t strategy_index;
+	
+	/**
+	 * @brief unique string id of the strategy
+	*/
 	std::string strategy_id;
 
 	/**
@@ -555,25 +586,104 @@ public:
 	AgisStrategyMap() = default;
 	~AgisStrategyMap();
 
+	/**
+	 * @brief Remove a strategy form the strategt map by it's unique id
+	 * @param id unique id of the strategy to remove
+	 * @return 
+	*/
 	AGIS_API void __remove_strategy(std::string const& id);
+
+	/**
+	 * @brief get the unique id of a strategy by it's index
+	 * @param index index of the strategy to get the id of
+	 * @return 
+	*/
 	AGIS_API AgisResult<std::string> __get_strategy_id(size_t index) const;
+
+	/**
+	 * @brief get a vector of all the strategy ids currently registered in the strategy map
+	 * @return vector of all the strategy ids currently registered in the strategy map
+	*/
 	AGIS_API std::vector<std::string> __get_strategy_ids() const;
+
+	/**
+	 * @brief get the strategy index by it's unique id
+	 * @param id unique id of the strategy to get the index of
+	 * @return index of the strategy
+	*/
 	AGIS_API inline size_t __get_strategy_index(std::string const& id) const { return this->strategy_id_map.at(id); }
+	
+	/**
+	 * @brief register a new strategy to the strategy map
+	 * @param strategy unique pointer to the strategy to register
+	 * @return 
+	*/
 	AGIS_API void register_strategy(AgisStrategyPtr strategy);
-	AgisStrategy const* get_strategy(std::string strategy_id) const;
-	AgisStrategy* __get_strategy(std::string strategy_id) const;
+
+	/**
+	 * @brief get a raw pointer to a strategy by it's unique id
+	 * @param strategy_id strategy id of the strategy to get
+	 * @return raw pointer to the strategy
+	*/
+	AgisStrategy const* get_strategy(std::string const& strategy_id) const;
+
+	/**
+	 * @brief get a raw pointer to a non const strategy by it's unique id. This is used for the hydra to modify the strategy
+	 * @param strategy_id strategy id of the strategy to get
+	 * @return 
+	*/
+	AgisStrategy* __get_strategy(std::string const& strategy_id) const;
+
+	/**
+	 * @brief get a const reference to the strategy map containg all the strategies
+	 * @return const reference to the strategy map
+	*/
 	ankerl::unordered_dense::map<size_t, AgisStrategyPtr> const& __get_strategies() const { return this->strategies; }
+	
+	/**
+	 * @brief get a non const ref to the strategy map containing all the strategies. This is used for the hydra to modify the strategies
+	 * @return  non const ref to the strategy map
+	*/
 	ankerl::unordered_dense::map<size_t, AgisStrategyPtr> & __get_strategies_mut() { return this->strategies; }
 
+	/**
+	 * @brief call virtual next method of each strategy in the strategy map if it is a valid step.
+	 * @return wether or not any strategies took a step
+	*/
 	bool __next();
+
+	/**
+	 * @brief reset all strategies in the strategy map and call virtual reset method of each strategy
+	*/
 	void __reset();
+
+	/**
+	 * @brief remove all strategies from the strategy map
+	*/
 	void __clear();
+
+	/**
+	 * @brief call the virtual build method of each strategy
+	 * @return wether or not all strategies were built successfully
+	*/
 	[[nodiscard]] AgisResult<bool> __build();
 
+	/**
+	 * @brief does a strategy exist in the strategy map by it's unique id
+	 * @param id unique id of the strategy to check for
+	 * @return wether or not the strategy exists
+	*/
 	bool __strategy_exists(std::string const& id) const { return this->strategy_id_map.count(id) > 0; }
 
 private:
+	/**
+	 * @brief mapping between strategy id and strategy index
+	*/
 	ankerl::unordered_dense::map<std::string, size_t> strategy_id_map;
+
+	/**
+	 * @brief maping between strategy index and strategy unique pointer
+	*/
 	ankerl::unordered_dense::map<size_t, AgisStrategyPtr> strategies;
 
 };
@@ -600,8 +710,17 @@ public:
 
 	AGIS_API void build() override;
 
+	/**
+	 * @brief extract the information from a node editor graph and build the abstract strategy.
+	 * @return wether or not the strategy was built successfully
+	*/
 	AGIS_API [[nodiscard]] AgisResult<bool> extract_ev_lambda();
 
+	/**
+	 * @brief set the function call that will be used to extract the information from a node editor graph and build the abstract strategy.
+	 * @param f_ function call that will be used to extract the information from a node editor graph and build the abstract strategy.
+	 * @return 
+	*/
 	AGIS_API inline void set_abstract_ev_lambda(std::function<
 		std::optional<ExchangeViewLambdaStruct>
 		()> f_) { this->ev_lambda = f_; };
@@ -610,6 +729,11 @@ public:
 
 	AGIS_API void to_json(json& j);
 
+	/**
+	 * @brief output code to a file that can be used to build a concrete strategy from the abstract strategy
+	 * @param strat_folder the destiniation of the output source code.
+	 * @return 
+	*/
 	AGIS_API void code_gen(fs::path strat_folder);
 
 	AGIS_API [[nodiscard]] AgisResult<bool> set_beta_trace(bool val, bool check = true);
@@ -651,8 +775,19 @@ public:
 
 	AGIS_API inline void set_asset_id(std::string const& asset_id) { this->asset_id = asset_id; }
 
+	/**
+	 * @brief unique id of the benchmark asset
+	*/
 	std::string asset_id = "";
+
+	/**
+	 * @brief unique index of the benchmark asset
+	*/
 	size_t asset_index = 0;
+
+	/**
+	 * @brief integer to signal if this is the first step of the strategy, in which case we buy the benchmark asset
+	*/
 	int i = 0;
 };
 

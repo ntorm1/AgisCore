@@ -117,6 +117,11 @@ bool AgisStrategy::__is_step()
 	// check to see if the strategy has subsribed to an exchange and if the exchange took step
 	if (!this->__exchange_step || !(*this->__exchange_step)) { return false; }
 
+	// check to see if the step frequency is set and if the current step is a multiple of the frequency
+	if (this->step_frequency.has_value()) {
+		if (this->exchange_map->__get_current_index() % this->step_frequency.value() != 0) { return false; }
+	}
+
 	// check to see if strategy is within it's trading window
 	if (this->trading_window.has_value())
 	{
@@ -350,7 +355,7 @@ void AgisStrategyMap::register_strategy(AgisStrategyPtr strategy)
 
 
 //============================================================================
-AgisStrategy const* AgisStrategyMap::get_strategy(std::string strategy_id) const
+AgisStrategy const* AgisStrategyMap::get_strategy(std::string const& strategy_id) const
 {
 	auto strategy_index = this->strategy_id_map.at(strategy_id);
 	return this->strategies.at(strategy_index).get();
@@ -358,7 +363,7 @@ AgisStrategy const* AgisStrategyMap::get_strategy(std::string strategy_id) const
 
 
 //============================================================================
-AgisStrategy* AgisStrategyMap::__get_strategy(std::string strategy_id) const
+AgisStrategy* AgisStrategyMap::__get_strategy(std::string const& strategy_id) const
 {
 	auto strategy_index = this->strategy_id_map.at(strategy_id);
 	return this->strategies.at(strategy_index).get();
@@ -663,6 +668,8 @@ AgisResult<bool> AbstractAgisStrategy::extract_ev_lambda()
 		this->ev_opp_type = ExchangeViewOpp::CONDITIONAL_SPLIT;
 	else if (strat_alloc_ref.ev_opp_type == "UNIFORM_SPLIT")
 		this->ev_opp_type = ExchangeViewOpp::UNIFORM_SPLIT;
+	else if (strat_alloc_ref.ev_opp_type == "CONSTANT")
+		this->ev_opp_type = ExchangeViewOpp::CONSTANT;
 	else AGIS_THROW("invalid exchange view opp type");
 
 	if (this->ev_opp_type == ExchangeViewOpp::CONDITIONAL_SPLIT || 
