@@ -61,7 +61,8 @@ AGIS_API AgisResult<bool> Hydra::__run()
         this->__step();
         this->current_index++;
     }
-    return AgisResult<bool>(true);
+    
+    return this->__cleanup();
 }
 
 
@@ -267,13 +268,43 @@ AGIS_API AgisResult<bool> Hydra::build()
 
 
 //============================================================================
-AGIS_API void Hydra::__reset()
+void Hydra::__reset()
 {
     this->current_index = 0;
     this->exchanges.__reset();
     this->portfolios.__reset();
     this->router.__reset();
     this->strategies.__reset();
+}
+
+
+//============================================================================
+AgisResult<bool> Hydra::__cleanup()
+{
+    auto& strategies = this->strategies.__get_strategies_mut();
+    std::vector<std::string> disabled_strategies;
+    for (auto& [index, strategy] : strategies)
+    {
+        if (strategy->__is_disabled())
+        {
+            auto id = this->strategies.__get_strategy_id(index).unwrap();
+            disabled_strategies.push_back(id);
+            strategy->__set_is_disabled(false);
+        }
+    }
+    // get an error message listing all the disabled strategies
+    if (disabled_strategies.size() > 0)
+	{
+		std::string error_msg = "The following strategies were disabled: ";
+		for (auto& id : disabled_strategies)
+		{
+			error_msg += id + ", ";
+		}
+		error_msg.pop_back();
+		error_msg.pop_back();
+		return AgisResult<bool>(AGIS_EXCEP(error_msg));
+	}
+    return AgisResult<bool>(true);
 }
 
 

@@ -50,6 +50,7 @@ void AgisStrategy::__build(
 	if (this->net_leverage_ratio.has_value()) this->net_leverage_ratio_history.reserve(n);
 }
 
+
 //============================================================================
 void AgisStrategy::__evaluate(bool on_close)
 {
@@ -63,6 +64,13 @@ void AgisStrategy::__evaluate(bool on_close)
 			else this->net_leverage_ratio = (this->nlv - this->cash) / this->nlv;
 			this->net_leverage_ratio_history.push_back(this->net_leverage_ratio.value());
 		}
+	}
+
+	// if nlv < 0 clear the portfolio and disable the strategy
+	if (this->nlv < 0)
+	{
+		this->clear_portfolio();
+		this->is_disabled = true;
 	}
 }
 
@@ -118,7 +126,7 @@ AgisResult<bool> AgisStrategy::exchange_subscribe(std::string const& exchange_id
 bool AgisStrategy::__is_step()
 {
 	// allow for manual disable of a strategy
-	if (!this->is_live) { return false; }
+	if (!this->is_live || this->is_disabled) { return false; }
 
 	// check to see if the strategy has subsribed to an exchange and if the exchange took step
 	if (!this->__exchange_step || !(*this->__exchange_step)) { return false; }
@@ -319,6 +327,17 @@ AgisResult<bool> AgisStrategy::set_trading_window(std::string const& window_name
 	TradingWindow window = agis_trading_window_map.at(window_name);
 	this->set_trading_window(window);
 	return  AgisResult<bool>(true);
+}
+
+
+//============================================================================
+void AgisStrategy::clear_portfolio()
+{
+	for (auto& [id, trade] : this->trades)
+	{
+		auto order = trade->generate_trade_inverse();
+		this->place_order(std::move(order));
+	}
 }
 
 
@@ -1156,7 +1175,7 @@ AgisResult<bool> AbstractAgisStrategy::set_beta_scale_positions(bool val, bool c
 {
 	if (!val) return AgisStrategy::set_beta_scale_positions(val, check);
 	if(check) AGIS_DO_OR_RETURN(this->validate_market_asset(), bool);
-	return AgisResult<bool>(true);
+	return AgisStrategy::set_beta_scale_positions(val);
 }
 
 

@@ -109,6 +109,9 @@ public:
     void insert_child_order(Order* child_order_) { this->child_order = std::move(child_order_); }
 
 protected:
+    /**
+     * @brief parent trade of the trade exit
+    */
     Trade const* trade;
 
     /**
@@ -128,7 +131,7 @@ public:
     }
 
     AGIS_API inline bool exit() override {
-        auto res = (this->trade->bars_held >= this->bars);
+        auto res = (this->trade->bars_held == this->bars);
         return res;
     }
 
@@ -159,13 +162,13 @@ public:
     }
 
     AGIS_API void build(Trade const* trade_) override {
+        TradeExit::build(trade_);
         if (this->stop_loss_pct.has_value()) {
-            this->stop_loss_pct = (1 + this->stop_loss_pct.value()) * trade->last_price;
+            this->stop_loss_pct = (1 + this->stop_loss_pct.value()) * this->trade->last_price;
         }
         if (this->take_profit_pct.has_value()) {
-            this->take_profit_pct = (1 + this->take_profit_pct.value()) * trade->last_price;
+            this->take_profit_pct = (1 + this->take_profit_pct.value()) * this->trade->last_price;
         }
-        TradeExit::build(trade_);
     }
 
 

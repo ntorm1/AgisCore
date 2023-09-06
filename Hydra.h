@@ -84,6 +84,12 @@ public:
 	/// <returns></returns>
 	AGIS_API void __reset();
 
+	/**
+	 * @brief on the completion of a run cleanup nessecary settings
+	 * @return whether the cleanup was successful
+	*/
+	AGIS_API AgisResult<bool> __cleanup();
+
 	/// <summary>
 	/// Save the current state of Hydra instance to json
 	/// </summary>

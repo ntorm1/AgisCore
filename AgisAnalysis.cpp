@@ -105,7 +105,41 @@ Drawdown get_stats_drawdown(
 
 
 //============================================================================
+AgisResult<double> get_stats_beta(std::vector<double> const& nlv_history, std::vector<double> const& benchmark_nlv_history)
+{
+    if(nlv_history.size() != benchmark_nlv_history.size())
+	{
+		return AgisResult<double>(AGIS_EXCEP("nlv_history and benchmark_nlv_history must have the same size"));
+	}
 
+    double covariance = 0.0;
+    double benchmark_variance = 0.0;
+
+    double nlv_mean = 0.0;
+    double benchmark_mean = 0.0;
+
+    for (size_t i = 0; i < nlv_history.size(); ++i) {
+        double nlv_return = (i > 0) ? (nlv_history[i] - nlv_history[i - 1]) / nlv_history[i - 1] : 0.0;
+        double benchmark_return = (i > 0) ? (benchmark_nlv_history[i] - benchmark_nlv_history[i - 1]) / benchmark_nlv_history[i - 1] : 0.0;
+
+        nlv_mean += nlv_return;
+        benchmark_mean += benchmark_return;
+
+        covariance += nlv_return * benchmark_return;
+        benchmark_variance += benchmark_return * benchmark_return;
+    }
+
+    nlv_mean /= nlv_history.size();
+    benchmark_mean /= benchmark_nlv_history.size();
+
+    double beta = (covariance - nlv_mean * benchmark_mean * nlv_history.size()) /
+        (benchmark_variance - benchmark_mean * benchmark_mean * nlv_history.size());
+
+    return AgisResult<double>(beta);
+}
+
+
+//============================================================================
 std::vector<double> get_rolling_sharpe(
     std::vector<double> const& nlv_history,
     size_t window_size,

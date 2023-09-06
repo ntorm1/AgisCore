@@ -365,6 +365,13 @@ public:
 	*/
 	void set_step_frequency(std::optional<size_t> step_frequency_) { this->step_frequency = step_frequency_; }
 
+	/**
+	 * @brief remove the disabled flag from a strategy. This is done on the completion of a hydra run, and 
+	 * is the result of a strategy being disabled during a hydra run due to breaching risk limits.
+	 * @param val is the strategy disabled
+	*/
+	void __set_is_disabled(bool val) { this->is_disabled = val; }
+
 	/// <summary>
 	/// Set the trading window from prefined string 
 	/// </summary>
@@ -388,6 +395,8 @@ public:
 	/// Only a strategy that is live will have code gen run. Else it will recompile what is in it.
 	/// </summary>
 	AGIS_API bool __is_live() const { return this->is_live; }
+
+	bool __is_disabled() const {return this->is_disabled;}
 
 	/// <summary>
 	/// Each unique trade is incrementally evaluated and the trade updates the valuation of it's parent strategy
@@ -446,6 +455,11 @@ protected:
 		double limit,
 		std::optional<TradeExitPtr> exit = std::nullopt
 	);
+
+	/**
+	 * @brief generate inverse order for each open trade and them to the router
+	*/
+	void clear_portfolio();
 
 	/// <summary>
 	/// Clear existing containers of all historical information
@@ -551,6 +565,11 @@ private:
 	 * @brief is the strategy currently live
 	*/
 	bool is_live = true; 
+
+	/**
+	 * @brief is the strategy currently disabled due to violation of risk parameters
+	*/
+	bool is_disabled = false;
 
 	/**
 	 * @brief unique id of the exchange the strategy is subscribed to
