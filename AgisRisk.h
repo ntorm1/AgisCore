@@ -5,6 +5,9 @@
 #include <optional>
 
 class Asset;
+class Order;
+class AgisStrategy;
+class ExchangeMap;
 
 struct IncrementalCovariance
 {
@@ -123,6 +126,24 @@ std::vector<double> rolling_beta(
 
 struct AgisRiskStruct
 {
+	AgisRiskStruct() {};
+
+	void __build(AgisStrategy const* parent_strategy);
+
+	void __reset();
+
+	double estimate_phantom_cash(Order const* order);
+
+	/**
+	 * @brief const pointer to the parent strategy
+	*/
+	AgisStrategy const * parent_strategy = nullptr;
+
+	/**
+	 * @brief const pointer to the exchange map
+	*/
+	ExchangeMap const * exchange_map = nullptr;
+
 	/**
 	* @brief The max portfolio leverage allowed for the strategy
 	*/
@@ -139,4 +160,10 @@ struct AgisRiskStruct
 	 * @brief wether or not to allow shorting
 	*/
 	bool allow_shorting = true;
+
+	/**
+	 * @brief a vector of size equal to the number of assets available to the strategy that contains
+	 * the number of units held by the asset of index i in index i of the vector.
+	*/
+	std::vector<double> asset_holdings;
 };

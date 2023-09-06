@@ -366,6 +366,8 @@ public:
 	*/
 	AGIS_API size_t get_candle_count() const { return this->candles; }
 
+	AGIS_API size_t get_asset_count() const { return this->assets.size(); }
+
 	/**
 	 * @brief get the current datetime of the exchange
 	 * @return current datetime of the exchange

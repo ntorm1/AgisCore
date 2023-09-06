@@ -256,6 +256,14 @@ public:
 	*/
 	void __remember_trade(SharedTradePtr trade) { this->trade_history.push_back(trade); }
 
+	/**
+	 * @brief Validates a new pending order attempting to be placed by the strategy
+	 * @param order that is being attempt to be placed
+	 * @return wether or not the order is valid
+	*/
+	AGIS_API void __validate_order(OrderPtr& order);
+
+
 	/// <summary>
 	/// Get all orders that have been  placed by the strategy
 	/// </summary>
@@ -298,7 +306,20 @@ public:
 	double get_nlv() const { return this->nlv; }
 	double get_cash() const { return this->cash; }
 	double get_allocation() const { return this->portfolio_allocation; }
-	std::optional<double> get_max_leverage() const { return this->limits.max_leverage; }
+
+	/**
+	 * @brief get the current max leverage setting of the strategy
+	 * @return 
+	*/
+	AGIS_API std::optional<double> get_max_leverage() const { return this->limits.max_leverage; }
+
+	/**
+	 * @brief get the current net leverage ratio of the portfolio. If there is a max leverage set on the 
+	 * portfolio then the cash requirements of any pending orders are also taken into account via phantom
+	 * cash set during order validation.
+	 * @return 
+	*/
+	AGIS_API std::optional<double> get_net_leverage_ratio() const;
 
 	/// <summary>
 	/// Get the unique strategy index of a strategy instance
@@ -341,7 +362,15 @@ public:
 	/// </summary>
 	/// <param name="id">unique id of the exchange to get</param>
 	/// <returns>Shared pointer to the exchange</returns>
-	AGIS_API ExchangePtr const get_exchange(std::string const& id) const;
+	AGIS_API ExchangePtr const get_exchange() const;
+
+
+	/// <summary>
+	/// Get const pointer to the exchange map
+	/// </summary>
+	/// <param name="id">unique id of the exchange to get</param>
+	/// <returns>Shared pointer to the exchange</returns>
+	AGIS_API ExchangeMap const* get_exchanges() const { return this->exchange_map; };
 
 	/// <summary>
 	/// Set the window in which a strategy can trade. Endpoints are included
@@ -611,13 +640,6 @@ private:
 	/// <returns></returns>
 	AGIS_API std::optional<SharedTradePtr> get_trade(size_t asset_index);
 
-	/**
-	 * @brief Validates a new pending order attempting to be placed by the strategy
-	 * @param order that is being attempt to be placed
-	 * @return wether or not the order is valid
-	*/
-	void __validate_order(OrderPtr& order);
-
 	std::vector<SharedTradePtr> trade_history;
 };
 
@@ -708,7 +730,7 @@ public:
 	 * @brief call the virtual build method of each strategy
 	 * @return wether or not all strategies were built successfully
 	*/
-	[[nodiscard]] AgisResult<bool> __build();
+	[[nodiscard]] AgisResult<bool> build();
 
 	/**
 	 * @brief does a strategy exist in the strategy map by it's unique id

@@ -155,7 +155,7 @@ public:
 
     [[nodiscard]] std::optional<double> get_limit() const { return this->limit; }
     [[nodiscard]] bool has_child_order() const { return this->child_order.has_value(); }
-    [[nodiscard]] OrderPtr const& get_child_order_ref() { return this->child_order.value(); }
+    [[nodiscard]] OrderPtr const& get_child_order_ref() const { return this->child_order.value(); }
     [[nodiscard]] OrderPtr get_child_order() { return std::move(this->child_order.value()); }
     [[nodiscard]] size_t get_order_id() const { return this->order_id; }
     [[nodiscard]] size_t get_asset_index() const { return this->asset_index; }

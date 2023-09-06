@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "AgisRisk.h"
 #include "Asset.h"
+#include "Order.h"
+#include "AgisStrategy.h"
 
 //============================================================================
 double covariance(const std::vector<double>& values1, const std::vector<double>& values2, size_t start, size_t end)
@@ -141,6 +143,62 @@ IncrementalCovariance::IncrementalCovariance(
         throw std::runtime_error("Assets must have the same current index");
     }
 #endif
+}
+
+
+//============================================================================
+void AgisRiskStruct::__build(AgisStrategy const* parent_strategy_)
+{
+    this->parent_strategy = parent_strategy_;
+    this->exchange_map = parent_strategy->get_exchanges();
+    auto asset_count = parent_strategy->get_exchanges()->get_asset_count();
+    this->asset_holdings.resize(asset_count, 0.0);
+}
+
+
+//============================================================================
+void AgisRiskStruct::__reset()
+{
+    for (size_t i = 0; i < this->asset_holdings.size(); i++)
+    {
+        this->asset_holdings[i] = 0.0f;
+    }
+}
+
+
+//============================================================================
+double AgisRiskStruct::estimate_phantom_cash(Order const* order)
+{
+    double cash_estimate = 0.0f;
+    auto asset_index = order->get_asset_index();
+    double order_units = order->get_units();
+    auto market_price = this->exchange_map->__get_market_price(asset_index, true);
+
+    // check to see if the order will increase or reduce a position
+    if (this->asset_holdings[asset_index] * order_units >= 0)
+    {
+        cash_estimate = abs(order_units) * market_price;
+    }
+    else
+    {
+        cash_estimate = (order_units)*market_price;
+    }
+
+    // get cash required for child orders
+    if (order->has_child_order()) {
+        auto& child_order_ref = order->get_child_order_ref();
+        asset_index = child_order_ref->get_asset_index();
+        market_price = this->exchange_map->__get_market_price(child_order_ref->get_asset_index(), true);
+        if (this->asset_holdings[asset_index] * order_units >= 0)
+        {
+            cash_estimate += abs(child_order_ref->get_units()) * market_price;
+        }
+        else
+        {
+            cash_estimate += (child_order_ref->get_units()) * market_price;
+        }
+    }
+    return cash_estimate;
 }
 
 

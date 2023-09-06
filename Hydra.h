@@ -125,6 +125,7 @@ public:
 		std::string source_dir_,
 		Frequency freq_,
 		std::string dt_format,
+		std::optional<std::vector<std::string>> asset_ids = std::nullopt,
 		std::optional<MarketAsset> market_asset_ = std::nullopt
 	);
 
@@ -182,6 +183,12 @@ public:
 	/// <param name="strategy_id">unique id of the strategy</param>
 	/// <returns></returns>
 	AGIS_API AgisStrategy* __get_strategy(std::string strategy_id) const;
+
+	/// <summary>
+	/// Get const ref to the portfolio map containing all registered portfolios
+	/// </summary>
+	/// <returns></returns>
+	AGIS_API PortfolioMap& __get_portfolios() { return this->portfolios; }
 
 	/// <summary>
 	/// Get a const ref to the vector containing the entire order history

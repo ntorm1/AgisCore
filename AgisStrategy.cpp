@@ -28,9 +28,10 @@ void AgisStrategy::__reset()
 	this->nlv = this->cash;
 	this->net_beta.has_value() ? this->net_beta = 0.0f : std::nullopt;
 	this->net_leverage_ratio.has_value() ? this->net_leverage_ratio = 0.0f : std::nullopt;
-
+	this->limits.__reset();
 	this->reset();
 }
+
 
 //============================================================================
 void AgisStrategy::__build(
@@ -38,6 +39,7 @@ void AgisStrategy::__build(
 	ExchangeMap* exchange_map
 )
 {
+	
 	this->router = router_;
 	this->exchange_map = exchange_map;
 	this->cash = this->portfolio_allocation * this->portfolio->get_cash();
@@ -48,6 +50,7 @@ void AgisStrategy::__build(
 	this->cash_history.reserve(n);
 	if (this->net_beta.has_value()) this->beta_history.reserve(n);
 	if (this->net_leverage_ratio.has_value()) this->net_leverage_ratio_history.reserve(n);
+	this->limits.__build(this);
 }
 
 
@@ -161,18 +164,9 @@ void AgisStrategy::__validate_order(OrderPtr& order)
 	// test if the order will cause the portfolio leverage to exceede it's limit
 	double cash_estimate = 0.0f;
 	if (this->limits.max_leverage.has_value()) {
-		auto x = this->exchange_map->__get_market_price(order->get_asset_index(), true);
-		cash_estimate = abs(order->get_units()) * x;
-
-		// get cash required for child orders
-		if (order->has_child_order()) {
-			auto& child_order_ref = order->get_child_order_ref();
-			auto market_price = this->exchange_map->__get_market_price(child_order_ref->get_asset_index(), true);
-			cash_estimate += abs(child_order_ref->get_units()) * market_price;
-		}
-
-		x = (this->nlv - (this->cash - this->limits.phantom_cash - cash_estimate)) / this->nlv;
-		if (x > this->limits.max_leverage.value())
+		cash_estimate = limits.estimate_phantom_cash(order.get());
+		auto ratio = (this->nlv - (this->cash - this->limits.phantom_cash - cash_estimate)) / this->nlv;
+		if (ratio > this->limits.max_leverage.value())
 		{
 			order->__set_state(OrderState::REJECTED);
 			return;
@@ -189,6 +183,9 @@ void AgisStrategy::__validate_order(OrderPtr& order)
 	if (this->limits.max_leverage.has_value()) {
 		this->limits.phantom_cash += cash_estimate;
 	}
+
+	//reflect the new units in the limits asset holdings
+	this->limits.asset_holdings[order->get_asset_index()] += order->get_units();
 }
 
 
@@ -202,9 +199,9 @@ std::optional<SharedTradePtr> AgisStrategy::get_trade(std::string const& asset_i
 
 
 //============================================================================
-AGIS_API ExchangePtr const AgisStrategy::get_exchange(std::string const& id) const
+AGIS_API ExchangePtr const AgisStrategy::get_exchange() const
 {
-	return this->exchange_map->get_exchange(id);
+	return this->exchange_map->get_exchange(this->exchange_subsrciption);
 }
 
 
@@ -504,12 +501,13 @@ void AgisStrategyMap::__clear()
 
 
 //============================================================================
-AgisResult<bool> AgisStrategyMap::__build()
+AgisResult<bool> AgisStrategyMap::build()
 {
 	for (auto& strategy : this->strategies)
 	{
 		if (!strategy.second->__is_live()) continue;
 		try {
+			// build the strategy instance
 			strategy.second->build();
 		}
 		catch (const std::exception& ex) {
@@ -1162,11 +1160,21 @@ AgisResult<bool> AgisStrategy::set_beta_trace(bool val, bool check)
 	return AgisResult<bool>(true);
 }
 
+
 //============================================================================
 AgisResult<bool> AgisStrategy::set_net_leverage_trace(bool val)
 {
 	val ? this->net_leverage_ratio = 0 : this->net_leverage_ratio = std::nullopt;
 	return AgisResult<bool>(true);
+}
+
+
+//============================================================================
+std::optional<double> AgisStrategy::get_net_leverage_ratio() const
+{
+	if (!this->net_leverage_ratio.has_value()) return std::nullopt;
+	if (!this->limits.max_leverage.has_value()) return (this->nlv - this->cash) / this->nlv;
+ 	return (this->nlv - (this->cash - this->limits.phantom_cash)) / this->nlv;
 }
 
 

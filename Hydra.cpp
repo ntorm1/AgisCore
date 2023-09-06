@@ -72,12 +72,13 @@ AgisResult<bool> Hydra::new_exchange(
     std::string source_dir_,
     Frequency freq_,
     std::string dt_format_,
+    std::optional<std::vector<std::string>> asset_ids,
     std::optional<MarketAsset> market_asset_)
 {
     this->is_built = false;
     auto res = this->exchanges.new_exchange(exchange_id_, source_dir_, freq_, dt_format_);
     if (res.is_exception()) return AgisResult<bool>(res.get_exception());
-    return this->exchanges.restore_exchange(exchange_id_, std::nullopt, market_asset_);
+    return this->exchanges.restore_exchange(exchange_id_, asset_ids, market_asset_);
 }
 
 
@@ -110,9 +111,6 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
     {
         AGIS_THROW("strategy already exsits");
     }
-
-    // build the strategy instance
-    strategy->__build(&this->router, &this->exchanges);
 
     // register the strategy to the strategy map
     this->strategies.register_strategy(std::move(strategy));
@@ -252,16 +250,18 @@ AGIS_API AgisResult<bool> Hydra::build()
     size_t n = this->exchanges.__get_dt_index().size();
     this->exchanges.__build();
     this->portfolios.__build(n);
-    AGIS_DO_OR_RETURN(this->strategies.__build(), bool);
 
     // register the strategies to the portfolio after they have all been added to prevent
     // references from being invalidated when a new strategy is added
     auto& strats = this->strategies.__get_strategies_mut();
     for (auto& strat : strats)
     {
+        strat.second->__build(&this->router, &this->exchanges);
         auto strat_ref = std::ref(strat.second);
         this->portfolios.__register_strategy(strat_ref);
     }
+
+    AGIS_DO_OR_RETURN(this->strategies.build(), bool);
 
     return AgisResult<bool>(true);
 }

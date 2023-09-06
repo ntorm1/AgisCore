@@ -160,19 +160,6 @@ class Portfolio
 public:
     AGIS_API Portfolio(std::string const& portfolio_id, double cash);
 
-	/// <summary>
-	/// Function called from the order router when an order placed to this portfolio is filled
-	/// </summary>
-	/// <param name="order">referance to a filled order object</param>
-	void __on_order_fill(OrderPtr const& order);
-
-    /// <summary>
-    /// Function called when an order is placed that is not mean to affect he portfolio. Used for 
-    /// benchmark strategies that shouldn't affect the portfolio's value
-    /// </summary>
-    /// <param name="order"></param>
-    void __on_phantom_order(OrderPtr const& order);
-
     /// <summary>
     /// Get the unique index of the portfolio
     /// </summary>
@@ -254,6 +241,19 @@ public:
 
 
 protected:
+    /// <summary>
+    /// Function called from the order router when an order placed to this portfolio is filled
+    /// </summary>
+    /// <param name="order">referance to a filled order object</param>
+    void __on_order_fill(OrderPtr const& order);
+
+    /// <summary>
+    /// Function called when an order is placed that is not mean to affect he portfolio. Used for 
+    /// benchmark strategies that shouldn't affect the portfolio's value
+    /// </summary>
+    /// <param name="order"></param>
+    void __on_phantom_order(OrderPtr const& order);
+
     /// <summary>
     /// Map between strategy index and ref to AgisStrategy
     /// </summary>
