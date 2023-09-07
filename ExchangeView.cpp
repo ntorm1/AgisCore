@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "ExchangeView.h"
 #include "Exchange.h"
+#include "Trade.h"
 
 //============================================================================
 AgisResult<bool> ExchangeView::beta_scale()

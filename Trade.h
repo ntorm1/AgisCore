@@ -95,6 +95,11 @@ public:
     virtual ~TradeExit() = default;
     TradeExit() : trade(nullptr) {}
 
+    /**
+     * @brief function to build the trade exit using the parent trade pointer. Function is 
+     * called on initialization of the trade. 
+     * @param trade_ 
+    */
     virtual void build(Trade const* trade_) { this->trade = trade_; }
 
     AGIS_API virtual bool exit() = 0;
@@ -104,11 +109,41 @@ public:
         return nullptr; 
     };
 
+    /**
+     * @brief take the child order from the trade exit and assune ownership of the order.
+     * The order is the placed as needed.
+     * @return 
+    */
     Order* take_child_order() { return std::move(this->child_order.value()); }
+
+    /**
+     * @brief does the trade exit have a child order
+     * @return true if the trade exit has a child order, false otherwise
+    */
     bool has_child_order() const { return this->child_order.has_value(); }
-    void insert_child_order(Order* child_order_) { this->child_order = std::move(child_order_); }
+    
+    /**
+     * @brief insert a new child order into the trade exit. The child order is placed on the
+     * trade exit being true.
+     * @param child_order_ 
+    */
+    void insert_child_order(Order* child_order_) {
+        this->child_order = std::move(child_order_); 
+    }
 
 protected:
+    /**
+     * @brief a point to a child exit representing the next exit in the chain. exits 
+     * evaluated from the top level down and result and a exit being true if either one, some, or
+     * all trade exits in a chain are true depnding on and or flag.
+    */
+    std::optional<TradeExitPtr> child_exit = std::nullopt;
+
+    /**
+	 * @brief boolean flag to determine if the child exit is an and or or. 
+    */
+    bool child_exit_is_and = true;
+
     /**
      * @brief parent trade of the trade exit
     */

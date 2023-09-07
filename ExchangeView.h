@@ -10,6 +10,8 @@
 class Exchange;
 class ExchangeMap;
 
+struct Trade;
+typedef std::shared_ptr<Trade> SharedTradePtr;
 
 #define CHECK_INDEX_MATCH(lhs, rhs) \
     do { \
@@ -69,7 +71,8 @@ struct ExchangeViewAllocation {
 	double allocation_amount = 0.0f;
 
 	/**
-	 * @brief optional beta hedge size linked to the allocation
+	 * @brief optional beta hedge size linked to the allocation. As of now beta hedges are applied at the trade level instead of the portfolio level. 
+	 * This allows for more flexibility, i.e. if some order is rejected than the beta hedge is still correct.
 	*/
 	std::optional<double> beta_hedge_size = std::nullopt;
 };
@@ -172,7 +175,12 @@ struct ExchangeView
 	 * @brief Applies a constant weight to every value in the exchange view
 	 * @param c constant weight to be applied
 	*/
-	void constant_weights(double c){
+	void constant_weights(double c, ankerl::unordered_dense::map<size_t, SharedTradePtr> const& trades){
+		// remove all trades that are in the trades map
+		auto shouldRemove = [&](ExchangeViewAllocation const& element) {
+			return trades.contains(element.asset_index);
+		};
+		view.erase(std::remove_if(view.begin(), view.end(), shouldRemove), view.end());
 		for (auto& pair : view) {
 			pair.allocation_amount = c;
 		}

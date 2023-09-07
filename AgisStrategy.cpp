@@ -186,6 +186,10 @@ void AgisStrategy::__validate_order(OrderPtr& order)
 
 	//reflect the new units in the limits asset holdings
 	this->limits.asset_holdings[order->get_asset_index()] += order->get_units();
+	if (order->has_child_order()) {
+		auto& child_order = order->get_child_order_ref();
+		this->limits.asset_holdings[child_order->get_asset_index()] += child_order->get_units();
+	}
 }
 
 
@@ -262,14 +266,14 @@ AGIS_API void AgisStrategy::strategy_allocate(
 		if (abs(size) < 1e-10) { continue; }
 
 		// make deep copy of the exit if needed
-		std::optional<TradeExitPtr> exit_copy = std::nullopt;
+		std::optional<TradeExitPtr> trade_exit_copy = std::nullopt;
 		if (exit.has_value()) {
 			auto exit_raw_ptr = exit.value()->clone();
-			exit_copy = std::make_optional<TradeExitPtr>(exit_raw_ptr);
+			trade_exit_copy = std::make_optional<TradeExitPtr>(exit_raw_ptr);
 		}
 
 		// add beta hedge order if needed
-		auto order = this->create_market_order(asset_index,size, exit_copy);
+		auto order = this->create_market_order(asset_index,size, trade_exit_copy);
 		if (!alloc.beta_hedge_size.has_value())this->place_order(std::move(order));
 		else {
 			// generate the beta hedge child order
@@ -281,9 +285,9 @@ AGIS_API void AgisStrategy::strategy_allocate(
 
 			// insert the inverse child order into the trade exit to be filled on trade exit.
 			// this will close the beta hedge once the main trade is closed
-			if (exit_copy.has_value()) {
-				auto inverse_child_order = beta_hedge_order->generate_inverse_order();
-				exit_copy.value()->insert_child_order(std::move(inverse_child_order.release()));
+			if (trade_exit_copy.has_value()) {
+				auto inverse_beta_order = beta_hedge_order->generate_inverse_order();
+				order->get_exit()->insert_child_order(std::move(inverse_beta_order.release()));
 			}
 
 			// insert the child order into the main order to be filled on main order fill
@@ -683,7 +687,7 @@ void AbstractAgisStrategy::next()
 		}
 		case ExchangeViewOpp::CONSTANT: {
 			auto c = this->ev_opp_param.value() * strat_alloc_ref.target_leverage;
-			ev.constant_weights(c);
+			ev.constant_weights(c, this->trades);
 			break;
 		}
 		default: {

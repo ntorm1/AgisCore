@@ -118,7 +118,7 @@ AgisResult<double> get_stats_beta(std::vector<double> const& nlv_history, std::v
     double nlv_mean = 0.0;
     double benchmark_mean = 0.0;
 
-    for (size_t i = 0; i < nlv_history.size(); ++i) {
+    for (size_t i = 1; i < nlv_history.size(); ++i) {
         double nlv_return = (i > 0) ? (nlv_history[i] - nlv_history[i - 1]) / nlv_history[i - 1] : 0.0;
         double benchmark_return = (i > 0) ? (benchmark_nlv_history[i] - benchmark_nlv_history[i - 1]) / benchmark_nlv_history[i - 1] : 0.0;
 
