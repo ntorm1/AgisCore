@@ -61,11 +61,13 @@ void AgisStrategy::__evaluate(bool on_close)
 	{
 		this->nlv_history.push_back(this->nlv);
 		this->cash_history.push_back(this->cash);
-		if (this->net_beta.has_value()) this->beta_history.push_back(this->net_beta.value());
+		if (this->net_beta.has_value()) {
+			this->beta_history.push_back(this->net_beta.value());
+		}
 		if (this->net_leverage_ratio.has_value()) {
-			if (this->nlv - this->cash < 1e-7) this->net_leverage_ratio = 1.0f;
-			else this->net_leverage_ratio = (this->nlv - this->cash) / this->nlv;
-			this->net_leverage_ratio_history.push_back(this->net_leverage_ratio.value());
+			// right now net_leverage_ratio has the sum of athe absolute values of the positions
+			// to get the leverage ratio we need to divide the nlv
+			this->net_leverage_ratio_history.push_back(this->net_leverage_ratio.value() / this->nlv);
 		}
 	}
 
@@ -186,10 +188,11 @@ void AgisStrategy::__validate_order(OrderPtr& order)
 
 	//reflect the new units in the limits asset holdings
 	this->limits.asset_holdings[order->get_asset_index()] += order->get_units();
-	if (order->has_child_order()) {
+	if (order->has_beta_hedge_order()) {
 		auto& child_order = order->get_child_order_ref();
 		this->limits.asset_holdings[child_order->get_asset_index()] += child_order->get_units();
 	}
+	if(this->net_leverage_ratio.has_value()) this->net_leverage_ratio.value() += cash_estimate;
 }
 
 
@@ -274,27 +277,60 @@ AGIS_API void AgisStrategy::strategy_allocate(
 
 		// add beta hedge order if needed
 		auto order = this->create_market_order(asset_index,size, trade_exit_copy);
-		if (!alloc.beta_hedge_size.has_value())this->place_order(std::move(order));
+		if (!alloc.beta_hedge_size.has_value()) {
+			this->place_order(std::move(order));
+		}
 		else {
 			// generate the beta hedge child order
+			double exisiting_units = 0;
+			double beta_hedge_order_size = alloc.beta_hedge_size.value() * (this->nlv / exchange_view.market_asset_price.value());
+			double inverse_beta_hedge_order_size = -beta_hedge_order_size;
+			// if there is an existing trade with an existing beta hedge subtract out this units
+			auto trade_opt = this->get_trade(asset_index);
+			if (trade_opt.has_value())
+			{
+				exisiting_units = trade_opt.value()->beta_hedge_units;
+				beta_hedge_order_size -= exisiting_units;
+			}
 			auto beta_hedge_order = this->create_market_order(
 				exchange_view.market_asset_index.value(),
-				alloc.beta_hedge_size.value() * (this->nlv / exchange_view.market_asset_price.value()),
+				beta_hedge_order_size,
+				std::nullopt
+			);
+			auto inverse_beta_hedge_order = this->create_market_order(
+				exchange_view.market_asset_index.value(),
+				inverse_beta_hedge_order_size,
 				std::nullopt
 			);
 
 			// insert the inverse child order into the trade exit to be filled on trade exit.
 			// this will close the beta hedge once the main trade is closed
 			if (trade_exit_copy.has_value()) {
-				auto inverse_beta_order = beta_hedge_order->generate_inverse_order();
-				order->get_exit()->insert_child_order(std::move(inverse_beta_order.release()));
+				order->get_exit()->insert_child_order(std::move(inverse_beta_hedge_order.release()));
+			}
+			// if there is no trade exit then insert it into the trade exit order
+			else {
+				// the inverse beta hedge trade to be placed on close of the trade should refelect
+				// the full beta hedge unit size
+				order->insert_trade_close_order(std::move(inverse_beta_hedge_order));
 			}
 
 			// insert the child order into the main order to be filled on main order fill
-			order->insert_child_order(std::move(beta_hedge_order));
+			order->insert_beta_hedge_order(std::move(beta_hedge_order));
+
 
 			// place the main order
 			this->place_order(std::move(order));
+		}
+	}
+
+	// if beta hedging touch the beta hedge trade manually as the asset is not in the allocation vector
+	if (apply_beta_hedge)
+	{
+		auto market_index = exchange_view.exchange->__get_market_asset_struct().value().market_index;
+		auto trade_opt = this->get_trade(market_index);
+		if (trade_opt.has_value()) {
+			trade_opt.value()->strategy_alloc_touch = true;
 		}
 	}
 
@@ -764,6 +800,7 @@ AgisResult<bool> AbstractAgisStrategy::extract_ev_lambda()
 		this->ev_opp_type = ExchangeViewOpp::CONSTANT;
 	else AGIS_THROW("invalid exchange view opp type");
 
+	// set ev extra param if needed
 	if (this->ev_opp_type == ExchangeViewOpp::CONDITIONAL_SPLIT || 
 		this->ev_opp_type == ExchangeViewOpp::CONSTANT)
 	{
@@ -777,6 +814,10 @@ AgisResult<bool> AbstractAgisStrategy::extract_ev_lambda()
 			this->ev_opp_param = val;
 		}
 	}
+
+	// set target leverage
+	this->target_leverage = strat_alloc_ref.target_leverage;
+
 	return AgisResult<bool>(true);
 }
 
@@ -1177,8 +1218,7 @@ AgisResult<bool> AgisStrategy::set_net_leverage_trace(bool val)
 std::optional<double> AgisStrategy::get_net_leverage_ratio() const
 {
 	if (!this->net_leverage_ratio.has_value()) return std::nullopt;
-	if (!this->limits.max_leverage.has_value()) return (this->nlv - this->cash) / this->nlv;
- 	return (this->nlv - (this->cash - this->limits.phantom_cash)) / this->nlv;
+	return this->net_leverage_ratio.value() / this->nlv;
 }
 
 

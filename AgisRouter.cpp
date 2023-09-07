@@ -66,10 +66,10 @@ void AgisRouter::processOrder(OrderPtr order) {
         // order has been filled by the exchange and is routed to the portfolio
         this->portfolios->__on_order_fill(order);
         // allow for child order to be process and filled in the same step
-        if (!order->has_child_order()) {
+        if (!order->has_beta_hedge_order()) {
             break;
         }
-        auto child_order = order->get_child_order();
+        auto child_order = order->get_beta_hedge_order();
         child_order->__set_state(OrderState::CHEAT);
         this->cheat_order(child_order);
         this->remeber_order(std::move(child_order));
@@ -101,15 +101,22 @@ void AgisRouter::cheat_order(OrderPtr& order)
 //============================================================================
 void AgisRouter::__process() {
 #ifdef USE_TBB
-    if (this->p->channel.unsafe_size() == 0) { return; }
-    std::for_each(
-        this->p->channel.unsafe_begin(),
-        this->p->channel.unsafe_end(),
-        [this](OrderPtr& order) {
-            processOrder(std::move(order));
-        }
-    );
-    this->p->channel.clear();
+    //if (this->p->channel.unsafe_size() == 0) { return; }
+    //std::for_each(
+    //    this->p->channel.unsafe_begin(),
+    //    this->p->channel.unsafe_end(),
+    //    [this](OrderPtr& order) {
+    //        processOrder(std::move(order));
+    //    }
+    //);
+    //this->p->channel.clear();
+    while (true) {
+        OrderPtr order = nullptr;
+        auto res = this->p->channel.try_pop(order);
+        if(!res || !order) break;
+        processOrder(std::move(order));
+    }
+
 #else
     if (this->p->channel.size() == 0) { return; }
 	    std::for_each(

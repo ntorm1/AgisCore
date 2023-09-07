@@ -31,6 +31,9 @@ Trade::Trade(AgisStrategy* strategy_, OrderPtr const& filled_order):
         this->exit = filled_order->move_exit();
         this->exit.value()->build(this); 
     }
+    if (filled_order->has_beta_hedge_order()) {
+		this->beta_hedge_units = filled_order->get_beta_hedge_order_ref()->get_units();
+	}
 
     // set the times
     this->trade_close_time = 0;
@@ -86,6 +89,21 @@ void Trade::adjust(OrderPtr const& filled_order)
     {
         this->reduce(filled_order);
     }
+
+    // if filled order has beta hedge attached to it reflect that on the current trades'
+    // beta hedge units tracker
+    if (filled_order->has_beta_hedge_order()) {
+        this->beta_hedge_units += filled_order->get_beta_hedge_order_ref()->get_units();
+    }
+
+    // check for orders on trade close and  swap in if needed
+    if (this->trade_close_order.has_value() && filled_order->has_trade_close_order()) {
+        OrderPtr order = std::move(this->trade_close_order.value());
+        this->trade_close_order = filled_order->get_trade_close_order();
+    }
+    else if (filled_order->has_trade_close_order()) {
+		this->trade_close_order = filled_order->get_trade_close_order();
+	}
 }
 
 
@@ -103,10 +121,12 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
     // adjust strategy net beta levels
     if (strategy->net_beta.has_value())
     {
-        strategy->net_beta.value() += (
+        auto beta_dollars = (
             this->units * market_price * __asset->get_beta().unwrap_or(0.0f)
         );
+        strategy->net_beta.value() += beta_dollars;
     }
+
     // adjust the strategy net leverage ratio to the abs of the position value
     if (strategy->net_leverage_ratio.has_value()) {
         strategy->net_leverage_ratio.value() += (

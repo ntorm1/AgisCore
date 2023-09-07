@@ -185,7 +185,7 @@ double AgisRiskStruct::estimate_phantom_cash(Order const* order)
     }
 
     // get cash required for child orders
-    if (order->has_child_order()) {
+    if (order->has_beta_hedge_order()) {
         auto& child_order_ref = order->get_child_order_ref();
         asset_index = child_order_ref->get_asset_index();
         market_price = this->exchange_map->__get_market_price(child_order_ref->get_asset_index(), true);

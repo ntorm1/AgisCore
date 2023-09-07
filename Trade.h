@@ -33,6 +33,7 @@ struct AGIS_API Trade {
     AssetPtr __asset;           ///< pointer to the underlying asset of the trade
     AgisStrategy* strategy;     ///< raw pointer to the strategy that generated the trade
 
+    double beta_hedge_units = 0.0f;
     double units;
     double average_price;
     double open_price;
@@ -59,6 +60,11 @@ struct AGIS_API Trade {
     bool strategy_alloc_touch = false;
 
     std::optional<TradeExitPtr> exit = std::nullopt;
+
+    /**
+     * @brief opotional order to be placed on trade close
+    */
+    std::optional<OrderPtr> trade_close_order;
 
     Trade(AgisStrategy* strategy, OrderPtr const& order);
 

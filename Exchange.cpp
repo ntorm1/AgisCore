@@ -234,9 +234,7 @@ AgisResult<bool> Exchange::__set_market_asset(
 		}
 		// adjust the lookback of the market asset to line up with the others
 		else {
-			// set the market beta columns to 1.0s, maybe better way for this
-			std::vector<double> ones(this->dt_index_size, 1.0);
-			asset_mid->__set_beta(ones);
+			asset_mid->__is_market_asset = true;
 			asset_mid->__set_warmup(beta_lookback.value());
 		}
 		});
@@ -600,9 +598,6 @@ AgisResult<bool> Exchange::restore(
 		{
 			return AgisResult<bool>(AGIS_EXCEP("Market asset not found"));
 		}
-		this->market_asset->asset = *new_market_asset_ptr;
-		this->market_asset->market_index = (*new_market_asset_ptr)->get_asset_index();
-
 		// build the beta vectors if the market asset has a beta lookback
 		if (this->market_asset.value().beta_lookback.has_value())
 		{
@@ -788,6 +783,27 @@ AgisResult<bool> ExchangeMap::restore_exchange(
 			this->asset_counter++;
 		}
 	this->candles += exchange->get_candle_count();
+
+	// set the market asset pointer
+	if (market_asset.has_value())
+	{
+		// find asset in assets with the same id as the market asset
+		auto new_market_asset_ptr = std::find_if(
+			this->assets.begin(),
+			this->assets.end(),
+			[&](const AssetPtr& asset) {
+				return asset->get_asset_id() == market_asset.value().market_id;
+			}
+		);
+		if (new_market_asset_ptr == this->assets.end())
+		{
+			return AgisResult<bool>(AGIS_EXCEP("Market asset not found"));
+		}
+		auto& market_asset_struct = exchange->__get_market_asset_struct_ref();
+		market_asset_struct.asset = *new_market_asset_ptr;
+		market_asset_struct.market_index = (*new_market_asset_ptr)->get_asset_index();
+	}
+	
 	UNLOCK_GUARD
 	return AgisResult<bool>(true);
 }
@@ -1245,14 +1261,37 @@ void ExchangeMap::__clear()
 }
 
 
+//============================================================================
+void ExchangeView::remove_allocation(size_t asset_index)
+{
+	std::optional<size_t> index = std::nullopt;
+	for (size_t i = 0; i < this->view.size(); i++)
+	{
+		if (view[i].asset_index = asset_index)
+		{
+			index = i;
+		}
+	}
+	if (index.has_value())
+	{
+		this->view.erase(this->view.begin() + index.value());
+	}
+}
+
+
+//============================================================================
 bool compareBySecondValueAsc(const ExchangeViewAllocation& a, const ExchangeViewAllocation& b) {
 	return a.allocation_amount < b.allocation_amount;  // Compare in ascending order
 }
 
+
+//============================================================================
 bool compareBySecondValueDesc(const ExchangeViewAllocation& a, const ExchangeViewAllocation& b) {
 	return a.allocation_amount > b.allocation_amount;  // Compare in descending order
 }
 
+
+//============================================================================
 void ExchangeView::sort(size_t N, ExchangeQueryType sort_type)
 {
 	if (view.size() <= N) { return; }

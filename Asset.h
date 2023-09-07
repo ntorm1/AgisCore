@@ -258,6 +258,11 @@ protected:
     /// </summary>
     bool __is_valid_next_time = true;
 
+    /**
+     * @brief is the asset a market asset, i.e. benchmark asset
+    */
+    bool __is_market_asset = false;
+
     bool __is_last_view() const { return this->current_index - 1 == this->rows; }
     bool __in_warmup() const { return (this->current_index - 1) < this->warmup; }
 

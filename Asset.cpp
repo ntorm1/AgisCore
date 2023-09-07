@@ -496,6 +496,9 @@ AGIS_API AgisResult<double> Asset::get_beta() const
     {
         return AgisResult<double>(this->beta_vector[this->current_index - 1]);
     }
+    else if (this->__is_market_asset) {
+        return AgisResult<double>(1.0f);
+    }
     else
     {
         return AgisResult<double>(AGIS_EXCEP("beta not available"));

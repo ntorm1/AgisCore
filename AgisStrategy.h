@@ -321,6 +321,12 @@ public:
 	*/
 	AGIS_API std::optional<double> get_net_leverage_ratio() const;
 
+	/**
+	 * @brief get the net beta of the strategy if it exits.
+	 * @return 
+	*/
+	AGIS_API std::optional<double> get_net_beta() const { return this->net_beta; }
+
 	/// <summary>
 	/// Get the unique strategy index of a strategy instance
 	/// </summary>
@@ -393,6 +399,16 @@ public:
 	 * @param step_frequency_ frequency in which the strategy calls virtual next method
 	*/
 	void set_step_frequency(std::optional<size_t> step_frequency_) { this->step_frequency = step_frequency_; }
+
+	/**
+	 * @brief set the target leverage of the strategy
+	 * @param t target leverage of the strategy
+	*/
+	void set_target_leverage(std::optional<double> t) {
+		this->target_leverage = t; 
+		this->set_net_leverage_trace(true);
+	}
+
 
 	/**
 	 * @brief remove the disabled flag from a strategy. This is done on the completion of a hydra run, and 

@@ -46,6 +46,7 @@ AGIS_API AgisResult<bool> ExchangeView::beta_hedge(
 		
 		double beta_hedge = -1 * alloc.allocation_amount * beta.unwrap();
 		alloc.beta_hedge_size = beta_hedge;
+		alloc.beta = beta.unwrap();
 		sum += abs(beta_hedge);
 		beta_hedge_total += beta_hedge;
 	}

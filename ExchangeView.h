@@ -71,6 +71,11 @@ struct ExchangeViewAllocation {
 	double allocation_amount = 0.0f;
 
 	/**
+	 * @brief beta of the asset
+	*/
+	std::optional<double> beta = 0.0f;
+
+	/**
 	 * @brief optional beta hedge size linked to the allocation. As of now beta hedges are applied at the trade level instead of the portfolio level. 
 	 * This allows for more flexibility, i.e. if some order is rejected than the beta hedge is still correct.
 	*/
@@ -95,6 +100,12 @@ struct ExchangeView
 	/// </summary>
 	/// <returns></returns>
 	size_t size() const { return this->view.size(); }
+
+	/**
+	 * @brief remove a specific allocation if it exists in the exchange view
+	 * @param asset_index unique id of the asset allocation to remove 
+	*/
+	void remove_allocation(size_t asset_index);
 
 	/// <summary>
 	/// Take an exchange view, then sort and extract a subset of the view

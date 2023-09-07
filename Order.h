@@ -135,7 +135,14 @@ private:
      * @brief On optional child order that is linked to this order is to be place on fill 
      * of the parent order
     */
-    std::optional<OrderPtr> child_order;
+    std::optional<OrderPtr> beta_hedge_order;
+
+    /**
+     * @brief an optional order to insert into the trade to be adjusted by this order that is sent on close
+     * of that trade. This is used for beta hedges that are using the non const portfolio allocations where the 
+     * portfolio trades do not have a trade exit.
+    */
+    std::optional<OrderPtr> trade_close_order;
 
 public:
     bool phantom_order = false;     /// is the order a phantom order (placed by benchmark strategy)
@@ -154,10 +161,14 @@ public:
     );
 
     [[nodiscard]] std::optional<double> get_limit() const { return this->limit; }
-    [[nodiscard]] bool has_child_order() const { return this->child_order.has_value(); }
+    [[nodiscard]] bool has_beta_hedge_order() const { return this->beta_hedge_order.has_value(); }
+    [[nodiscard]] bool has_trade_close_order() const { return this->trade_close_order.has_value(); }
     [[nodiscard]] TradeExitPtr get_exit() const { return this->exit.value(); }
-    [[nodiscard]] OrderPtr const& get_child_order_ref() const { return this->child_order.value(); }
-    [[nodiscard]] OrderPtr get_child_order() { return std::move(this->child_order.value()); }
+    [[nodiscard]] OrderPtr const& get_child_order_ref() const { return this->beta_hedge_order.value(); }
+    [[nodiscard]] OrderPtr get_trade_close_order() { return std::move(this->trade_close_order.value()); }
+    [[nodiscard]] OrderPtr get_beta_hedge_order() { return std::move(this->beta_hedge_order.value()); }
+    [[nodiscard]] OrderPtr const & get_beta_hedge_order_ref() { return this->beta_hedge_order.value(); }
+
     [[nodiscard]] size_t get_order_id() const { return this->order_id; }
     [[nodiscard]] size_t get_asset_index() const { return this->asset_index; }
     [[nodiscard]] size_t get_strategy_index() const { return this->strategy_index; }
@@ -167,7 +178,8 @@ public:
     [[nodiscard]] std::optional<TradeExitPtr> move_exit() { return std::move(this->exit); }
     [[nodiscard]] bool has_exit() const { return this->exit.has_value(); }
 
-    void insert_child_order(OrderPtr child_order_) { this->child_order = std::move(child_order_); }
+    void insert_trade_close_order(OrderPtr child_order_) { this->trade_close_order = std::move(child_order_); }
+    void insert_beta_hedge_order(OrderPtr child_order_) { this->beta_hedge_order = std::move(child_order_); }
     void set_limit(double limit_) { this->limit = limit_; }
     void set_create_time(long long t) { this->order_create_time = t; }
     void set_units(double units) { this->units = units; }

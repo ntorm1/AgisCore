@@ -170,6 +170,7 @@ public:
 	AGIS_API inline long long __get_market_time() { return this->dt_index[this->current_index]; }
 	size_t __get_exchange_index() const { return this->current_index - 1; };
 	AGIS_API [[nodiscard]] AgisResult<AssetPtr> __get_market_asset();
+	AGIS_API [[nodiscard]] MarketAsset& __get_market_asset_struct_ref() { return this->market_asset.value(); };
 	AGIS_API [[nodiscard]] std::optional<MarketAsset> __get_market_asset_struct() const { return this->market_asset;};
 
 

@@ -32,6 +32,13 @@ Position::Position(
         strategy,
         filled_order_
     );
+
+    // attach any exit order
+    if (filled_order_->has_trade_close_order()) {
+		auto order = filled_order_->get_trade_close_order();
+        trade->trade_close_order = std::move(order);
+	}
+
     this->trades.insert({trade->strategy_index,trade});
     strategy->__add_trade(trade);
     this->position_id = position_counter++;
@@ -101,7 +108,7 @@ void Position::close(OrderPtr const& order, std::vector<SharedTradePtr>& trade_h
     this->unrealized_pl = 0;
 
     for (auto& element : trades) {
-        // Retrieve the unique pointer
+        // Retrieve the trade pointer
         SharedTradePtr trade = element.second;
         trade->close(order);
         trade->strategy->__remove_trade(trade->asset_index);
@@ -210,11 +217,11 @@ OrderPtr Position::generate_position_inverse()
 
 
 //============================================================================
-void PortfolioMap::__evaluate(AgisRouter& router, bool on_close, bool is_reprice)
+void PortfolioMap::__evaluate(bool on_close, bool is_reprice)
 {
     // Define a lambda function that calls next for each strategy
     auto portfolio_evaluate = [&](auto& portfolio) {
-        portfolio.second->__evaluate(router, on_close, is_reprice);
+        portfolio.second->__evaluate(on_close, is_reprice);
     };
 
     std::for_each(
@@ -394,7 +401,7 @@ json Portfolio::to_json() const
 
 
 //============================================================================
-void PortfolioMap::restore(json const& j)
+void PortfolioMap::restore(AgisRouter& router, json const& j)
 {
     Portfolio::__reset_counter();
     json portfolios = j["portfolios"];
@@ -407,7 +414,7 @@ void PortfolioMap::restore(json const& j)
         double starting_cash = j["starting_cash"];
         
         // build new portfolio from the parsed settings
-        auto portfolio = std::make_unique<Portfolio>(portfolio_id, starting_cash);
+        auto portfolio = std::make_unique<Portfolio>(router, portfolio_id, starting_cash);
         this->__register_portfolio(std::move(portfolio));
     }
 }
@@ -443,7 +450,8 @@ AGIS_API json PortfolioMap::to_json() const
 
 
 //============================================================================
-Portfolio::Portfolio(std::string const & portfolio_id_, double cash_)
+Portfolio::Portfolio(AgisRouter& router_, std::string const & portfolio_id_, double cash_) :
+    router(router_)
 {
     this->portfolio_id = portfolio_id_;
     this->portfolio_index = portfolio_counter++;
@@ -544,7 +552,7 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
 
 
 //============================================================================
-void Portfolio::__evaluate(AgisRouter& router, bool on_close, bool is_reprice)
+void Portfolio::__evaluate(bool on_close, bool is_reprice)
 {
     LOCK_GUARD
     this->nlv = this->cash;
@@ -566,6 +574,7 @@ void Portfolio::__evaluate(AgisRouter& router, bool on_close, bool is_reprice)
         // evaluate the indivual positions and allow for any orders that are generated
         // as a result of the new valuation
         auto& position = it->second;
+
         position->__evaluate(orders, on_close, is_reprice);
         this->nlv += position->nlv;
         this->unrealized_pl += position->unrealized_pl;
@@ -769,6 +778,7 @@ void Portfolio::open_position(OrderPtr const& order)
     );
 }
 
+
 //============================================================================
 void Portfolio::__on_trade_closed(size_t start_index)
 {
@@ -776,6 +786,14 @@ void Portfolio::__on_trade_closed(size_t start_index)
     for (auto i = start_index; i < this->trade_history.size(); i++)
     {
         SharedTradePtr trade = this->trade_history[i];
+
+        // check for orders on trade close
+        if (trade->trade_close_order.has_value()) {
+        	OrderPtr order = std::move(trade->trade_close_order.value());
+            order->__set_state(OrderState::CHEAT);
+            this->router.place_order(std::move(order));
+        }
+
         auto& strategy = this->strategies.at(trade->strategy_index);
         strategy->__remember_trade(trade);
     }

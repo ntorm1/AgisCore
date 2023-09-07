@@ -27,7 +27,7 @@ void Hydra::__step()
     auto& expired_index_list = this->exchanges.__get_expired_index_list();
     
     // evaluate the portfolios at the current prices
-    this->portfolios.__evaluate(this->router, true, true);
+    this->portfolios.__evaluate(true, true);
 
     // process strategy logic at end of each time step
     bool step = this->strategies.__next();
@@ -38,7 +38,7 @@ void Hydra::__step()
     this->router.__process();
 
     // evaluate the portfolios on close, then remove any position for assets that are expiring.
-    this->portfolios.__evaluate(this->router, true);
+    this->portfolios.__evaluate(true);
     this->portfolios.__on_assets_expired(this->router, expired_index_list);
     this->router.__process();
 }
@@ -90,7 +90,7 @@ AGIS_API PortfolioPtr const Hydra::new_portfolio(std::string id, double cash)
         AGIS_THROW("portfolio already exists");
     }
     this->is_built = false;
-    auto portfolio = std::make_unique<Portfolio>(id, cash);
+    auto portfolio = std::make_unique<Portfolio>(this->router, id, cash);
     this->portfolios.__register_portfolio(std::move(portfolio));
 
     return this->get_portfolio(id);
@@ -381,7 +381,7 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
 //============================================================================
 AgisResult<bool> Hydra::restore_portfolios(json const& j)
 {
-    this->portfolios.restore(j);
+    this->portfolios.restore(this->router, j);
 
 
     // build the abstract strategies stored in the json

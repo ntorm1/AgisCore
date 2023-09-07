@@ -234,8 +234,8 @@ public:
 	AGIS_API [[nodiscard]] AgisResult<bool> set_market_asset(
 		std::string const& exchange_id,
 		std::string const& asset_id,
-		bool disable,
-		std::optional<size_t> beta_lookback
+		bool disable = true,
+		std::optional<size_t> beta_lookback = std::nullopt
 	);
 	
 	AGIS_API inline void __set_strategy_is_live(std::string const& strategy_id, bool is_live) {

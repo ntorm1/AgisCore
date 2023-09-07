@@ -158,7 +158,7 @@ class Portfolio
 {
     friend class PortfolioMap;
 public:
-    AGIS_API Portfolio(std::string const& portfolio_id, double cash);
+    AGIS_API Portfolio(AgisRouter& router, std::string const& portfolio_id, double cash);
 
     /// <summary>
     /// Get the unique index of the portfolio
@@ -173,7 +173,7 @@ public:
     /// <param name="exchanges">Const ref to a Hydra's exchange map instance</param>
     /// <param name="on_close">Are we on close</param>
     /// <param name="is_reprice">Is this a reprice, i.e. just evaluate the portfolio at current prices</param>
-    void __evaluate(AgisRouter& router, bool on_close, bool is_reprice = false);
+    void __evaluate(bool on_close, bool is_reprice = false);
 
     /// <summary>
     /// Get the unique id of the portfolio
@@ -308,6 +308,11 @@ private:
     /// </summary>
     static std::atomic<size_t> portfolio_counter;
 
+    /**
+     * @brief a ref to the main order router
+    */
+    AgisRouter& router;
+
     /// <summary>
     /// The unique index of the portfolio
     /// </summary>
@@ -345,7 +350,7 @@ class PortfolioMap
 public:
 	PortfolioMap() = default;
 
-    void __evaluate(AgisRouter& router, bool on_close, bool is_reprice = false);
+    void __evaluate(bool on_close, bool is_reprice = false);
     void __clear();
     void __reset();
     void __build(size_t size);
@@ -369,7 +374,7 @@ public:
     AGIS_API PortfolioRef get_portfolio(std::string const& id) const;
     AGIS_API std::vector<std::string> get_portfolio_ids() const;
     AGIS_API json to_json() const;
-    AGIS_API void restore(json const& j);
+    AGIS_API void restore(AgisRouter& router, json const& j);
 
 private:
     ankerl::unordered_dense::map<size_t, PortfolioPtr> portfolios;
