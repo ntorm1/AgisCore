@@ -50,6 +50,32 @@ void AgisRouter::remeber_order(OrderPtr order)
     this->portfolios->__remember_order(order_ptr);
 }
 
+
+//============================================================================
+void AgisRouter::process_beta_hedge(OrderPtr& order)
+{
+    auto child_order = order->take_beta_hedge_order();
+    child_order->__set_state(OrderState::CHEAT);
+    this->cheat_order(child_order);
+
+    // adjut the trades beta hedge partition 
+    auto asset_index = child_order->get_asset_index();
+    if (!order->parent_trade->partition_exists(asset_index)) {
+        auto partition = std::make_shared<TradePartition>(
+            order->parent_trade,
+            child_order->parent_trade,
+            child_order->get_units()
+        );
+        order->parent_trade->take_partition(std::move(partition));
+    }
+    else {
+        auto partition = order->parent_trade->get_child_partition(child_order->get_asset_index());
+        partition->child_trade_units += child_order->get_units();
+    }
+    this->remeber_order(std::move(child_order));
+}
+
+
 //============================================================================
 void AgisRouter::processOrder(OrderPtr order) {
     if (!order) { return; }
@@ -65,14 +91,10 @@ void AgisRouter::processOrder(OrderPtr order) {
     case OrderState::FILLED: {
         // order has been filled by the exchange and is routed to the portfolio
         this->portfolios->__on_order_fill(order);
-        // allow for child order to be process and filled in the same step
-        if (!order->has_beta_hedge_order()) {
-            break;
-        }
-        auto child_order = order->get_beta_hedge_order();
-        child_order->__set_state(OrderState::CHEAT);
-        this->cheat_order(child_order);
-        this->remeber_order(std::move(child_order));
+        // allow for bet hedge to be processed in the same step
+        if (order->has_beta_hedge_order()) {
+            this->process_beta_hedge(order);
+        }        
         break;
     }
     case OrderState::CHEAT:

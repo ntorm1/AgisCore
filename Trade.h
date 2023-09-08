@@ -29,11 +29,21 @@ AGIS_API typedef std::shared_ptr<TradeExit> TradeExitPtr;
 AGIS_API typedef std::reference_wrapper<const SharedTradePtr> TradeRef;
 
 
+/**
+ * @brief A trade partition is a chunk of a trade that belongs to a trade in a different asset. I.e. every trade
+ * might have a beta hedge associated with it, and those trade are responsible some portion of the beta hedge trade.
+*/
+struct TradePartition {
+    Trade* parent_trade         = nullptr;
+    Trade* child_trade          = nullptr;
+    double child_trade_units    = 0.0f;
+};
+
+
 struct AGIS_API Trade {
     AssetPtr __asset;           ///< pointer to the underlying asset of the trade
     AgisStrategy* strategy;     ///< raw pointer to the strategy that generated the trade
 
-    double beta_hedge_units = 0.0f;
     double units;
     double average_price;
     double open_price;
@@ -53,18 +63,21 @@ struct AGIS_API Trade {
     size_t strategy_index;
     size_t portfolio_index;
 
-    /// <summary>
-    /// Boolean flag to test if the strategy has allocated touch the trade. Used 
-    /// for clearing trades that were not in the new allocation of a strategy.
-    /// </summary>
+    /**
+     * @brief Boolean flag to test if the strategy has allocated touch the trade. Used 
+     * for clearing trades that were not in the new allocation of a strategy.
+    */
     bool strategy_alloc_touch = false;
 
+    /**
+     * @brief an optional trade exit object that will be used to close the trade if a condition is met
+    */
     std::optional<TradeExitPtr> exit = std::nullopt;
 
     /**
-     * @brief opotional order to be placed on trade close
+     * @brief a vector of child trade partitions that contain chunks of a trade in a different asset that belong to this trade.
     */
-    std::optional<OrderPtr> trade_close_order;
+    std::vector<std::shared_ptr<TradePartition>> child_partitions;
 
     Trade(AgisStrategy* strategy, OrderPtr const& order);
 
@@ -79,6 +92,10 @@ struct AGIS_API Trade {
     );
     OrderPtr generate_trade_inverse();
     AgisResult<json> serialize(json& _json, HydraPtr hydra) const;
+
+    void take_partition(std::shared_ptr<TradePartition> partition) { this->child_partitions.push_back(std::move(partition)); };
+    [[nodiscard]] std::shared_ptr<TradePartition> get_child_partition(size_t asset_index);
+    [[nodiscard]] bool partition_exists(size_t asset_index);
 
     [[nodiscard]] size_t get_asset_index() const { return this->asset_index; }
     [[nodiscard]] size_t get_strategy_index() const { return this->strategy_index; }

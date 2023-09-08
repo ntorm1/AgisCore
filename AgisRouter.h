@@ -46,6 +46,8 @@ private:
 
     void remeber_order(OrderPtr order);
 
+    void process_beta_hedge(OrderPtr& order);
+
 public:
     AgisRouter(
         ExchangeMap& exchanges_,

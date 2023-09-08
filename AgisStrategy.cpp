@@ -283,41 +283,24 @@ AGIS_API void AgisStrategy::strategy_allocate(
 		else {
 			// generate the beta hedge child order
 			double exisiting_units = 0;
+			size_t market_asset_index = exchange_view.market_asset_index.value();
 			double beta_hedge_order_size = alloc.beta_hedge_size.value() * (this->nlv / exchange_view.market_asset_price.value());
 			double inverse_beta_hedge_order_size = -beta_hedge_order_size;
 			// if there is an existing trade with an existing beta hedge subtract out this units
 			auto trade_opt = this->get_trade(asset_index);
-			if (trade_opt.has_value())
+			if (trade_opt.has_value() && trade_opt.value()->get_child_partition(market_asset_index))
 			{
-				exisiting_units = trade_opt.value()->beta_hedge_units;
-				beta_hedge_order_size -= exisiting_units;
+				auto partition = trade_opt.value()->get_child_partition(market_asset_index);
+				beta_hedge_order_size -= partition->child_trade_units;
 			}
 			auto beta_hedge_order = this->create_market_order(
-				exchange_view.market_asset_index.value(),
+				market_asset_index,
 				beta_hedge_order_size,
 				std::nullopt
 			);
-			auto inverse_beta_hedge_order = this->create_market_order(
-				exchange_view.market_asset_index.value(),
-				inverse_beta_hedge_order_size,
-				std::nullopt
-			);
-
-			// insert the inverse child order into the trade exit to be filled on trade exit.
-			// this will close the beta hedge once the main trade is closed
-			if (trade_exit_copy.has_value()) {
-				order->get_exit()->insert_child_order(std::move(inverse_beta_hedge_order.release()));
-			}
-			// if there is no trade exit then insert it into the trade exit order
-			else {
-				// the inverse beta hedge trade to be placed on close of the trade should refelect
-				// the full beta hedge unit size
-				order->insert_trade_close_order(std::move(inverse_beta_hedge_order));
-			}
 
 			// insert the child order into the main order to be filled on main order fill
 			order->insert_beta_hedge_order(std::move(beta_hedge_order));
-
 
 			// place the main order
 			this->place_order(std::move(order));

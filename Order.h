@@ -12,6 +12,7 @@
 
 class Order;
 class Hydra;
+struct Trade;
 
 typedef const Hydra* HydraPtr;
 AGIS_API typedef std::unique_ptr<Order> OrderPtr;
@@ -125,6 +126,8 @@ private:
     size_t strategy_index;          /// unique id of the strategy that placed the order
     size_t portfolio_index;         /// unique id of the portflio the order was placed to
 
+
+
     /// <summary>
     /// An option trade exit to be given to the trade created by this order
     /// </summary>
@@ -137,19 +140,17 @@ private:
     */
     std::optional<OrderPtr> beta_hedge_order;
 
-    /**
-     * @brief an optional order to insert into the trade to be adjusted by this order that is sent on close
-     * of that trade. This is used for beta hedges that are using the non const portfolio allocations where the 
-     * portfolio trades do not have a trade exit.
-    */
-    std::optional<OrderPtr> trade_close_order;
-
 public:
     bool phantom_order = false;     /// is the order a phantom order (placed by benchmark strategy)
     bool force_close = false;       /// force an order to close out a position
     AssetPtr __asset = nullptr;		/// pointer to the asset the order is for
 
     typedef std::shared_ptr<Order> order_sp_t;
+
+    /**
+     * @brief pointer to the trade altered by this order
+    */
+    Trade* parent_trade = nullptr;
 
     Order(OrderType order_type_,
         size_t asset_index_,
@@ -162,11 +163,9 @@ public:
 
     [[nodiscard]] std::optional<double> get_limit() const { return this->limit; }
     [[nodiscard]] bool has_beta_hedge_order() const { return this->beta_hedge_order.has_value(); }
-    [[nodiscard]] bool has_trade_close_order() const { return this->trade_close_order.has_value(); }
     [[nodiscard]] TradeExitPtr get_exit() const { return this->exit.value(); }
     [[nodiscard]] OrderPtr const& get_child_order_ref() const { return this->beta_hedge_order.value(); }
-    [[nodiscard]] OrderPtr get_trade_close_order() { return std::move(this->trade_close_order.value()); }
-    [[nodiscard]] OrderPtr get_beta_hedge_order() { return std::move(this->beta_hedge_order.value()); }
+    [[nodiscard]] OrderPtr take_beta_hedge_order() { return std::move(this->beta_hedge_order.value()); this->beta_hedge_order = std::nullopt; }
     [[nodiscard]] OrderPtr const & get_beta_hedge_order_ref() { return this->beta_hedge_order.value(); }
 
     [[nodiscard]] size_t get_order_id() const { return this->order_id; }
@@ -178,7 +177,6 @@ public:
     [[nodiscard]] std::optional<TradeExitPtr> move_exit() { return std::move(this->exit); }
     [[nodiscard]] bool has_exit() const { return this->exit.has_value(); }
 
-    void insert_trade_close_order(OrderPtr child_order_) { this->trade_close_order = std::move(child_order_); }
     void insert_beta_hedge_order(OrderPtr child_order_) { this->beta_hedge_order = std::move(child_order_); }
     void set_limit(double limit_) { this->limit = limit_; }
     void set_create_time(long long t) { this->order_create_time = t; }

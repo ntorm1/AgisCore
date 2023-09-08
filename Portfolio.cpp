@@ -33,12 +33,6 @@ Position::Position(
         filled_order_
     );
 
-    // attach any exit order
-    if (filled_order_->has_trade_close_order()) {
-		auto order = filled_order_->get_trade_close_order();
-        trade->trade_close_order = std::move(order);
-	}
-
     this->trades.insert({trade->strategy_index,trade});
     strategy->__add_trade(trade);
     this->position_id = position_counter++;
@@ -787,11 +781,14 @@ void Portfolio::__on_trade_closed(size_t start_index)
     {
         SharedTradePtr trade = this->trade_history[i];
 
-        // check for orders on trade close
-        if (trade->trade_close_order.has_value()) {
-        	OrderPtr order = std::move(trade->trade_close_order.value());
-            order->__set_state(OrderState::CHEAT);
-            this->router.place_order(std::move(order));
+        // check for trade partitions to close
+        if (trade->child_partitions.size()) {
+            for (auto& partition : trade->child_partitions) {
+                auto order = partition->child_trade->generate_trade_inverse();
+                order->set_units(-1*partition->child_trade_units);
+                order->__set_state(OrderState::CHEAT);
+                this->router.place_order(std::move(order));
+            }
         }
 
         auto& strategy = this->strategies.at(trade->strategy_index);
