@@ -167,6 +167,7 @@ public:
     AGIS_API AgisResult<double> get_asset_feature(std::string const& col, int index) const;
     AGIS_API AgisResult<double> get_asset_feature(size_t col, int index) const;
     AGIS_API AgisResult<double> get_beta() const;
+    AGIS_API AgisResult<double> get_volatility() const;
     AGIS_API std::span<double const> get_beta_column() const;
 
     AGIS_API bool __get_is_valid_next_time() const { return __is_valid_next_time; }
@@ -228,6 +229,7 @@ protected:
 
     AGIS_API inline void __set_alignment(bool is_aligned_) { this->__is_aligned = is_aligned_; }
     bool __set_beta(AssetPtr market_asset, size_t lookback);
+    void __set_volatility(size_t lookback);
     bool __set_beta(std::vector<double> beta_column);
     void __set_warmup(size_t warmup_) { if (this->warmup < warmup_) this->warmup = warmup_; }
     void __set_index(size_t index_) { this->asset_index = index_; }
@@ -264,7 +266,10 @@ protected:
     bool __is_market_asset = false;
 
     bool __is_last_view() const { return this->current_index - 1 == this->rows; }
-    bool __in_warmup() const { return (this->current_index - 1) < this->warmup; }
+    bool __in_warmup() const { 
+        if(this->current_index == 0) return true;
+        return (this->current_index - 1) < this->warmup; 
+    }
 
 
 private:
@@ -286,10 +291,21 @@ private:
     size_t current_index = 0;
     size_t open_index;
     size_t close_index;
-    long long* dt_index;
-    double* data;
-    double* close;
-    double* open;
+    long long* dt_index = nullptr;
+    double* data        = nullptr;
+    double* close       = nullptr;
+    double* open        = nullptr;
+
+    /**
+     * @brief vector of rolling annualized volatility defined by some lookback N. Set via 
+     * and exchange's set_volatility() method.
+    */
+    std::vector<double> volatility_vector;
+
+    /**
+     * @brief vector of rolling beta defined by some lookback N. Set via and exchanges set_market_asset
+     * function call.
+    */
     std::vector<double> beta_vector;
 
     std::optional<std::pair<long long, long long>> window = std::nullopt;

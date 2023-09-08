@@ -4,6 +4,8 @@
 #include "Order.h"
 #include "AgisStrategy.h"
 
+constexpr auto SQRT_252 = 15.874507866387544;
+
 //============================================================================
 double covariance(const std::vector<double>& values1, const std::vector<double>& values2, size_t start, size_t end)
 {
@@ -118,6 +120,55 @@ std::vector<double> rolling_beta(const std::vector<double>& stock_returns, const
     }
 
     return rolling_betas;
+}
+
+
+//============================================================================
+std::vector<double> rolling_volatility(std::span<double> const prices, size_t window_size)
+{
+    std::vector<double> rolling_volatility; // Initialize with zeros
+
+    if (prices.size() < window_size) {
+        // Handle the case where the window size is greater than the number of returns.
+        // You may want to return an error or handle it differently based on your requirements.
+        return rolling_volatility;
+    }
+
+    // volatility is calculated with returns, to make sure the vol vector is the same length
+    // as the the asset's row count, insert 0 at the beginning
+    rolling_volatility.reserve(prices.size());
+    rolling_volatility.push_back(0.0);
+
+    double sum = 0.0;
+    double sos = 0.0;
+
+    // Calculate the initial sums for the first window
+    for (size_t i = 1; i < window_size; ++i) {
+        double returnVal = (prices[i] - prices[i - 1]) / prices[i - 1];
+        sum += returnVal;
+        sos += returnVal * returnVal;
+        rolling_volatility.push_back(0.0f);
+    }
+
+    for (size_t i = window_size; i < prices.size(); ++i) {
+        // Calculate the rolling standard deviation (volatility) for the current window.
+        double returnVal = (prices[i] - prices[i - 1]) / prices[i - 1];
+        sum += returnVal;
+        sos += returnVal * returnVal;
+        double mean = sum / (window_size);
+        double variance = (sos / (window_size-1)) - (mean * mean);
+        double volatility = std::sqrt(variance) * SQRT_252;
+
+        rolling_volatility.push_back(volatility);
+
+        if (i > window_size) {
+            double old_return = (prices[i - window_size] - prices[i - window_size - 1]) / prices[i - window_size - 1];
+            sum -= old_return;
+            sos -= old_return * old_return;
+        }
+    }
+
+    return rolling_volatility;
 }
 
 

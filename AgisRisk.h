@@ -117,9 +117,27 @@ double mean(const double* values, size_t start, size_t end);
 // Calculate the correlation coefficient between two sets of values over a range [start, end)
 double correlation(const std::vector<double>& values1, const std::vector<double>& values2, size_t start, size_t end);
 
+/**
+ * @brief calculate the rolling beta of a stock over a given window size
+ * @param stock_returns returns of the asset
+ * @param market_returns returns of the benchmark
+ * @param windowSize the size of the window to calculate the beta over
+ * @return the rolling beta
+*/
 std::vector<double> rolling_beta(
-	const std::vector<double>& stockReturns,
-	const std::vector<double>& marketReturns,
+	std::vector<double> const& stock_returns,
+	std::vector<double> const& market_returns,
+	size_t windowSize
+);
+
+/**
+ * @brief calculate the rolling volatility of a stock over a given window size
+ * @param returns returns of the asset
+ * @param windowSize the size of the window to calculate the volatility over
+ * @return the rolling volatility
+*/
+std::vector<double> rolling_volatility(
+	std::span<double> const returns,
 	size_t windowSize
 );
 

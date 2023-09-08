@@ -64,12 +64,18 @@ void ExchangeMap::restore(json const& j)
 		auto freq_ = string_to_freq(exchange_json["freq"]);
 		this->new_exchange(exchange_id_, source_dir_, freq_, dt_format_);
 
+		// set market asset if needed
 		MarketAsset market_asset = MarketAsset(
 			exchange_json["market_asset"], exchange_json["market_warmup"]
 		);
 
 		this->restore_exchange(exchange_id_, std::nullopt, market_asset);
-		});
+
+		// set volatility lookback
+		auto exchange_ptr = this->get_exchange(exchange_id_);
+		size_t volatility_lookback = exchange_json.value("volatility_lookback", 0);
+		exchange_ptr->__set_volatility(volatility_lookback);
+	});
 
 	// set market assets
 	for (auto& exchange : this->exchanges)
@@ -90,7 +96,8 @@ json Exchange::to_json() const
 		{"exchange_id", this->exchange_id},
 		{"source_dir", this->source_dir},
 		{"freq", this->freq},
-		{"dt_format", this->dt_format}
+		{"dt_format", this->dt_format},
+		{"volatility_lookback", this->volatility_lookback}
 	};
 	if (this->market_asset.has_value())
 	{
@@ -726,6 +733,18 @@ void Exchange::__process_limit_order(std::unique_ptr<Order>& order, bool on_clos
 
 
 //============================================================================
+void Exchange::__set_volatility(size_t window_size)
+{
+	this->volatility_lookback = window_size;
+	if (window_size == 0) return;
+	for(auto& asset : this->assets)
+	{
+		asset->__set_volatility(window_size);
+	}
+}
+
+
+//============================================================================
 AGIS_API double Exchange::__get_market_price(size_t index, bool on_close) const
 {
 	auto const& asset = this->assets[index];
@@ -797,6 +816,7 @@ AgisResult<bool> ExchangeMap::restore_exchange(
 		);
 		if (new_market_asset_ptr == this->assets.end())
 		{
+			UNLOCK_GUARD
 			return AgisResult<bool>(AGIS_EXCEP("Market asset not found"));
 		}
 		auto& market_asset_struct = exchange->__get_market_asset_struct_ref();

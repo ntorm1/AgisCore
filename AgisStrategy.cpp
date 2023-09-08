@@ -282,7 +282,6 @@ AGIS_API void AgisStrategy::strategy_allocate(
 		}
 		else {
 			// generate the beta hedge child order
-			double exisiting_units = 0;
 			size_t market_asset_index = exchange_view.market_asset_index.value();
 			double beta_hedge_order_size = alloc.beta_hedge_size.value() * (this->nlv / exchange_view.market_asset_price.value());
 			double inverse_beta_hedge_order_size = -beta_hedge_order_size;

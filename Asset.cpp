@@ -429,6 +429,8 @@ std::vector<std::string> Asset::__get_dt_index_str(bool adjust_for_warmup) const
     return dt_index_str;
 }
 
+
+//============================================================================
 bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
 {
     auto market_close_col_index = market_asset->__get_close_index();
@@ -480,6 +482,18 @@ bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
 
 
 //============================================================================
+void Asset::__set_volatility(size_t lookback)
+{
+    // adjust the warmup to account for the lookback period
+    this->__set_warmup(lookback);
+    // calculate volatility using closing prices
+    auto close_span = this->__get_column(this->close_index);
+    this->volatility_vector = rolling_volatility(close_span, lookback);
+    assert(this->volatility_vector.size() == this->rows);
+}
+
+
+//============================================================================
 bool Asset::__set_beta(std::vector<double> beta_column)
 {
     // allow for explcit setting of beta instead of rolling cov/var. Also used to
@@ -490,9 +504,23 @@ bool Asset::__set_beta(std::vector<double> beta_column)
 
 
 //============================================================================
+AGIS_API AgisResult<double> Asset::get_volatility() const
+{
+    if (this->volatility_vector.size() && !this->__in_warmup())
+    {
+        return AgisResult<double>(this->volatility_vector[this->current_index - 1]);
+    }
+    else
+    {
+        return AgisResult<double>(AGIS_EXCEP("volatility not available"));
+    }
+}
+
+
+//============================================================================
 AGIS_API AgisResult<double> Asset::get_beta() const
 {
-    if (this->beta_vector.size() > 0 && !this->__in_warmup())
+    if (this->beta_vector.size() && !this->__in_warmup())
     {
         return AgisResult<double>(this->beta_vector[this->current_index - 1]);
     }
@@ -505,6 +533,8 @@ AGIS_API AgisResult<double> Asset::get_beta() const
     }
 }
 
+
+//============================================================================
 AGIS_API std::span<double const> Asset::get_beta_column() const
 {
     // return beta_vector as span

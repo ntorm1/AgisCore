@@ -168,6 +168,7 @@ public:
 	AGIS_API inline size_t const __get_size() const { return this->dt_index_size; }
 	AGIS_API inline double __get_market_price(size_t asset_index, bool on_close) const;
 	AGIS_API inline long long __get_market_time() { return this->dt_index[this->current_index]; }
+	AGIS_API inline size_t __get_vol_lookback() const { return this->volatility_lookback; }
 	size_t __get_exchange_index() const { return this->current_index - 1; };
 	AGIS_API [[nodiscard]] AgisResult<AssetPtr> __get_market_asset();
 	AGIS_API [[nodiscard]] MarketAsset& __get_market_asset_struct_ref() { return this->market_asset.value(); };
@@ -181,6 +182,7 @@ public:
 	void __process_order(bool on_close, OrderPtr& order);
 	void __process_market_order(std::unique_ptr<Order>& order, bool on_close);
 	void __process_limit_order(std::unique_ptr<Order>& order, bool on_close);
+	AGIS_API void __set_volatility(size_t window_size);
 
 	AgisResult<bool> validate();
 	void reset();
@@ -227,6 +229,7 @@ private:
 	size_t dt_index_size = 0;
 	size_t current_index = 0;
 	size_t warmup = 0;
+	size_t volatility_lookback = 0;
 	size_t candles = 0;
 	bool is_built = false;
 };
