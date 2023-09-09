@@ -11,6 +11,24 @@
 std::atomic<size_t> AgisStrategy::strategy_counter(0);
 
 
+//============================================================================
+AgisStrategy::AgisStrategy(
+	std::string id,
+	PortfolioPtr const portfolio_,
+	double portfolio_allocation_
+) :
+	portfolio(portfolio_)
+{
+	this->strategy_id = id;
+	this->strategy_index = strategy_counter++;
+	this->router = nullptr;
+
+	this->portfolio_allocation = portfolio_allocation_;
+	this->nlv = portfolio_allocation * portfolio->get_cash();
+	this->cash = portfolio_allocation * portfolio->get_cash();
+	this->starting_cash = this->cash;
+}
+
 
 //============================================================================
 void AgisStrategy::__reset()

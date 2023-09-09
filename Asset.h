@@ -112,6 +112,15 @@ AGIS_API typedef std::shared_ptr<Asset> AssetPtr;
 class Exchange;
 class ExchangeMap;
 
+
+// Observer base class
+class AssetObserver {
+public:
+    virtual void on_step() = 0;
+    virtual void on_reset() = 0;
+};
+
+
 class  Asset
 {
     friend class Exchange;
@@ -145,6 +154,20 @@ public:
     /// <returns></returns>
     bool encloses(AssetPtr asset_b);
 
+    /**
+     * @brief given another asset which is enclosed, find the index location of the current asset
+     * that marks the start of the datetime index of the enclosed asset
+     * @param asset_b the child asset
+     * @return index location of the first matching datetime index
+    */
+    size_t encloses_index(AssetPtr asset_b);
+
+    /**
+     * @brief add a new asset observer
+     * @param observer the observer to add
+    */
+    void add_observer(std::shared_ptr<AssetObserver> observer) { this->observers.push_back(observer); }
+
     /// <summary>
     /// Takes an asset and returns a vector of NLV values representing the result of 
     /// a portfolio which takes a 100% position in this asset at time 0
@@ -168,7 +191,8 @@ public:
     AGIS_API AgisResult<double> get_asset_feature(size_t col, int index) const;
     AGIS_API AgisResult<double> get_beta() const;
     AGIS_API AgisResult<double> get_volatility() const;
-    AGIS_API std::span<double const> get_beta_column() const;
+    AGIS_API const std::span<double const> get_beta_column() const;
+    AGIS_API const std::span<double const> get_volatility_column() const;
 
     AGIS_API bool __get_is_valid_next_time() const { return __is_valid_next_time; }
     AGIS_API bool __is_last_row() const {return this->current_index == this->rows + 1;}
@@ -184,10 +208,13 @@ public:
     AGIS_API std::span<long long> const __get_dt_index(bool adjust_for_warmup = true) const;
     AGIS_API std::vector<std::string> __get_dt_index_str(bool adjust_for_warmup = true) const;
     size_t __get_index(bool offset = true) const { return offset ? this->asset_index : this->asset_index - this->exchange_offset; }
+    bool __get_is_aligned() const { return this->__is_aligned;}
+
 
     bool __contains_column(std::string const& col) { return this->headers.count(col) > 0; }
     bool __valid_row(int n)const { return abs(n) <= (this->current_index - 1); }
-    
+    void __set_warmup(size_t warmup_) { if (this->warmup < warmup_) this->warmup = warmup_; }
+    void __set_in_exchange_view(bool x) { this->__in_exchange_view = x; }
     bool __is_valid_time(long long& datetime);
     long long __get_asset_time() const { return this->dt_index[this->current_index];}
 
@@ -231,7 +258,6 @@ protected:
     bool __set_beta(AssetPtr market_asset, size_t lookback);
     void __set_volatility(size_t lookback);
     bool __set_beta(std::vector<double> beta_column);
-    void __set_warmup(size_t warmup_) { if (this->warmup < warmup_) this->warmup = warmup_; }
     void __set_index(size_t index_) { this->asset_index = index_; }
     void __set_exchange_offset(size_t offset) { this->exchange_offset = offset; }
 
@@ -283,7 +309,7 @@ private:
     std::string source;
     std::string dt_fmt;
     std::string tz;
-    size_t warmup;
+    size_t warmup = 0;
     Frequency freq;
 
     size_t rows          = 0;
@@ -307,6 +333,11 @@ private:
      * function call.
     */
     std::vector<double> beta_vector;
+
+    /**
+     * @brief a vector of observers linked for this asset
+    */
+    std::vector<std::shared_ptr<AssetObserver>> observers;
 
     std::optional<std::pair<long long, long long>> window = std::nullopt;
 

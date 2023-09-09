@@ -172,13 +172,14 @@ AGIS_API AgisResult<bool> Asset::load(
 }
 #endif
 
+
 //============================================================================
 bool Asset::encloses(AssetPtr asset_b)
 {
     if (!this->is_loaded) return false;
-    if(this->rows < asset_b->rows) return false;
+    if (this->rows < asset_b->rows) return false;
 
-    auto asset_b_index = asset_b->__get_dt_index();
+    auto asset_b_index = asset_b->__get_dt_index(false);
     auto asset_b_start = asset_b_index[0];
 
     // find the index location of asset_b_start in this->dt_index if it exists
@@ -194,8 +195,21 @@ bool Asset::encloses(AssetPtr asset_b)
 			return false;
 		}
 	}
-	return true;
-    
+	return true; 
+}
+
+
+//============================================================================
+size_t Asset::encloses_index(AssetPtr asset_b)
+{
+    auto asset_b_index = asset_b->__get_dt_index(false);
+    auto asset_b_start = asset_b_index[0];
+
+    // find the index location of asset_b_start in this->dt_index if it exists
+    auto it = std::find(this->dt_index, this->dt_index + this->rows, asset_b_start);
+    if (it == this->dt_index + this->rows) return false;
+    auto asset_b_start_index = std::distance(this->dt_index, it);
+    return asset_b_start_index;
 }
 
 
@@ -535,21 +549,16 @@ AGIS_API AgisResult<double> Asset::get_beta() const
 
 
 //============================================================================
-AGIS_API std::span<double const> Asset::get_beta_column() const
+AGIS_API const std::span<double const> Asset::get_beta_column() const
 {
-    // return beta_vector as span
     return std::span<double const>(this->beta_vector);
 }
 
 
 //============================================================================
-void Asset::__step()
+AGIS_API const std::span<double const> Asset::get_volatility_column() const
 {
-    this->current_index++;
-    this->open++;
-    this->close++;
-    if (this->__in_warmup()) this->__is_streaming = false;
-    else this->__is_streaming = true;
+    return std::span<double const>(this->volatility_vector);
 }
 
 
@@ -567,6 +576,23 @@ bool Asset::__is_valid_time(long long& datetime)
 
     if (t < w.first || t > w.second) { return false; }
     return true;
+}
+
+
+//============================================================================
+void Asset::__step()
+{
+    this->current_index++;
+    this->open++;
+    this->close++;
+    if (this->__in_warmup()) this->__is_streaming = false;
+    else this->__is_streaming = true;
+
+    if (this->observers.size()) {
+        for (auto& observer : observers) {
+            observer->on_step();
+        }
+    }
 }
 
 
@@ -589,12 +615,24 @@ void Asset::__goto(long long datetime)
 //============================================================================
 void Asset::__reset()
 {
+    if (this->observers.size()) {
+        for (auto& observer : observers) {
+            observer->on_reset();
+        }
+    }
+
     // move datetime index and data pointer back to start
-    this->current_index = this->warmup;
+    this->current_index = 0;
     this->__is_expired = false;
     if(!__is_aligned) this->__is_streaming = false;
-    this->close = (this->data + (this->rows) * this->close_index) + this->current_index;
-    this->open = (this->data + (this->rows) * this->open_index) + this->current_index;
+    this->close = (this->data + (this->rows) * this->close_index);
+    this->open = (this->data + (this->rows) * this->open_index);
+
+    // step forward untill warmup is reached
+    for (int i = 0; i < this->warmup; i++)
+    {
+        this->__step();
+    }
 }
 
 

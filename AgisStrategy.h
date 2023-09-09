@@ -140,22 +140,11 @@ class AgisStrategy
 public:
 	virtual ~AgisStrategy() = default;
 	AgisStrategy() = default;
-	AgisStrategy(
-		std::string id, 
+	AGIS_API AgisStrategy(
+		std::string id,
 		PortfolioPtr const portfolio_,
 		double portfolio_allocation_
-	):
-		portfolio(portfolio_)
-	{
-		this->strategy_id = id;
-		this->strategy_index = strategy_counter++;
-		this->router = nullptr;
-
-		this->portfolio_allocation = portfolio_allocation_;
-		this->nlv = portfolio_allocation * portfolio->get_cash();
-		this->cash = portfolio_allocation * portfolio->get_cash();
-		this->starting_cash = this->cash;
-	}
+	);
 
 	AGIS_API inline static void __reset_counter() { strategy_counter.store(0); }
 

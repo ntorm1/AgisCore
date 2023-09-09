@@ -202,7 +202,7 @@ std::vector<double> get_stats_underwater_plot(std::span<double const> const& nlv
 
 std::vector<double> get_stats_rolling_drawdown(std::vector<double> const& nlv_history) {
     int n = 252;
-    int dataSize = nlv_history.size();
+    size_t dataSize = nlv_history.size();
     std::vector<double> max_drawdowns(dataSize, 0.0);
     std::deque<int> drawdown_queue;
 

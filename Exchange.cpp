@@ -5,8 +5,9 @@
 #include <Windows.h>
 #include "utils_array.h"
 #include "Exchange.h"
-#include "AgisRouter.h"
 
+#include "AgisRouter.h"
+#include "AgisRisk.h"
 
 std::atomic<size_t> Exchange::exchange_counter(0);
 std::vector<std::string> exchange_view_opps = {
@@ -74,7 +75,7 @@ void ExchangeMap::restore(json const& j)
 		// set volatility lookback
 		auto exchange_ptr = this->get_exchange(exchange_id_);
 		size_t volatility_lookback = exchange_json.value("volatility_lookback", 0);
-		exchange_ptr->__set_volatility(volatility_lookback);
+		exchange_ptr->__set_volatility_lookback(volatility_lookback);
 	});
 
 	// set market assets
@@ -284,6 +285,51 @@ AgisResult<bool> ExchangeMap::set_market_asset(
 	// store pointer to the market asset
 	this->market_assets.emplace(freq, asset);
 	return res;
+}
+
+
+//============================================================================
+AGIS_API AgisResult<bool> ExchangeMap::init_covariance_matrix()
+{
+	// validate the currently registered exchanges. They all must have the same frequency 
+	// and have the same volatility lookback period
+	size_t vol_lookback = 0;
+	Frequency freq = Frequency::Day1;
+	int i = 1;
+	for (auto& [id,exchange] : this->exchanges)
+	{
+		if (exchange->__get_vol_lookback() == 0) {
+			return AgisResult<bool>(AGIS_EXCEP("exchange: " + id + " has no vol lookback"));
+		}
+		if (i == 1) {
+			vol_lookback = exchange->__get_vol_lookback();
+			freq = exchange->get_frequency();
+		}
+		else {
+			if (exchange->__get_vol_lookback() != vol_lookback) {
+				return AgisResult<bool>(AGIS_EXCEP("exchange: " + id + " has different vol lookback"));
+			}
+			if (exchange->get_frequency() != freq) {
+				return AgisResult<bool>(AGIS_EXCEP("exchange: " + id + " has different frequency"));
+			}
+		}
+	}
+
+	try {
+		this->covariance_matrix = AgisCovarianceMatrix(this);
+	}
+	catch (std::exception& e) {
+		return AgisResult<bool>(AGIS_EXCEP(e.what()));
+	}
+	return AgisResult<bool>(true);
+}
+
+
+//============================================================================
+AGIS_API AgisCovarianceMatrix const& ExchangeMap::get_covariance_matrix() const
+{
+	if (!this->covariance_matrix.has_value()) return nullptr;
+	return this->covariance_matrix.value();
 }
 
 
@@ -733,7 +779,7 @@ void Exchange::__process_limit_order(std::unique_ptr<Order>& order, bool on_clos
 
 
 //============================================================================
-void Exchange::__set_volatility(size_t window_size)
+void Exchange::__set_volatility_lookback(size_t window_size)
 {
 	this->volatility_lookback = window_size;
 	if (window_size == 0) return;
@@ -1131,6 +1177,16 @@ void ExchangeMap::__set_asset(size_t asset_index, std::shared_ptr<Asset> asset)
 	LOCK_GUARD
 	this->assets[asset_index] = asset;
 	UNLOCK_GUARD
+}
+
+
+//============================================================================
+AGIS_API void ExchangeMap::__set_volatility_lookback(size_t window_size)
+{
+	for (auto& [id, exchange] : this->exchanges)
+	{
+		exchange->__set_volatility_lookback(window_size);
+	}
 }
 
 

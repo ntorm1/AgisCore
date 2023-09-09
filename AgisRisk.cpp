@@ -2,9 +2,12 @@
 #include "AgisRisk.h"
 #include "Asset.h"
 #include "Order.h"
+#include "Exchange.h"
 #include "AgisStrategy.h"
 
+
 constexpr auto SQRT_252 = 15.874507866387544;
+
 
 //============================================================================
 double covariance(const std::vector<double>& values1, const std::vector<double>& values2, size_t start, size_t end)
@@ -177,12 +180,7 @@ std::vector<double> rolling_volatility(std::span<double> const prices, size_t wi
 IncrementalCovariance::IncrementalCovariance(
     std::shared_ptr<Asset> a1,
     std::shared_ptr<Asset> a2,
-    size_t period) : IncrementalCovariance(
-        a1->__get_column(a1->__get_close_index()),
-        a2->__get_column(a2->__get_close_index()),
-        period,
-        a1->get_current_index()
-    )
+    size_t period_)
 {
 #ifdef _DEBUG
     if (a1->get_frequency() != a2->get_frequency())
@@ -194,6 +192,97 @@ IncrementalCovariance::IncrementalCovariance(
         throw std::runtime_error("Assets must have the same current index");
     }
 #endif
+
+    a1->__set_warmup(period_);
+    a2->__set_warmup(period_);
+
+    // find the enclosing asset
+    std::shared_ptr<Asset> enclosing_asset;
+    std::shared_ptr<Asset> child_asset;
+    if (a1->encloses(a2)) {
+        enclosing_asset = a1;
+        child_asset = a2;
+    }
+    else if (a2->encloses(a1)) {
+        enclosing_asset = a2;
+        child_asset = a1;
+    }
+    else {
+        throw std::runtime_error("did not find an enclosing asset");
+    }
+    this->period = period_;
+    this->enclosing_span = enclosing_asset->__get_column((enclosing_asset->__get_close_index()));
+    this->child_span = child_asset->__get_column((enclosing_asset->__get_close_index()));
+    this->enclosing_span_start_index = enclosing_asset->encloses_index(a2);
+}
+
+
+//============================================================================
+void IncrementalCovariance::on_step()
+{
+    // if the current index is less than the enclosing span start index then return
+    if (index < this->enclosing_span_start_index || index == 0) {
+        index++;
+        return;
+    }
+    auto child_index = index - this->enclosing_span_start_index;
+    double enclose_pct_change = (enclosing_span[index] - enclosing_span[index - 1]) / enclosing_span[index - 1];
+    double child_pct_change = (child_span[child_index] - child_span[child_index - 1]) / child_span[child_index - 1];
+    this->sum1 += enclose_pct_change;
+    this->sum2 += child_pct_change;
+    this->sum_product += enclose_pct_change * child_pct_change;
+    this->sum1_squared += enclose_pct_change * enclose_pct_change;
+    this->sum2_squared += child_pct_change * child_pct_change;
+
+    // check if in warmup
+    if (child_index < this->period) {
+        index++;
+        return;
+    }
+
+    // check if need to remove the previous value
+    if (child_index > this->period) {
+        child_index = (child_index - 1) - (this->period - 1);
+        index = (index - 1) - (this->period - 1);
+        enclose_pct_change = (enclosing_span[index] - enclosing_span[index - 1]) / enclosing_span[index - 1];
+        child_pct_change = (child_span[child_index] - child_span[child_index - 1]) / child_span[child_index - 1];
+        this->sum1 -= enclose_pct_change;
+        this->sum2 -= child_pct_change;
+        this->sum_product -= enclose_pct_change * child_pct_change;
+        this->sum1_squared -= enclose_pct_change * enclose_pct_change;
+        this->sum2_squared -= child_pct_change * child_pct_change;
+    }
+
+    // set covariance and matrix pointers
+    this->covariance = (sum_product - sum1 * sum2 / period) / (period - 1);
+    *this->upper_triangular = this->covariance;
+    *this->lower_triangular = this->covariance;
+
+    index++;
+}
+
+
+//============================================================================
+void IncrementalCovariance::on_reset()
+{
+    this->sum1 = 0.0;
+	this->sum2 = 0.0;
+	this->sum_product = 0.0;
+	this->sum1_squared = 0.0;
+	this->sum2_squared = 0.0;
+	this->covariance = 0.0;
+	this->index = 0;
+    this->covariance = 0.0f;
+    *this->lower_triangular = 0.0f;
+    *this->upper_triangular = 0.0f;
+}
+
+
+//============================================================================
+void IncrementalCovariance::set_pointers(double* upper_triangular_, double* lower_triangular_)
+{
+    this->upper_triangular = upper_triangular_;
+	this->lower_triangular = lower_triangular_;
 }
 
 
@@ -253,5 +342,38 @@ double AgisRiskStruct::estimate_phantom_cash(Order const* order)
 }
 
 
+//============================================================================
+AgisCovarianceMatrix::AgisCovarianceMatrix(ExchangeMap* exchange_map)
+{
+    auto& assets = exchange_map->get_assets();
+    auto asset_count = assets.size();
+    this->covariance_matrix.resize(asset_count, asset_count);
+    this->covariance_matrix.setZero();
 
+    // build the incremental covariance matrix
+    incremental_covariance_matrix.resize(asset_count);
+    for (size_t i = 0; i < asset_count; i++)
+    {
+        incremental_covariance_matrix[i].resize(i+1);
 
+        for (size_t j = 0; j < i + 1; j++)
+        {
+            std::shared_ptr<IncrementalCovariance> incremental_covariance;
+            try {
+                incremental_covariance = std::make_shared<IncrementalCovariance>(
+                    assets[i],
+                    assets[j],
+                    252
+                );
+            }
+            catch (std::runtime_error& e) {
+			    throw e;
+			}
+            assets[i]->add_observer(incremental_covariance);
+            auto upper_triangular = &this->covariance_matrix(i, j);
+            auto lower_triangular = &this->covariance_matrix(j, i);
+            incremental_covariance->set_pointers(upper_triangular, lower_triangular);
+            incremental_covariance_matrix[i][j] = incremental_covariance;
+		}
+    }
+}

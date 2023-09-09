@@ -230,6 +230,12 @@ public:
 	/// <param name="asset_id">Unique id of the asset to search for</param>
 	/// <returns></returns>
 	AGIS_API AgisResult<AssetPtr> get_asset(std::string const& asset_id) const;
+
+	/**
+	 * @brief init the covariance matrix for the exchange map
+	 * @return result of the operation
+	*/
+	AGIS_API AgisResult<bool> init_covariance_matrix() { return this->exchanges.init_covariance_matrix(); }
 	
 	AGIS_API [[nodiscard]] AgisResult<bool> set_market_asset(
 		std::string const& exchange_id,

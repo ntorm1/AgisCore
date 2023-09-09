@@ -11,6 +11,7 @@
 #include "Asset.h"
 #include "Order.h"
 #include "AgisErrors.h"
+#include "AgisRisk.h"
 #include "AgisPointers.h"
 #include "ExchangeView.h"
 
@@ -182,7 +183,7 @@ public:
 	void __process_order(bool on_close, OrderPtr& order);
 	void __process_market_order(std::unique_ptr<Order>& order, bool on_close);
 	void __process_limit_order(std::unique_ptr<Order>& order, bool on_close);
-	AGIS_API void __set_volatility(size_t window_size);
+	AGIS_API void __set_volatility_lookback(size_t window_size);
 
 	AgisResult<bool> validate();
 	void reset();
@@ -328,6 +329,9 @@ public:
 	/// <param name="exchange_id">Unique id of the exchange to get</param>
 	/// <returns></returns>
 	AGIS_API ExchangePtr const get_exchange(const std::string& exchange_id) const;
+
+
+	AGIS_API auto const& get_assets() const noexcept {return this->assets;}
 	
 	/// <summary>
 	/// Does a asset with this id exist already
@@ -350,6 +354,18 @@ public:
 		bool disable_asset,
 		std::optional<size_t> beta_lookback
 	);
+
+	/**
+	 * @brief initialize the covariance matrix
+	 * @return result of the attempted initialization
+	*/
+	AGIS_API AgisResult<bool> init_covariance_matrix();
+
+	/**
+	 * @brief get a const pointer to the agis covariance matrix
+	 * @return 
+	*/
+	AGIS_API AgisCovarianceMatrix const& get_covariance_matrix() const;
 
 	/**
 	 * @brief does an exchange with this id exist already
@@ -449,6 +465,14 @@ public:
 	void __set_asset(size_t asset_index, std::shared_ptr<Asset> asset);
 
 	/**
+	 * @brief set the volatility lookback period of all exchanges registered 
+	 * @param window_size lookback period to set
+	 * @return 
+	*/
+	AGIS_API void __set_volatility_lookback(size_t window_size);
+
+
+	/**
 	 * @brief place an incoming order on the exchange order queue to be evaluated at the next step
 	 * @param order unique pointer to the order to place on the exchange
 	*/
@@ -479,6 +503,7 @@ private:
 	std::vector<std::shared_ptr<Asset>> assets;
 	std::vector<std::shared_ptr<Asset>> assets_expired;
 	ThreadSafeVector<size_t> expired_asset_index;
+	std::optional<AgisCovarianceMatrix> covariance_matrix = std::nullopt;
 
 
 	TimePoint time_point;
