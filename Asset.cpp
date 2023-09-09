@@ -174,42 +174,42 @@ AGIS_API AgisResult<bool> Asset::load(
 
 
 //============================================================================
-bool Asset::encloses(AssetPtr asset_b)
+AgisResult<bool> Asset::encloses(AssetPtr asset_b)
 {
-    if (!this->is_loaded) return false;
-    if (this->rows < asset_b->rows) return false;
+    if (!this->is_loaded) return AgisResult<bool>(false);
+    if (this->rows < asset_b->rows) return AgisResult<bool>(false);
 
     auto asset_b_index = asset_b->__get_dt_index(false);
-    auto asset_b_start = asset_b_index[0];
-
-    // find the index location of asset_b_start in this->dt_index if it exists
-    auto it = std::find(this->dt_index, this->dt_index + this->rows, asset_b_start);
-	if (it == this->dt_index + this->rows) return false;
-	auto asset_b_start_index = std::distance(this->dt_index, it);
-
+    auto asset_b_start_index_res = this->encloses_index(asset_b);
+    if (asset_b_start_index_res.is_exception()) {
+        return AgisResult<bool>(asset_b_start_index_res.get_exception());
+    }
+    auto asset_b_start_index = asset_b_start_index_res.unwrap();
 	// check if asset_b is contained in this
 	for (size_t i = 0; i < asset_b->rows; i++)
 	{
 		if (this->dt_index[asset_b_start_index + i] != asset_b_index[i])
 		{
-			return false;
+			return AgisResult<bool>(false);
 		}
 	}
-	return true; 
+	return AgisResult<bool>(true);
 }
 
 
 //============================================================================
-size_t Asset::encloses_index(AssetPtr asset_b)
+AgisResult<size_t> Asset::encloses_index(AssetPtr asset_b)
 {
     auto asset_b_index = asset_b->__get_dt_index(false);
     auto asset_b_start = asset_b_index[0];
 
     // find the index location of asset_b_start in this->dt_index if it exists
     auto it = std::find(this->dt_index, this->dt_index + this->rows, asset_b_start);
-    if (it == this->dt_index + this->rows) return false;
-    auto asset_b_start_index = std::distance(this->dt_index, it);
-    return asset_b_start_index;
+    if (it == this->dt_index + this->rows) {
+        return AgisResult<size_t>(AGIS_EXCEP("asset_b_start not found in this->dt_index"));
+    }
+    auto asset_b_start_index = static_cast<size_t>(std::distance(this->dt_index, it));
+    return AgisResult<size_t>(asset_b_start_index);
 }
 
 

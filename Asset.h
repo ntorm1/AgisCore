@@ -152,7 +152,7 @@ public:
     /// </summary>
     /// <param name="asset_b">the asset encloses asset_b</param>
     /// <returns></returns>
-    bool encloses(AssetPtr asset_b);
+    AgisResult<bool> encloses(AssetPtr asset_b);
 
     /**
      * @brief given another asset which is enclosed, find the index location of the current asset
@@ -160,7 +160,7 @@ public:
      * @param asset_b the child asset
      * @return index location of the first matching datetime index
     */
-    size_t encloses_index(AssetPtr asset_b);
+    AgisResult<size_t> encloses_index(AssetPtr asset_b);
 
     /**
      * @brief add a new asset observer

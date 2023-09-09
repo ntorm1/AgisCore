@@ -222,7 +222,8 @@ AgisResult<bool> Exchange::__set_market_asset(
 	// check to see if asset encloses all assets listed on the exchange
 	for (AssetPtr asset_mid : this->assets)
 	{
-		if (!market_asset_->encloses(asset_mid))
+		auto result = market_asset_->encloses(asset_mid);
+		if (result.is_exception() || !result.unwrap())
 		{
 			return AgisResult<bool>(AGIS_EXCEP("asset does not enclose: " + asset_mid->get_asset_id()));
 		}
@@ -293,22 +294,14 @@ AGIS_API AgisResult<bool> ExchangeMap::init_covariance_matrix()
 {
 	// validate the currently registered exchanges. They all must have the same frequency 
 	// and have the same volatility lookback period
-	size_t vol_lookback = 0;
 	Frequency freq = Frequency::Day1;
 	int i = 1;
 	for (auto& [id,exchange] : this->exchanges)
 	{
-		if (exchange->__get_vol_lookback() == 0) {
-			return AgisResult<bool>(AGIS_EXCEP("exchange: " + id + " has no vol lookback"));
-		}
 		if (i == 1) {
-			vol_lookback = exchange->__get_vol_lookback();
 			freq = exchange->get_frequency();
 		}
 		else {
-			if (exchange->__get_vol_lookback() != vol_lookback) {
-				return AgisResult<bool>(AGIS_EXCEP("exchange: " + id + " has different vol lookback"));
-			}
 			if (exchange->get_frequency() != freq) {
 				return AgisResult<bool>(AGIS_EXCEP("exchange: " + id + " has different frequency"));
 			}

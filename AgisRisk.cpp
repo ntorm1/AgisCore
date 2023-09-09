@@ -199,11 +199,15 @@ IncrementalCovariance::IncrementalCovariance(
     // find the enclosing asset
     std::shared_ptr<Asset> enclosing_asset;
     std::shared_ptr<Asset> child_asset;
-    if (a1->encloses(a2)) {
+    auto res = a1->encloses(a2);
+    if (res.is_exception()) throw res.get_exception();
+    if (res.unwrap()) {
         enclosing_asset = a1;
         child_asset = a2;
     }
-    else if (a2->encloses(a1)) {
+    res = a2->encloses(a1);
+    if (res.is_exception()) throw res.get_exception();
+    else if (res.unwrap()) {
         enclosing_asset = a2;
         child_asset = a1;
     }
@@ -213,7 +217,7 @@ IncrementalCovariance::IncrementalCovariance(
     this->period = period_;
     this->enclosing_span = enclosing_asset->__get_column((enclosing_asset->__get_close_index()));
     this->child_span = child_asset->__get_column((enclosing_asset->__get_close_index()));
-    this->enclosing_span_start_index = enclosing_asset->encloses_index(a2);
+    this->enclosing_span_start_index = enclosing_asset->encloses_index(a2).unwrap();
 }
 
 
@@ -272,7 +276,6 @@ void IncrementalCovariance::on_reset()
 	this->sum2_squared = 0.0;
 	this->covariance = 0.0;
 	this->index = 0;
-    this->covariance = 0.0f;
     *this->lower_triangular = 0.0f;
     *this->upper_triangular = 0.0f;
 }
