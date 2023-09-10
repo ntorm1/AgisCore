@@ -1219,6 +1219,8 @@ AgisResult<bool> AbstractAgisStrategy::validate_market_asset()
 AgisResult<bool> AgisStrategy::set_beta_trace(bool val, bool check)
 {
 	val ? this->net_beta = 0 : this->net_beta = std::nullopt;
+	auto benchmark = this->portfolio->__get_benchmark_strategy();
+	if (benchmark && this->strategy_type != AgisStrategyType::BENCHMARK) { benchmark->set_beta_trace(val); }
 	return AgisResult<bool>(true);
 }
 
@@ -1227,6 +1229,8 @@ AgisResult<bool> AgisStrategy::set_beta_trace(bool val, bool check)
 AgisResult<bool> AgisStrategy::set_net_leverage_trace(bool val)
 {
 	val ? this->net_leverage_ratio = 0 : this->net_leverage_ratio = std::nullopt;
+	auto benchmark = this->portfolio->__get_benchmark_strategy();
+	if (benchmark && this->strategy_type != AgisStrategyType::BENCHMARK) { benchmark->set_net_leverage_trace(val); }
 	return AgisResult<bool>(true);
 }
 
@@ -1237,6 +1241,9 @@ AgisResult<bool> AgisStrategy::set_vol_trace(bool val)
 	// init the portfolio volatility tracer value
 	val ? this->portfolio_volatility = 0 : this->portfolio_volatility = std::nullopt;
 	
+	auto benchmark = this->portfolio->__get_benchmark_strategy();
+	if (benchmark && this->strategy_type != AgisStrategyType::BENCHMARK) {benchmark->set_vol_trace(val);}
+
 	return AgisResult<bool>(true);
 }
 
@@ -1270,6 +1277,18 @@ std::optional<double> AgisStrategy::calculate_portfolio_volatility()
 	// Perform matrix multiplication using the dot() method
 	this->portfolio_volatility = std::sqrt(portfolio_weights.transpose().dot(eigen_matrix * 252 * portfolio_weights));
 	return this->portfolio_volatility;
+}
+
+
+//============================================================================
+std::optional<double> BenchMarkStrategy::calculate_portfolio_volatility()
+{
+	auto cov_matrix = this->exchange_map->get_covariance_matrix();
+	if (!cov_matrix) return std::nullopt;
+	auto& eigen_matrix = cov_matrix->get_eigen_matrix();
+
+	auto variance = eigen_matrix(this->asset_index, this->asset_index);
+	return std::sqrt(variance * 252);
 }
 
 

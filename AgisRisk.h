@@ -1,4 +1,10 @@
 #pragma once
+#pragma once
+#ifdef AGISCORE_EXPORTS
+#define AGIS_API __declspec(dllexport)
+#else
+#define AGIS_API __declspec(dllimport)
+#endif
 #include <cmath> // For std::sqrt
 #include <vector>
 #include <span>
@@ -135,7 +141,7 @@ std::vector<double> rolling_beta(
  * @param windowSize the size of the window to calculate the volatility over
  * @return the rolling volatility
 */
-std::vector<double> rolling_volatility(
+AGIS_API std::vector<double> rolling_volatility(
 	std::span<double> const returns,
 	size_t windowSize
 );

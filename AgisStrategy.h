@@ -323,7 +323,7 @@ public:
 	 * the portfolios current weights.
 	 * @return 
 	*/
-	std::optional<double> calculate_portfolio_volatility();
+	AGIS_API virtual std::optional<double> calculate_portfolio_volatility();
 
 	/**
 	 * @brief get the net beta of the strategy if it exits.
@@ -876,6 +876,13 @@ public:
 	AGIS_API void build() override;
 
 	AGIS_API inline void reset() override { this->i = 0; }
+
+	/**
+	 * @brief override portfolio vol calculation to return the benchmark volatility. Benchmark strategy is 100% 
+	 * allocated to 1 asset so vol is just the vol of that asset
+	 * @return 
+	*/
+	AGIS_API std::optional<double> calculate_portfolio_volatility() override;
 
 	AGIS_API inline void set_asset_id(std::string const& asset_id) { this->asset_id = asset_id; }
 

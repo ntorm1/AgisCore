@@ -526,7 +526,7 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 		}
 	};
 
-	std::for_each(
+	tbb::parallel_for_each(
 		this->assets.begin(),
 		this->assets.end(),
 		process_asset);
