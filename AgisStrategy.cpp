@@ -182,7 +182,7 @@ bool AgisStrategy::__is_step()
 	if (!this->__exchange_step || !(*this->__exchange_step)) { return false; }
 
 	// check to see if the step frequency is set and if the current step is a multiple of the frequency
-	if (this->step_frequency.has_value()) {
+	if (this->step_frequency.has_value() && this->step_frequency.value() != 1) {
 		if (this->exchange_map->__get_current_index() % this->step_frequency.value() != 0) { return false; }
 	}
 
@@ -590,8 +590,15 @@ AgisResult<bool> AgisStrategyMap::build()
 void AgisStrategyMap::__remove_strategy(std::string const& id)
 {
 	auto index = this->strategy_id_map.at(id);
+	AgisStrategyPtr strategy = std::move(this->strategies.at(index));
 	this->strategies.erase(index);
 	this->strategy_id_map.erase(id);
+
+	// check to see if the strategy is CPP strategy, in which case release unique pointer to prevent double 
+	// free form the AgisStrategy.dll
+	if (strategy->get_strategy_type() == AgisStrategyType::CPP) {
+		AgisStrategy* raw_ptr = strategy.release();
+	}
 }
 
 
@@ -1164,6 +1171,7 @@ void {STRATEGY_ID}_CPP::build(){
 	this->set_beta_scale_positions({BETA_SCALE});
 	this->set_beta_hedge_positions({BETA_HEDGE});
 	this->set_net_leverage_trace({NET_LEV});
+	this->set_step_frequency({FREQ});
 };
 
 void {STRATEGY_ID}_CPP::next(){
@@ -1203,6 +1211,12 @@ void {STRATEGY_ID}_CPP::next(){
 	// Replace the lambda chain
 	pos = strategy_source.find("{NET_LEV}");
 	strategy_source.replace(pos, 9, (this->net_leverage_ratio.has_value()) ? "true" : "false");
+
+	// Replace the lambda chain
+	pos = strategy_source.find("{FREQ}");
+	// convert the frequency to a string
+	std::string freq_str = std::to_string(this->get_step_frequency());
+	str_replace_all(strategy_source, "{FREQ}", freq_str);
 
 	// Replace strategy class name
 	str_replace_all(strategy_source, place_holder, strategy_id);
