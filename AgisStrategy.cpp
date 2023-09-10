@@ -525,7 +525,7 @@ bool AgisStrategyMap::__next()
 		flag.store(true, std::memory_order_relaxed);
 	};
 	
-	std::for_each(
+	tbb::parallel_for_each(
 		this->strategies.begin(),
 		this->strategies.end(),
 		strategy_next
