@@ -40,6 +40,7 @@ void AgisStrategy::__reset()
 	this->nlv_history.clear();
 	this->beta_history.clear();
 	this->net_leverage_ratio_history.clear();
+	this->portfolio_volatility_history.clear();
 
 
 	this->cash = this->starting_cash;
@@ -66,8 +67,19 @@ void AgisStrategy::__build(
 	auto n = exchange_map->__get_dt_index().size();
 	this->nlv_history.reserve(n);
 	this->cash_history.reserve(n);
+
 	if (this->net_beta.has_value()) this->beta_history.reserve(n);
+
 	if (this->net_leverage_ratio.has_value()) this->net_leverage_ratio_history.reserve(n);
+
+	if (this->portfolio_volatility.has_value()) {
+		this->portfolio_volatility_history.reserve(n);
+		
+		// init eigen vector of portfolio weights
+		auto asset_count = this->exchange_map->get_asset_count();
+		this->portfolio_weights.resize(asset_count);
+		this->portfolio_weights.setZero();
+	}
 	this->limits.__build(this);
 }
 
@@ -86,6 +98,10 @@ void AgisStrategy::__evaluate(bool on_close)
 			// right now net_leverage_ratio has the sum of athe absolute values of the positions
 			// to get the leverage ratio we need to divide the nlv
 			this->net_leverage_ratio_history.push_back(this->net_leverage_ratio.value() / this->nlv);
+		}
+		if (this->portfolio_volatility.has_value()) {
+			auto v = this->calculate_portfolio_volatility();
+			this->portfolio_volatility_history.push_back(v.value());
 		}
 	}
 
@@ -120,6 +136,7 @@ void AgisStrategy::to_json(json& j) const
 	j["beta_hedge"] = this->apply_beta_hedge;
 	j["beta_trace"] = this->net_beta.has_value();
 	j["net_leverage_trace"] = this->net_leverage_ratio.has_value();
+	j["vol_trace"] = this->portfolio_volatility.has_value();
 
 	if (this->limits.max_leverage.has_value()) {
 		j["max_leverage"] = this->limits.max_leverage.value();
@@ -1215,10 +1232,44 @@ AgisResult<bool> AgisStrategy::set_net_leverage_trace(bool val)
 
 
 //============================================================================
+AgisResult<bool> AgisStrategy::set_vol_trace(bool val)
+{
+	// init the portfolio volatility tracer value
+	val ? this->portfolio_volatility = 0 : this->portfolio_volatility = std::nullopt;
+	
+	return AgisResult<bool>(true);
+}
+
+
+//============================================================================
 std::optional<double> AgisStrategy::get_net_leverage_ratio() const
 {
 	if (!this->net_leverage_ratio.has_value()) return std::nullopt;
 	return this->net_leverage_ratio.value() / this->nlv;
+}
+
+
+//============================================================================
+std::optional<double> AgisStrategy::calculate_portfolio_volatility()
+{
+	auto cov_matrix = this->exchange_map->get_covariance_matrix();
+	if(!cov_matrix) return std::nullopt;
+	auto& eigen_matrix = cov_matrix->get_eigen_matrix();
+
+	for (size_t i = 0; i < this->exchange_map->get_asset_count(); i++)
+	{
+		auto trade_opt = this->get_trade(i);
+		if (trade_opt.has_value()) {
+			this->portfolio_weights(i) = trade_opt.value()->nlv / this->nlv;
+		}
+		else {
+			this->portfolio_weights(i) = 0.0f;
+		}
+	}
+
+	// Perform matrix multiplication using the dot() method
+	this->portfolio_volatility = std::sqrt(portfolio_weights.transpose().dot(eigen_matrix * 252 * portfolio_weights));
+	return this->portfolio_volatility;
 }
 
 

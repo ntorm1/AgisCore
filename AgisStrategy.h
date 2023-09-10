@@ -7,6 +7,9 @@
 #include "pch.h"
 #include <utility>
 #include <filesystem>
+
+#include <Eigen/Dense>
+
 #include "AgisFunctional.h"
 #include "AgisRouter.h"
 #include "AgisRisk.h"
@@ -15,12 +18,13 @@
 #include "Portfolio.h"
 #include "Exchange.h"
 
+using namespace Eigen;
+
 namespace fs = std::filesystem;
 
 class AgisStrategy;
 
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
-
 
 
 enum class AGIS_API AgisStrategyType {
@@ -275,6 +279,9 @@ public:
 	/// <param name="val"></param>
 	/// <returns></returns>
 	AGIS_API virtual AgisResult<bool> set_net_leverage_trace(bool val);
+
+	AGIS_API virtual AgisResult<bool> set_vol_trace(bool val);
+
 	
 	/// <summary>
 	/// Set the trategy to scale the positions by the beta of the asset when calling strategy_allocate
@@ -295,6 +302,7 @@ public:
 	double get_nlv() const { return this->nlv; }
 	double get_cash() const { return this->cash; }
 	double get_allocation() const { return this->portfolio_allocation; }
+	size_t get_step_frequency() const { return this->step_frequency.value_or(1); }
 
 	/**
 	 * @brief get the current max leverage setting of the strategy
@@ -311,10 +319,23 @@ public:
 	AGIS_API std::optional<double> get_net_leverage_ratio() const;
 
 	/**
+	 * @brief get the currernt portfolio volatility level by multiplying the covariance matrix by 
+	 * the portfolios current weights.
+	 * @return 
+	*/
+	std::optional<double> calculate_portfolio_volatility();
+
+	/**
 	 * @brief get the net beta of the strategy if it exits.
 	 * @return 
 	*/
 	AGIS_API std::optional<double> get_net_beta() const { return this->net_beta; }
+
+	/**
+	 * @brief get the net beta of the strategy if it exits.
+	 * @return
+	*/
+	AGIS_API std::optional<double> get_portfolio_volatility() const { return this->portfolio_volatility; }
 
 	/// <summary>
 	/// Get the unique strategy index of a strategy instance
@@ -451,12 +472,14 @@ public:
 	bool __is_beta_hedged() const { return this->apply_beta_hedge; }
 	bool __is_beta_trace() const { return this->net_beta.has_value(); }
 	bool __is_net_lev_trace() const {return this->net_leverage_ratio.has_value(); } 
+	bool __is_vol_trace() const {return this->portfolio_volatility.has_value(); }
 	AGIS_API inline void __set_allocation(double allocation_) { this->portfolio_allocation = allocation_; }
 
 	AGIS_API inline std::vector<double> get_beta_history() const { return beta_history; }
 	AGIS_API inline std::vector<double> get_nlv_history() const { return nlv_history; }
 	AGIS_API inline std::vector<double> get_cash_history() const { return cash_history;}
 	AGIS_API inline std::vector<double> get_net_leverage_ratio_history() const { return net_leverage_ratio_history; }
+	AGIS_API inline std::vector<double> const& get_portfolio_vol_vec() { return this->portfolio_volatility_history; }
 
 protected:
 	/**
@@ -535,6 +558,7 @@ protected:
 	std::vector<double> nlv_history;
 	std::vector<double> cash_history;
 	std::vector<double> net_leverage_ratio_history;
+	std::vector<double> portfolio_volatility_history;
 
 	/**
 	 * @brief Defined as the net beta dollars of the portfolio. I.e. units*share_price*beta
@@ -545,6 +569,17 @@ protected:
 	 * @brief Defined as the net leverage ratio of the portfolio. I.e. (nlv - cash)/nlv
 	*/
 	std::optional<double> net_leverage_ratio = std::nullopt;
+
+	/**
+	 * @brief Defined as the forward looks estimate of portfolio volatility obtained by multiplying
+	 * the asset covariance matrix by the portfolio weights
+	*/
+	std::optional<double> portfolio_volatility = std::nullopt;
+
+	/**
+	 * @brief an eigen vector of portfolio weights used to calculate portfolio volatility
+	*/
+	Matrix<double, Dynamic, 1> portfolio_weights;
 
 	double nlv = 0;
 	double cash = 0;

@@ -235,7 +235,7 @@ public:
 	 * @brief init the covariance matrix for the exchange map
 	 * @return result of the operation
 	*/
-	AGIS_API AgisResult<bool> init_covariance_matrix() { return this->exchanges.init_covariance_matrix(); }
+	AGIS_API AgisResult<bool> init_covariance_matrix(size_t lookback, size_t step_size);
 	
 	AGIS_API [[nodiscard]] AgisResult<bool> set_market_asset(
 		std::string const& exchange_id,

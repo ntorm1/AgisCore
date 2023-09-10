@@ -1,4 +1,5 @@
 #include "Hydra.h"
+#include "Hydra.h"
 #pragma once
 #include "pch.h" 
 
@@ -328,6 +329,7 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
     bool beta_hedge = strategy_json.value("beta_hedge", false);
     bool beta_trace = strategy_json.value("beta_trace", false);
     bool net_leverage_trace = strategy_json.value("net_leverage_trace", false);
+    bool vol_trace = strategy_json.value("vol_trace", false);
 
     bool is_live = strategy_json.at("is_live");
     double allocation = strategy_json.at("allocation");
@@ -367,6 +369,7 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
         strategy->set_beta_hedge_positions(beta_hedge, false).unwrap();
         strategy->set_beta_trace(beta_trace, false).unwrap();
         strategy->set_net_leverage_trace(net_leverage_trace).unwrap();
+        strategy->set_vol_trace(vol_trace).unwrap();
         strategy->set_max_leverage(max_leverage);
         strategy->set_step_frequency(step_frequency);
     }
@@ -402,6 +405,16 @@ AgisResult<bool> Hydra::restore_portfolios(json const& j)
             this->register_strategy(std::move(strategy.unwrap()));
         }
     }
+    return AgisResult<bool>(true);
+}
+
+
+//============================================================================
+AGIS_API AgisResult<bool> Hydra::init_covariance_matrix(size_t lookback, size_t step_size)
+{
+    auto res = this->exchanges.init_covariance_matrix(lookback, step_size);
+    if (res.is_exception()) return res;
+    this->is_built = false;
     return AgisResult<bool>(true);
 }
 

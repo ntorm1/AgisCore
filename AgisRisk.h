@@ -22,9 +22,11 @@ class IncrementalCovariance : public AssetObserver
 public:
 	IncrementalCovariance(
 		std::shared_ptr<Asset> a1,
-		std::shared_ptr<Asset> a2,
-		size_t period
+		std::shared_ptr<Asset> a2
 	);
+
+	static size_t step_size;
+	static size_t period;
 
 	/**
 	 * @brief set the pointers into the covariance matrix that this incremental covariance struct will update
@@ -57,7 +59,6 @@ private:
 	std::span<double const> child_span;
 	size_t enclosing_span_start_index;
 	size_t index = 0;
-	size_t period;
 	double sum1 = 0;
 	double sum2 = 0;
 	double sum_product = 0;
@@ -77,22 +78,27 @@ private:
 */
 struct AgisCovarianceMatrix
 {
-	AgisCovarianceMatrix(ExchangeMap* exchange_map);
+	AgisCovarianceMatrix(ExchangeMap* exchange_map, size_t lookback = 252, size_t step_size = 1);
 	/**
 	 * @brief Main covariance matrix containing the covariance between all assets on the exchange
 	*/
 	MatrixXd covariance_matrix;
 
 	/**
-	 * @brief lower triangular matrix of incremental covariance structs used to update the 
-	 * covariance matrix on exchange step forward.
+	 * @brief container for incremental covariance structs used to update the 
+	 * covariance matrix on exchange step forward. Not only lower diagonal is stored, use symmetry to fill rest
 	*/
-	std::vector<std::vector<std::shared_ptr<IncrementalCovariance>>> incremental_covariance_matrix;
+	std::vector<std::shared_ptr<IncrementalCovariance>> incremental_covariance_matrix;
 	
 	// Overload for accessing the covariance matrix
 	double operator()(size_t i, size_t j) const {
 		return covariance_matrix(i,j);
 	}
+
+	auto const & get_eigen_matrix() const {return this->covariance_matrix; }
+
+	size_t lookback = 0;
+	size_t step_size = 1;
 };
 
 

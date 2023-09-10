@@ -290,16 +290,17 @@ AgisResult<bool> ExchangeMap::set_market_asset(
 
 
 //============================================================================
-AGIS_API AgisResult<bool> ExchangeMap::init_covariance_matrix()
+AGIS_API AgisResult<bool> ExchangeMap::init_covariance_matrix(size_t lookback, size_t step_size)
 {
 	// validate the currently registered exchanges. They all must have the same frequency 
 	// and have the same volatility lookback period
-	Frequency freq = Frequency::Day1;
+	Frequency freq;
 	int i = 1;
 	for (auto& [id,exchange] : this->exchanges)
 	{
 		if (i == 1) {
 			freq = exchange->get_frequency();
+			i++;
 		}
 		else {
 			if (exchange->get_frequency() != freq) {
@@ -309,7 +310,7 @@ AGIS_API AgisResult<bool> ExchangeMap::init_covariance_matrix()
 	}
 
 	try {
-		this->covariance_matrix = AgisCovarianceMatrix(this);
+		this->covariance_matrix = std::make_shared<AgisCovarianceMatrix>(this, lookback, step_size);
 	}
 	catch (std::exception& e) {
 		return AgisResult<bool>(AGIS_EXCEP(e.what()));
@@ -319,10 +320,9 @@ AGIS_API AgisResult<bool> ExchangeMap::init_covariance_matrix()
 
 
 //============================================================================
-AGIS_API AgisCovarianceMatrix const& ExchangeMap::get_covariance_matrix() const
+AGIS_API std::shared_ptr<AgisCovarianceMatrix> const ExchangeMap::get_covariance_matrix() const
 {
-	if (!this->covariance_matrix.has_value()) return nullptr;
-	return this->covariance_matrix.value();
+	return this->covariance_matrix;
 }
 
 
@@ -374,7 +374,7 @@ void Exchange::__goto(long long datetime)
 	}
 
 	// search for datetime in the index
-	for (int i = this->current_index; i < this->dt_index_size; i++)
+	for (size_t i = this->current_index; i < this->dt_index_size; i++)
 	{
 		//is >= right?
 		if (this->dt_index[i] >= datetime)
@@ -545,7 +545,7 @@ AGIS_API AgisResult<bool> Exchange::restore_h5(std::optional<std::vector<std::st
 	int numObjects = file.getNumObjs();
 
 	// Read data from each dataset
-	for (int i = 0; i < numObjects; i++) {
+	for (size_t i = 0; i < numObjects; i++) {
 		// Get the name of the dataset at index i
 		try {
 			std::string asset_id = file.getObjnameByIdx(i);

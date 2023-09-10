@@ -166,7 +166,7 @@ public:
      * @brief add a new asset observer
      * @param observer the observer to add
     */
-    void add_observer(std::shared_ptr<AssetObserver> observer) { this->observers.push_back(observer); }
+    void add_observer(AssetObserver* observer) { this->observers.push_back(observer); }
 
     /// <summary>
     /// Takes an asset and returns a vector of NLV values representing the result of 
@@ -337,7 +337,7 @@ private:
     /**
      * @brief a vector of observers linked for this asset
     */
-    std::vector<std::shared_ptr<AssetObserver>> observers;
+    std::vector<AssetObserver*> observers;
 
     std::optional<std::pair<long long, long long>> window = std::nullopt;
 

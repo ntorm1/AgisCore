@@ -359,13 +359,13 @@ public:
 	 * @brief initialize the covariance matrix
 	 * @return result of the attempted initialization
 	*/
-	AGIS_API AgisResult<bool> init_covariance_matrix();
+	AGIS_API AgisResult<bool> init_covariance_matrix(size_t lookback, size_t step_size);
 
 	/**
 	 * @brief get a const pointer to the agis covariance matrix
 	 * @return 
 	*/
-	AGIS_API AgisCovarianceMatrix const& get_covariance_matrix() const;
+	AGIS_API std::shared_ptr<AgisCovarianceMatrix> const get_covariance_matrix() const;
 
 	/**
 	 * @brief does an exchange with this id exist already
@@ -503,7 +503,7 @@ private:
 	std::vector<std::shared_ptr<Asset>> assets;
 	std::vector<std::shared_ptr<Asset>> assets_expired;
 	ThreadSafeVector<size_t> expired_asset_index;
-	std::optional<AgisCovarianceMatrix> covariance_matrix = std::nullopt;
+	std::shared_ptr<AgisCovarianceMatrix> covariance_matrix = nullptr;
 
 
 	TimePoint time_point;
