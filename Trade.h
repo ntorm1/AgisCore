@@ -97,10 +97,10 @@ struct AGIS_API Trade {
     [[nodiscard]] std::shared_ptr<TradePartition> get_child_partition(size_t asset_index);
     [[nodiscard]] bool partition_exists(size_t asset_index);
 
-    [[nodiscard]] size_t get_asset_index() const { return this->asset_index; }
-    [[nodiscard]] size_t get_strategy_index() const { return this->strategy_index; }
-    [[nodiscard]] size_t get_portfolio_index() const { return this->portfolio_index; }
-
+    [[nodiscard]] size_t get_asset_index() const noexcept { return this->asset_index; }
+    [[nodiscard]] size_t get_strategy_index() const noexcept { return this->strategy_index; }
+    [[nodiscard]] size_t get_portfolio_index() const noexcept { return this->portfolio_index; }
+    inline static void __reset_counter() { trade_counter.store(0); }
 private:
     static std::atomic<size_t> trade_counter;
 };

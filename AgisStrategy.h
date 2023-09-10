@@ -299,10 +299,10 @@ public:
 	/// <returns></returns>
 	AGIS_API virtual AgisResult<bool> set_beta_hedge_positions(bool val, bool check = true) {apply_beta_hedge = val; return AgisResult<bool>(true);}
 
-	double get_nlv() const { return this->nlv; }
-	double get_cash() const { return this->cash; }
-	double get_allocation() const { return this->portfolio_allocation; }
-	size_t get_step_frequency() const { return this->step_frequency.value_or(1); }
+	double get_nlv() const noexcept { return this->nlv; }
+	double get_cash() const noexcept { return this->cash; }
+	double get_allocation() const noexcept { return this->portfolio_allocation; }
+	size_t get_step_frequency() const noexcept  { return this->step_frequency.value_or(1); }
 
 	/**
 	 * @brief get the current max leverage setting of the strategy

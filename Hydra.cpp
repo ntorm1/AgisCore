@@ -276,6 +276,9 @@ void Hydra::__reset()
     this->portfolios.__reset();
     this->router.__reset();
     this->strategies.__reset();
+
+    Order::__reset_counter();
+    Trade::__reset_counter();
 }
 
 

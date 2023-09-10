@@ -97,7 +97,7 @@ struct AgisCovarianceMatrix
 	std::vector<std::shared_ptr<IncrementalCovariance>> incremental_covariance_matrix;
 	
 	// Overload for accessing the covariance matrix
-	double operator()(size_t i, size_t j) const {
+	double operator()(size_t i, size_t j) const noexcept {
 		return covariance_matrix(i,j);
 	}
 
