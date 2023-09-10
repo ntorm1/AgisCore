@@ -87,6 +87,11 @@ void ExchangeMap::restore(json const& j)
 		this->market_assets[market_asset->get_frequency()] = market_asset;
 	}
 
+	// init covariance matrix if needed
+	if (j.contains("covariance_lookback")) {
+		this->init_covariance_matrix(j["covariance_lookback"], j["covariance_step"]);
+	}
+
 }
 
 

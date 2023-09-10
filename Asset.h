@@ -76,7 +76,7 @@ AGIS_API typedef std::shared_ptr<Asset> AssetPtr;
 *   |     2019-01-03       |    9.8 |10.14  |
 *   
 * 
-*   To create an asset from hdf5 data, you need to datasets. One for the nanosecond epoch index,
+*   To create an asset from hdf5 data, you need two datasets. One for the nanosecond epoch index,
 *   and one for the actual data. Note the index should be an int64 nanosecond epoch index, not string.
 *   Use the following python code as an example to see how to format the .h5 file so that we can read it.
 *   

@@ -50,6 +50,10 @@ void Trade::close(OrderPtr const& filled_order)
     this->trade_close_time = filled_order->get_fill_time();
     this->realized_pl +=(this->units * (this->close_price - this->average_price));
     this->unrealized_pl = 0;
+
+    // tell the strategy we are closing
+    this->strategy->__on_trade_closed(this->asset_index);
+
 }
 
 

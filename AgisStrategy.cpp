@@ -114,6 +114,16 @@ void AgisStrategy::__evaluate(bool on_close)
 }
 
 
+//============================================================================
+void AgisStrategy::__on_trade_closed(size_t asset_index)
+{
+	// update the portfolio weights used to calculate vol to show that a trade has closed
+	if (this->portfolio_volatility.has_value()) {
+		this->portfolio_weights(asset_index) = 0;
+	}
+}
+
+
 //============================================================================s
 void AgisStrategy::__zero_out_tracers()
 {
@@ -524,6 +534,7 @@ bool AgisStrategyMap::__next()
 		strategy.second->next();
 		flag.store(true, std::memory_order_relaxed);
 	};
+	
 	
 	tbb::parallel_for_each(
 		this->strategies.begin(),
@@ -1040,8 +1051,9 @@ private:
 	exchange_str.replace(pos, 4, exchange_id);
 	
 	std::string build_method =
-	R"(this->exchange = this->get_exchange()" + exchange_str + R"(); 
-	this->exchange_subscribe(exchange->get_exchange_id());)";
+	R"(this->exchange_subscribe("{EXCHANGE_ID}");
+	this->exchange = this->get_exchange();)";
+	str_replace_all(build_method, "{EXCHANGE_ID}", this->get_exchange()->get_exchange_id());
 
 	// build the vector of asset lambdas to be used when calling next
 	std::string asset_lambda = R"(std::vector<AssetLambdaScruct> operations = { )";
@@ -1086,7 +1098,7 @@ private:
 		
 	auto ev = this->exchange->get_exchange_view(
 		next_lambda, 
-		{EXCHANGE_QUERY_TYPE},
+		ExchangeQueryType::{EXCHANGE_QUERY_TYPE},
 		{N}
 	);
 
@@ -1141,7 +1153,6 @@ private:
 // EDIT IT AT YOUR OWN RISK 
 
 #include "{STRATEGY_ID}_CPP.h"
-#include <functional> // for std::reference_wrapper
 
 {LAMBDA_CHAIN}
 
@@ -1263,15 +1274,11 @@ std::optional<double> AgisStrategy::calculate_portfolio_volatility()
 	if(!cov_matrix) return std::nullopt;
 	auto& eigen_matrix = cov_matrix->get_eigen_matrix();
 
-	for (size_t i = 0; i < this->exchange_map->get_asset_count(); i++)
+	// set the portfolio weights to the trades, note that when a trade is closed the vector at that
+	// index is zeroed out automatically
+	for (auto& [asset_index, trade] : this->trades)
 	{
-		auto trade_opt = this->get_trade(i);
-		if (trade_opt.has_value()) {
-			this->portfolio_weights(i) = trade_opt.value()->nlv / this->nlv;
-		}
-		else {
-			this->portfolio_weights(i) = 0.0f;
-		}
+		this->portfolio_weights(asset_index) = trade->nlv / this->nlv;
 	}
 
 	// Perform matrix multiplication using the dot() method

@@ -529,6 +529,12 @@ protected:
 	/// <param name="on_close">On the close of a time period</param>
 	void __evaluate(bool on_close);
 
+	/**
+	 * @brief function called by trade when it is closed to zero out the portfolio weights of the given asset
+	 * @param start_index 
+	*/
+	void __on_trade_closed(size_t asset_index);
+
 	/// <summary>
 	/// Get a trade by asset id
 	/// </summary>
