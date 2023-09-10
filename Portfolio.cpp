@@ -218,7 +218,7 @@ void PortfolioMap::__evaluate(bool on_close, bool is_reprice)
         portfolio.second->__evaluate(on_close, is_reprice);
     };
 
-    std::for_each(
+    tbb::parallel_for_each(
         this->portfolios.begin(),
         this->portfolios.end(),
         portfolio_evaluate
