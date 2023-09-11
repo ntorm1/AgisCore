@@ -110,6 +110,9 @@ AgisResult<U> ExtractException(AgisResult<T>& result) {
 }
 
 
+#define AGIS_FORWARD_EXCEP(msg) \
+    AgisException(msg)
+
 #define AGIS_EXCEP(msg) \
     AgisException(std::string(__FILE__) + ":" + std::to_string(__LINE__) + " - " + msg)
 

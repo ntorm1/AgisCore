@@ -5,7 +5,7 @@
 #define AGIS_API __declspec(dllimport)
 #endif
 #include "pch.h" 
-#include "AgisErrors.h"
+#include "AgisRisk.h"
 
 class Exchange;
 class ExchangeMap;
@@ -134,6 +134,13 @@ struct ExchangeView
 	/// <returns></returns>
 	AGIS_API AgisResult<bool> beta_scale();
 
+	/**
+	 * @brief takes a portfolio allocation in terms of percentage of nlv and scales it to target a specific level
+	 * of overall portfolio volatility using the main exchange map covaraince matrix
+	 * @param agis_cov_matrix const ref to an agis covariance matrix
+	 * @return result of operations
+	*/
+	AGIS_API AgisResult<bool> apply_vol_target(std::shared_ptr<AgisCovarianceMatrix> const agis_cov_matrix);
 
 	/// <summary>
 	/// Generate a beta hedge for the portfolio and adjust allocation weights to match 

@@ -163,10 +163,21 @@ public:
     AgisResult<size_t> encloses_index(AssetPtr asset_b);
 
     /**
-     * @brief add a new asset observer
+     * @brief add a new asset observer if it does not already exist
      * @param observer the observer to add
     */
-    void add_observer(AssetObserver* observer) { this->observers.push_back(observer); }
+    void add_observer(AssetObserver* observer);
+
+    /**
+     * @brief remove an observer from the asset
+     * @param observer 
+    */
+    void remove_observer(AssetObserver* observer);
+
+    /**
+     * @brief remove all observers from the asset
+    */
+    void clear_observers() { this->observers.clear(); }
 
     /// <summary>
     /// Takes an asset and returns a vector of NLV values representing the result of 

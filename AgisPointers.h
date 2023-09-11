@@ -1,5 +1,4 @@
 #pragma once
-#include <memory>
 
 #pragma once
 #ifdef AGISCORE_EXPORTS
@@ -8,6 +7,7 @@
 #define AGIS_API __declspec(dllimport)
 #endif
 #include <mutex>
+#include <memory>
 
 #define LOCK_GUARD _mutex.lock();
 #define UNLOCK_GUARD _mutex.unlock();

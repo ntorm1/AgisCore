@@ -39,7 +39,7 @@ void Hydra::__step()
     this->router.__process();
 
     // evaluate the portfolios on close, then remove any position for assets that are expiring.
-    this->portfolios.__evaluate(true);
+    AGIS_TRY(this->portfolios.__evaluate(true));
     this->portfolios.__on_assets_expired(this->router, expired_index_list);
     this->router.__process();
 }
@@ -59,7 +59,7 @@ AGIS_API AgisResult<bool> Hydra::__run()
     size_t step_count = this->exchanges.__get_dt_index().size();
     for (size_t i = this->current_index; i < step_count; i++)
     {
-        this->__step();
+        AGIS_TRY_RESULT(this->__step(), bool);
         this->current_index++;
     }
     

@@ -323,7 +323,7 @@ public:
 	 * the portfolios current weights.
 	 * @return 
 	*/
-	AGIS_API virtual std::optional<double> calculate_portfolio_volatility();
+	AGIS_API virtual AgisResult<double> calculate_portfolio_volatility();
 
 	/**
 	 * @brief get the net beta of the strategy if it exits.
@@ -527,7 +527,7 @@ protected:
 	/// Evaluate the portfolio at the current levels
 	/// </summary>
 	/// <param name="on_close">On the close of a time period</param>
-	void __evaluate(bool on_close);
+	AgisResult<bool> __evaluate(bool on_close);
 
 	/**
 	 * @brief function called by trade when it is closed to zero out the portfolio weights of the given asset
@@ -888,7 +888,7 @@ public:
 	 * allocated to 1 asset so vol is just the vol of that asset
 	 * @return 
 	*/
-	AGIS_API std::optional<double> calculate_portfolio_volatility() override;
+	AGIS_API AgisResult<double> calculate_portfolio_volatility() override;
 
 	AGIS_API inline void set_asset_id(std::string const& asset_id) { this->asset_id = asset_id; }
 

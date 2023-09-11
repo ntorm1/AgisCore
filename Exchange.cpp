@@ -325,6 +325,23 @@ AGIS_API AgisResult<bool> ExchangeMap::init_covariance_matrix(size_t lookback, s
 
 
 //============================================================================
+AGIS_API AgisResult<bool> ExchangeMap::set_covariance_matrix_state(bool enabled)
+{
+	// no cov matrix exists
+	if (!this->covariance_matrix) return AgisResult<bool>(AGIS_EXCEP("covariance matrix not initialized"));
+	// disable it by removing all asset observers
+	if (!enabled) {
+		this->covariance_matrix->clear_observers();
+	}
+	// enable it by adding all asset observers	
+	else {
+		this->covariance_matrix->set_asset_observers();
+	}
+
+	return AgisResult<bool>(true);
+}
+
+//============================================================================
 AGIS_API std::shared_ptr<AgisCovarianceMatrix> const ExchangeMap::get_covariance_matrix() const
 {
 	return this->covariance_matrix;

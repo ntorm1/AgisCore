@@ -24,6 +24,8 @@
 #include <variant>
 #include <ankerl/unordered_dense.h>
 #include "utils_gmp.h"
+#include "AgisPointers.h"
+#include "AgisErrors.h"
 #include "json.hpp"
 typedef unsigned int uint;
 

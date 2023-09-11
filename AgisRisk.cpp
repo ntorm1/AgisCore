@@ -178,7 +178,35 @@ std::vector<double> rolling_volatility(std::span<double> const prices, size_t wi
     return rolling_volatility;
 }
 
-
+AgisResult<AssetPtr> get_enclosing_asset(
+    std::shared_ptr<Asset> a1,
+    std::shared_ptr<Asset> a2
+)
+{
+    auto res = a1->encloses(a2);
+    if (res.is_exception()) {
+        return AgisResult<AssetPtr>(res.get_exception());
+    }
+    // a1 is the enclosing asset
+    if (res.unwrap()) {
+        return AgisResult<AssetPtr>(a1);
+    }
+    else {
+        res = a2->encloses(a1);
+        if (res.is_exception()) {
+            return AgisResult<AssetPtr>(res.get_exception());
+        }
+        // a2 is the enclosing asset
+        else if (res.unwrap()) {
+            return AgisResult<AssetPtr>(a2);
+        }
+        // no enclosing asset was fount
+        else {
+            auto msg = "Assets " + a1->get_asset_id() + " and " + a2->get_asset_id() + " do not enclose each other";
+            return AgisResult<AssetPtr>(AGIS_EXCEP(msg));
+        }
+    }
+}
 
 //============================================================================
 IncrementalCovariance::IncrementalCovariance(
@@ -201,32 +229,22 @@ IncrementalCovariance::IncrementalCovariance(
 
     // find the enclosing asset. One aset most enclose the other i.e. the datetimeindex of the child 
     // must be a subset of the enclosing asset and have no gaps
-    std::shared_ptr<Asset> enclosing_asset;
     std::shared_ptr<Asset> child_asset;
-    auto res = a1->encloses(a2);
-    if (res.is_exception()) throw res.get_exception();
-    // a1 is the enclosing asset
-    if (res.unwrap()) {
-        enclosing_asset = a1;
-        child_asset = a2;
-    }
+    auto res = get_enclosing_asset(a1, a2);
+    if (res.is_exception()) {
+		throw res.get_exception();
+	}
+    this->enclosing_asset = res.unwrap();
+    if (this->enclosing_asset == a1) {
+		child_asset = a2;
+	}
     else {
-        res = a2->encloses(a1);
-        if (res.is_exception()) throw res.get_exception();
-        // a2 is the enclosing asset
-        else if (res.unwrap()) {
-            enclosing_asset = a2;
-            child_asset = a1;
-        }
-        // no enclosing asset was fount
-        else {
-            auto msg = "Assets " + a1->get_asset_id() + " and " + a2->get_asset_id() + " do not enclose each other";
-            throw std::runtime_error(msg);
-        }
-    }
+		child_asset = a1;
+	}
+
     // add this to the encosing asset observer list. The enclosing asset must be used as the index into 
     // the enclosing span assumes alignment with the closing span.
-    enclosing_asset->add_observer(this);
+    this->enclosing_asset->add_observer(this);
 
     this->enclosing_span = enclosing_asset->__get_column((enclosing_asset->__get_close_index()));
     this->child_span = child_asset->__get_column((child_asset->__get_close_index()));
@@ -375,6 +393,7 @@ AgisCovarianceMatrix::AgisCovarianceMatrix(
 {
     this->lookback = lookback_;
     this->step_size = step_size_;
+    this->exchange_map = exchange_map;
 
     IncrementalCovariance::step_size = this->step_size;
     IncrementalCovariance::period = this->lookback;
@@ -406,4 +425,41 @@ AgisCovarianceMatrix::AgisCovarianceMatrix(
             incremental_covariance_matrix.push_back(incremental_covariance);
 		}
     }
+    this->built = true;
 }
+
+
+//============================================================================
+void AgisCovarianceMatrix::set_asset_observers() noexcept
+{
+    for (auto& m : this->incremental_covariance_matrix) {
+        if (!m->enclosing_asset) continue;
+        m->add_observer();
+    }
+    this->built = true;
+}
+
+
+//============================================================================
+void AgisCovarianceMatrix::clear_observers() noexcept
+{
+    for (auto& m : this->incremental_covariance_matrix) {
+        if(!m->enclosing_asset) continue;
+        m->remove_observer();
+    }
+    this->built = false;
+}
+
+
+//============================================================================
+AgisResult<double> AgisCovarianceMatrix::calculate_volatility(VectorXd const& weights) const noexcept
+{
+    // check dimensions
+    if (weights.size() != this->covariance_matrix.rows()) {
+		return AgisResult<double>(AGIS_EXCEP("Weights vector size does not match covariance matrix size"));
+	}
+
+    auto res = std::sqrt(weights.transpose().dot(this->covariance_matrix * 252 * weights));
+    return AgisResult<double>(res);
+}
+

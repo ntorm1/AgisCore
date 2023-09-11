@@ -173,7 +173,7 @@ public:
     /// <param name="exchanges">Const ref to a Hydra's exchange map instance</param>
     /// <param name="on_close">Are we on close</param>
     /// <param name="is_reprice">Is this a reprice, i.e. just evaluate the portfolio at current prices</param>
-    void __evaluate(bool on_close, bool is_reprice = false);
+    AgisResult<bool> __evaluate(bool on_close, bool is_reprice = false);
 
     /// <summary>
     /// Get the unique id of the portfolio

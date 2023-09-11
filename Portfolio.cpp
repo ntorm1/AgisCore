@@ -215,7 +215,7 @@ void PortfolioMap::__evaluate(bool on_close, bool is_reprice)
 {
     // Define a lambda function that calls next for each strategy
     auto portfolio_evaluate = [&](auto& portfolio) {
-        portfolio.second->__evaluate(on_close, is_reprice);
+        AGIS_DO_OR_THROW(portfolio.second->__evaluate(on_close, is_reprice));
     };
 
     tbb::parallel_for_each(
@@ -546,7 +546,7 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
 
 
 //============================================================================
-void Portfolio::__evaluate(bool on_close, bool is_reprice)
+AgisResult<bool> Portfolio::__evaluate(bool on_close, bool is_reprice)
 {
     LOCK_GUARD
     this->nlv = this->cash;
@@ -598,7 +598,7 @@ void Portfolio::__evaluate(bool on_close, bool is_reprice)
     if (is_reprice)
     {
         UNLOCK_GUARD
-        return;
+        return AgisResult<bool>(true);
     }
 
     // store portfolio stats at the current level
@@ -609,10 +609,11 @@ void Portfolio::__evaluate(bool on_close, bool is_reprice)
     // log strategy levels
     for (const auto& strat : this->strategies)
     {
-        strat.second->__evaluate(on_close);
+        AGIS_DO_OR_RETURN(strat.second->__evaluate(on_close), bool);
     }
     if (this->benchmark_strategy)  this->benchmark_strategy->evluate();
     UNLOCK_GUARD
+    return AgisResult<bool>(true);
 }
 
 

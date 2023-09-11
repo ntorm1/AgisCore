@@ -10,9 +10,7 @@
 
 #include "Asset.h"
 #include "Order.h"
-#include "AgisErrors.h"
 #include "AgisRisk.h"
-#include "AgisPointers.h"
 #include "ExchangeView.h"
 
 using json = nlohmann::json;
@@ -360,6 +358,13 @@ public:
 	 * @return result of the attempted initialization
 	*/
 	AGIS_API AgisResult<bool> init_covariance_matrix(size_t lookback, size_t step_size);
+
+	/**
+	 * @brief disable or enable covariance matrix tracking by either adding or removing asset observers
+	 * @param enabled 
+	 * @return 
+	*/
+	AGIS_API AgisResult<bool> set_covariance_matrix_state(bool enabled);
 
 	/**
 	 * @brief get a const pointer to the agis covariance matrix

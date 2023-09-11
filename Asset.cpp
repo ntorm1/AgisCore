@@ -214,6 +214,30 @@ AgisResult<size_t> Asset::encloses_index(AssetPtr asset_b)
 
 
 //============================================================================
+void Asset::add_observer(AssetObserver* observer)
+{
+    // add observer if it does not already exist
+    auto it = std::find(this->observers.begin(), this->observers.end(), observer);
+    if (it == this->observers.end())
+    {
+		this->observers.push_back(observer);
+	}
+}
+
+
+//============================================================================
+void Asset::remove_observer(AssetObserver* observer)
+{
+    // remove observer if it exists
+	auto it = std::find(this->observers.begin(), this->observers.end(), observer);
+    if (it != this->observers.end())
+    {
+		this->observers.erase(it);
+	}
+}
+
+
+//============================================================================
 std::vector<double> Asset::generate_baseline_returns(double starting_amount)
 {
     std::vector<double> returns(this->rows, 0.0);

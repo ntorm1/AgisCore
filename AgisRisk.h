@@ -52,6 +52,20 @@ public:
 	void on_reset() override;
 
 	/**
+	 * @brief add the observer to the enclosing asset, used to re add after the observer has been removed
+	*/
+	void add_observer() {
+		this->enclosing_asset->add_observer(this);
+	}
+
+	/**
+	 * @brief remove the observer from the enclosing asset, used before the observer is deleted
+	*/
+	void remove_observer() {
+		this->enclosing_asset->remove_observer(this);
+	}
+
+	/**
 	 * @brief get the current covariance value
 	 * @return the current covariance value
 	*/
@@ -61,6 +75,7 @@ public:
 	}
 
 private:
+	AssetPtr enclosing_asset = nullptr;
 	std::span<double const> enclosing_span;
 	std::span<double const> child_span;
 	size_t enclosing_span_start_index;
@@ -85,26 +100,53 @@ private:
 struct AgisCovarianceMatrix
 {
 	AgisCovarianceMatrix(ExchangeMap* exchange_map, size_t lookback = 252, size_t step_size = 1);
-	/**
-	 * @brief Main covariance matrix containing the covariance between all assets on the exchange
-	*/
-	MatrixXd covariance_matrix;
-
-	/**
-	 * @brief container for incremental covariance structs used to update the 
-	 * covariance matrix on exchange step forward. Not only lower diagonal is stored, use symmetry to fill rest
-	*/
-	std::vector<std::shared_ptr<IncrementalCovariance>> incremental_covariance_matrix;
 	
 	// Overload for accessing the covariance matrix
 	double operator()(size_t i, size_t j) const noexcept {
 		return covariance_matrix(i,j);
 	}
 
-	auto const & get_eigen_matrix() const {return this->covariance_matrix; }
+	/**
+	 * @brief enable the covariance matrix tracing by adding observers to all assets
+	*/
+	void set_asset_observers() noexcept;
+
+	/**
+	 * @brief disable the covariance matrix tracing by removing all observers from the assets
+	*/
+	void clear_observers() noexcept;
+
+	/**
+	 * @brief take a vector of portfolio weights and calculate the portfolio volatility
+	 * @param weights 
+	 * @return 
+	*/
+	AgisResult<double> calculate_volatility(VectorXd const& weights) const noexcept;
+	 
+	/**
+	 * @brief get the underlying eigen matrix of covariance values
+	 * @return 
+	*/
+	auto const & get_eigen_matrix() const noexcept {return this->covariance_matrix; }
+
+	/**
+	 * @brief container for incremental covariance structs used to update the
+	 * covariance matrix on exchange step forward. Not only lower diagonal is stored, use symmetry to fill rest
+	*/
+	std::vector<std::shared_ptr<IncrementalCovariance>> incremental_covariance_matrix;
+
+	/**
+	 * @brief Main covariance matrix containing the covariance between all assets in the exchange map
+	*/
+	MatrixXd covariance_matrix;
+
+	ExchangeMap* exchange_map = nullptr;
+
+	bool built = false;
 
 	size_t lookback = 0;
 	size_t step_size = 1;
+
 };
 
 

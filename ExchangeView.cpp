@@ -27,6 +27,17 @@ AgisResult<bool> ExchangeView::beta_scale()
 
 
 //============================================================================
+AGIS_API AgisResult<bool> ExchangeView::apply_vol_target(std::shared_ptr<AgisCovarianceMatrix> const agis_cov_matrix)
+{
+	if(!agis_cov_matrix) return AgisResult<bool>(AGIS_EXCEP("attempted vol target with null cov matri"));
+
+	auto& eigen_cov_matrix = agis_cov_matrix->get_eigen_matrix();
+
+	return AgisResult<bool>();
+}
+
+
+//============================================================================
 AGIS_API AgisResult<bool> ExchangeView::beta_hedge(
 	std::optional<double> target_leverage
 )
