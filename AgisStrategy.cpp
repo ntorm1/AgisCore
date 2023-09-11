@@ -1,4 +1,3 @@
-#include "AgisStrategy.h"
 #include "pch.h"
 #include <fstream>
 
@@ -17,16 +16,17 @@ AgisStrategy::AgisStrategy(
 	PortfolioPtr const portfolio_,
 	double portfolio_allocation_
 ) :
-	portfolio(portfolio_)
+	portfolio(portfolio_),
+	tracers(this)
 {
 	this->strategy_id = id;
 	this->strategy_index = strategy_counter++;
 	this->router = nullptr;
 
 	this->portfolio_allocation = portfolio_allocation_;
-	this->nlv = portfolio_allocation * portfolio->get_cash();
-	this->cash = portfolio_allocation * portfolio->get_cash();
-	this->starting_cash = this->cash;
+	this->tracers.nlv = portfolio_allocation * portfolio->get_cash();
+	this->tracers.cash = portfolio_allocation * portfolio->get_cash();
+	this->tracers.starting_cash = this->tracers.cash;
 }
 
 
@@ -35,19 +35,8 @@ void AgisStrategy::__reset()
 {
 	this->trades.clear();
 	this->order_history.clear();
-	
-	this->cash_history.clear();
-	this->nlv_history.clear();
-	this->beta_history.clear();
-	this->net_leverage_ratio_history.clear();
-	this->portfolio_volatility_history.clear();
-
-
-	this->cash = this->starting_cash;
-	this->nlv = this->cash;
-	this->net_beta.has_value() ? this->net_beta = 0.0f : std::nullopt;
-	this->net_leverage_ratio.has_value() ? this->net_leverage_ratio = 0.0f : std::nullopt;
 	this->limits.__reset();
+	this->tracers.reset_history();
 	this->reset();
 }
 
@@ -58,28 +47,12 @@ void AgisStrategy::__build(
 	ExchangeMap* exchange_map
 )
 {
-	
 	this->router = router_;
 	this->exchange_map = exchange_map;
-	this->cash = this->portfolio_allocation * this->portfolio->get_cash();
-	this->nlv = this->cash;
 
+	// init required tracing and limit values
 	auto n = exchange_map->__get_dt_index().size();
-	this->nlv_history.reserve(n);
-	this->cash_history.reserve(n);
-
-	if (this->net_beta.has_value()) this->beta_history.reserve(n);
-
-	if (this->net_leverage_ratio.has_value()) this->net_leverage_ratio_history.reserve(n);
-
-	if (this->portfolio_volatility.has_value()) {
-		this->portfolio_volatility_history.reserve(n);
-		
-		// init eigen vector of portfolio weights
-		auto asset_count = this->exchange_map->get_asset_count();
-		this->portfolio_weights.resize(asset_count);
-		this->portfolio_weights.setZero();
-	}
+	this->tracers.build(this, n);
 	this->limits.__build(this);
 }
 
@@ -87,29 +60,15 @@ void AgisStrategy::__build(
 //============================================================================
 AgisResult<bool> AgisStrategy::__evaluate(bool on_close)
 {
+	// Note: at this point all trades have been evaluated and the cash balance has been updated
+	// so we only have to observer the values or use them to calculate other values.
 	if (on_close)
 	{
-		this->nlv_history.push_back(this->nlv);
-		this->cash_history.push_back(this->cash);
-		if (this->net_beta.has_value()) {
-			this->beta_history.push_back(this->net_beta.value());
-		}
-		if (this->net_leverage_ratio.has_value()) {
-			// right now net_leverage_ratio has the sum of athe absolute values of the positions
-			// to get the leverage ratio we need to divide the nlv
-			this->net_leverage_ratio_history.push_back(this->net_leverage_ratio.value() / this->nlv);
-		}
-		if (this->portfolio_volatility.has_value()) {
-			auto v = this->calculate_portfolio_volatility();
-			if (v.is_exception()) {
-				return AgisResult<bool>(AGIS_FORWARD_EXCEP(v.get_exception()));
-			}
-			this->portfolio_volatility_history.push_back(v.unwrap());
-		}
+		AGIS_DO_OR_RETURN(this->tracers.evaluate(), bool);
 	}
 
 	// if nlv < 0 clear the portfolio and disable the strategy
-	if (this->nlv < 0)
+	if (this->tracers.nlv < 0)
 	{
 		this->clear_portfolio();
 		this->is_disabled = true;
@@ -122,19 +81,9 @@ AgisResult<bool> AgisStrategy::__evaluate(bool on_close)
 void AgisStrategy::__on_trade_closed(size_t asset_index)
 {
 	// update the portfolio weights used to calculate vol to show that a trade has closed
-	if (this->portfolio_volatility.has_value()) {
-		this->portfolio_weights(asset_index) = 0;
+	if (this->tracers.has(Tracer::VOLATILITY)) {
+		this->tracers.set_portfolio_weight(asset_index, 0.0f);
 	}
-}
-
-
-//============================================================================s
-void AgisStrategy::__zero_out_tracers()
-{
-	this->nlv = this->cash;
-	if (this->net_beta.has_value()) this->net_beta = 0.0f;
-	if (this->net_leverage_ratio.has_value()) this->net_leverage_ratio = 0.0f;
-	if (this->limits.max_leverage.has_value()) this->limits.phantom_cash = 0.0f;
 }
 
 
@@ -148,9 +97,9 @@ void AgisStrategy::to_json(json& j) const
 	j["trading_window"] = trading_window_to_key_str(this->trading_window);
 	j["beta_scale"] = this->apply_beta_scale;
 	j["beta_hedge"] = this->apply_beta_hedge;
-	j["beta_trace"] = this->net_beta.has_value();
-	j["net_leverage_trace"] = this->net_leverage_ratio.has_value();
-	j["vol_trace"] = this->portfolio_volatility.has_value();
+	j["beta_trace"] = this->tracers.has(Tracer::BETA);
+	j["net_leverage_trace"] = this->tracers.has(Tracer::LEVERAGE);
+	j["vol_trace"] = this->tracers.has(Tracer::VOLATILITY);
 
 	if (this->limits.max_leverage.has_value()) {
 		j["max_leverage"] = this->limits.max_leverage.value();
@@ -216,7 +165,7 @@ void AgisStrategy::__validate_order(OrderPtr& order)
 	double cash_estimate = 0.0f;
 	if (this->limits.max_leverage.has_value()) {
 		cash_estimate = limits.estimate_phantom_cash(order.get());
-		auto ratio = (this->nlv - (this->cash - this->limits.phantom_cash - cash_estimate)) / this->nlv;
+		auto ratio = (this->tracers.nlv - (this->tracers.cash - this->limits.phantom_cash - cash_estimate)) / this->tracers.nlv;
 		if (ratio > this->limits.max_leverage.value())
 		{
 			order->__set_state(OrderState::REJECTED);
@@ -241,7 +190,7 @@ void AgisStrategy::__validate_order(OrderPtr& order)
 		auto& child_order = order->get_child_order_ref();
 		this->limits.asset_holdings[child_order->get_asset_index()] += child_order->get_units();
 	}
-	if(this->net_leverage_ratio.has_value()) this->net_leverage_ratio.value() += cash_estimate;
+	if(this->tracers.has(Tracer::LEVERAGE)) this->tracers.net_leverage_ratio += cash_estimate;
 }
 
 
@@ -290,7 +239,7 @@ AGIS_API void AgisStrategy::strategy_allocate(
 			}
 			case AllocType::PCT: {
 				auto market_price = this->exchange_map->__get_market_price(asset_index, true);
-				size *=  (this->nlv / market_price);
+				size *=  (this->tracers.nlv / market_price);
 				break;
 			}
 		}
@@ -332,7 +281,7 @@ AGIS_API void AgisStrategy::strategy_allocate(
 		else {
 			// generate the beta hedge child order
 			size_t market_asset_index = exchange_view.market_asset_index.value();
-			double beta_hedge_order_size = alloc.beta_hedge_size.value() * (this->nlv / exchange_view.market_asset_price.value());
+			double beta_hedge_order_size = alloc.beta_hedge_size.value() * (this->tracers.nlv / exchange_view.market_asset_price.value());
 			double inverse_beta_hedge_order_size = -beta_hedge_order_size;
 			// if there is an existing trade with an existing beta hedge subtract out this units
 			auto trade_opt = this->get_trade(asset_index);
@@ -719,158 +668,6 @@ AgisResult<TradeExitPtr> parse_trade_exit(
 }
 
 
-//============================================================================
-void AbstractAgisStrategy::next()
-{
-	auto& ev_lambda_ref = *this->ev_lambda_struct;
-	
-	// verify strategy warmup period has passed
-	if (ev_lambda_ref.exchange->__get_exchange_index() < ev_lambda_ref.warmup) { return; }
-
-	ExchangeView ev;
-	AGIS_TRY(
-		ev = ev_lambda_ref.exchange_view_labmda(
-			ev_lambda_ref.asset_lambda,
-			ev_lambda_ref.exchange,
-			ev_lambda_ref.query_type,
-			ev_lambda_ref.N
-		);
-	);
-
-	auto& strat_alloc_ref = *ev_lambda_ref.strat_alloc_struct;
-	switch (this->ev_opp_type)
-		{
-		case ExchangeViewOpp::UNIFORM: {
-			ev.uniform_weights(strat_alloc_ref.target_leverage);
-			break;
-		}
-		case ExchangeViewOpp::LINEAR_INCREASE: {
-			ev.linear_increasing_weights(strat_alloc_ref.target_leverage);
-			break;
-		}
-		case ExchangeViewOpp::LINEAR_DECREASE: {
-			ev.linear_decreasing_weights(strat_alloc_ref.target_leverage);
-			break;
-		}
-		case ExchangeViewOpp::CONDITIONAL_SPLIT: {
-			ev.conditional_split(strat_alloc_ref.target_leverage, this->ev_opp_param.value());
-			break;
-		}
-		case ExchangeViewOpp::UNIFORM_SPLIT: {
-			ev.uniform_split(strat_alloc_ref.target_leverage);
-			break;
-		}
-		case ExchangeViewOpp::CONSTANT: {
-			auto c = this->ev_opp_param.value() * strat_alloc_ref.target_leverage;
-			ev.constant_weights(c, this->trades);
-			break;
-		}
-		default: {
-			throw std::runtime_error("invalid exchange view operation");
-		}
-	}
-
-	this->strategy_allocate(
-		ev,
-		strat_alloc_ref.epsilon,
-		strat_alloc_ref.clear_missing,
-		strat_alloc_ref.trade_exit,
-		strat_alloc_ref.alloc_type
-	);
-}
-
-
-//============================================================================
-void AbstractAgisStrategy::build()
-{
-	if (!ev_lambda_struct.has_value()) {
-		throw std::runtime_error(this->get_strategy_id() + " missing abstract lambda strategy");
-	}
-
-	ExchangePtr exchange = ev_lambda_struct.value().exchange;
-	auto res = this->exchange_subscribe(exchange->get_exchange_id());
-
-	// validate exchange subscription
-	if (res.is_exception()) throw res.get_exception();
-
-	// validate beta hedge
-	if (this->apply_beta_hedge || this->apply_beta_scale)
-	{
-		auto market_asset = exchange->__get_market_asset();
-		if(market_asset.is_exception()) throw market_asset.get_exception();
-	}
-
-	// set the strategy warmup period
-	this->warmup = this->ev_lambda_struct.value().warmup;
-
-	// set the strategy target leverage
-	this->target_leverage = this->ev_lambda_struct.value().strat_alloc_struct.value().target_leverage;
-}
-
-
-//============================================================================
-AgisResult<bool> AbstractAgisStrategy::extract_ev_lambda()
-{
-	this->ev_lambda_struct = this->ev_lambda();
-
-	if (!this->ev_lambda_struct.has_value()) {
-		return AgisResult<bool>(AGIS_EXCEP("missing ev lambda struct"));
-	}
-
-	auto& ev_lambda_ref = *this->ev_lambda_struct;
-
-	if (!ev_lambda_ref.exchange) {
-		return AgisResult<bool>(AGIS_EXCEP("missing exchange"));
-	}
-
-	// set ev alloc type
-	auto& strat_alloc_ref = *ev_lambda_ref.strat_alloc_struct;
-	if (strat_alloc_ref.ev_opp_type == "UNIFORM")
-		this->ev_opp_type = ExchangeViewOpp::UNIFORM;
-	else if (strat_alloc_ref.ev_opp_type == "LINEAR_DECREASE")
-		this->ev_opp_type = ExchangeViewOpp::LINEAR_DECREASE;
-	else if (strat_alloc_ref.ev_opp_type == "LINEAR_INCREASE")
-		this->ev_opp_type = ExchangeViewOpp::LINEAR_INCREASE;
-	else if (strat_alloc_ref.ev_opp_type == "CONDITIONAL_SPLIT")
-		this->ev_opp_type = ExchangeViewOpp::CONDITIONAL_SPLIT;
-	else if (strat_alloc_ref.ev_opp_type == "UNIFORM_SPLIT")
-		this->ev_opp_type = ExchangeViewOpp::UNIFORM_SPLIT;
-	else if (strat_alloc_ref.ev_opp_type == "CONSTANT")
-		this->ev_opp_type = ExchangeViewOpp::CONSTANT;
-	else AGIS_THROW("invalid exchange view opp type");
-
-	// set ev extra param if needed
-	if (this->ev_opp_type == ExchangeViewOpp::CONDITIONAL_SPLIT || 
-		this->ev_opp_type == ExchangeViewOpp::CONSTANT)
-	{
-		std::optional<double> val = strat_alloc_ref.ev_extra_opp.value();
-		if (!val.has_value())
-		{
-			return AgisResult<bool>(AGIS_EXCEP("exchange view opperation expected extra ev parameters"));
-		}
-		else
-		{
-			this->ev_opp_param = val;
-		}
-	}
-
-	// set target leverage
-	this->target_leverage = strat_alloc_ref.target_leverage;
-
-	return AgisResult<bool>(true);
-}
-
-//============================================================================
-void AbstractAgisStrategy::restore(fs::path path)
-{
-}
-
-//============================================================================
-void AbstractAgisStrategy::to_json(json& j)
-{
-	AgisStrategy::to_json(j);
-}
-
 
 //============================================================================
 void BenchMarkStrategy::build()
@@ -963,291 +760,11 @@ void code_gen_write(fs::path filename, std::string const& source)
 
 
 //============================================================================
-std::string trading_window_to_str(std::optional<TradingWindow> window_op) {
-	if (!window_op.has_value()) { return ""; }
-	std::ostringstream codeStream;
-	auto window = window_op.value();
-	codeStream << "TradingWindow(";
-	codeStream << "std::make_pair(TimePoint{" << window.first.hour << ", " << window.first.minute << "}, ";
-	codeStream << "TimePoint{" << window.second.hour << ", " << window.second.minute << "})";
-	codeStream << ")";
-
-	return codeStream.str();
-}
-
-
-//============================================================================
-void AbstractAgisStrategy::code_gen(fs::path strat_folder)
-{
-	if (!this->ev_lambda_struct.has_value())
-	{
-		AGIS_THROW("Abstract strategy has not been built yet");
-	}
-	auto exchange_id = this->ev_lambda_struct.value().exchange->get_exchange_id();
-	auto portfolio_id = this->get_portfolio_id();
-	auto warmup = this->ev_lambda_struct.value().warmup;
-	auto& ev_lambda_ref = *this->ev_lambda_struct;
-	auto& strat_alloc_ref = *ev_lambda_ref.strat_alloc_struct;
-
-	std::string strategy_header = R"(#pragma once
-
-#ifdef AGISSTRATEGY_EXPORTS // This should be defined when building the DLL
-#  define AGIS_STRATEGY_API __declspec(dllexport)
-#else
-#  define AGIS_STRATEGY_API __declspec(dllimport)
-#endif
-
-// the following code is generated from an abstract strategy flow graph.
-// EDIT IT AT YOUR OWN RISK 
-#include "AgisStrategy.h"
-
-class {STRATEGY_ID}_CPP : public AgisStrategy {
-public:
-	AGIS_STRATEGY_API {STRATEGY_ID}_CPP (
-        PortfolioPtr const portfolio_
-    ) : AgisStrategy("{STRATEGY_ID}_CPP", portfolio_, {ALLOC}) {
-		this->strategy_type = AgisStrategyType::CPP;
-		this->trading_window = {TRADING_WINDOW};
-	};
-
-    AGIS_STRATEGY_API inline static std::unique_ptr<AgisStrategy> create_instance(
-        PortfolioPtr const& portfolio_
-    ) 
-	{
-        return std::make_unique<{STRATEGY_ID}_CPP>(portfolio_);
-    }
-
-	AGIS_STRATEGY_API inline void reset() override {}
-
-	AGIS_STRATEGY_API void build() override;
-
-	AGIS_STRATEGY_API void next() override;
-
-private:
-	ExchangeViewOpp ev_opp_type = ExchangeViewOpp::{EV_OPP_TYPE};
-	ExchangePtr exchange = nullptr;
-	size_t warmup = {WARMUP};
-};
-)";
-
-	// Replace the placeholder with the EV_OPP_TYPE value
-	auto pos = strategy_header.find("{EV_OPP_TYPE}");
-	strategy_header.replace(pos, 13, ev_opp_to_str(this->ev_opp_type));
-
-	// Replace the allocation amount
-	pos = strategy_header.find("{ALLOC}");
-	strategy_header.replace(pos, 7, std::to_string(this->get_allocation()));
-
-	// Replace the warmup 
-	pos = strategy_header.find("{WARMUP}");
-	strategy_header.replace(pos, 8, std::to_string(warmup));
-
-	// Replace the trading_window
-	pos = strategy_header.find("{TRADING_WINDOW}");
-	if (this->trading_window.has_value()) {
-		strategy_header.replace(pos, 16, trading_window_to_str(this->trading_window.value()));
-	}
-	else {
-		strategy_header.replace(pos, 16, "std::nullopt");
-	}
-
-	// Replace strategy class name
-	std::string place_holder = "{STRATEGY_ID}";
-	std::string strategy_id = this->get_strategy_id();
-	str_replace_all(strategy_header, place_holder, strategy_id);
-
-	// Insert exchange ID
-	std::string exchange_str = R"("{ID}")";
-	pos = exchange_str.find("{ID}");
-	exchange_str.replace(pos, 4, exchange_id);
-	
-	std::string build_method =
-	R"(this->exchange_subscribe("{EXCHANGE_ID}");
-	this->exchange = this->get_exchange();)";
-	str_replace_all(build_method, "{EXCHANGE_ID}", this->get_exchange()->get_exchange_id());
-
-	// build the vector of asset lambdas to be used when calling next
-	std::string asset_lambda = R"(std::vector<AssetLambdaScruct> operations = { )";
-	int i = 0;
-	for (auto& pair : ev_lambda_ref.asset_lambda)
-	{
-		std::string lambda_mid;
-		if (pair.is_operation()) {
-			lambda_mid = R"(AssetLambdaScruct(AssetLambda({OPP}, [&](const AssetPtr& asset) {
-			return asset->get_asset_feature("{COL}", {INDEX});
-		}),{OPP}, "{COL}", {INDEX})
-)";
-			auto pos = lambda_mid.find("{OPP}");
-			auto& asset_operation = pair.get_asset_operation_struct();
-			lambda_mid.replace(pos, 5, opp_to_str(pair.get_agis_operation()));
-
-			str_replace_all(lambda_mid, "{COL}", asset_operation.column);
-			str_replace_all(lambda_mid, "{OPP}", opp_to_str(pair.get_agis_operation()));
-			str_replace_all(lambda_mid, "{INDEX}", std::to_string(asset_operation.row));
-		}
-		else {
-			lambda_mid = pair.get_asset_filter_struct().asset_filter_range.code_gen();
-		}
-		// append the asset lambda str rep to the vector containing the operations
-		asset_lambda = asset_lambda + lambda_mid;
-		if(i < ev_lambda_ref.asset_lambda.size() - 1)
-		{
-			asset_lambda = asset_lambda + ", ";
-		}
-		else {
-			asset_lambda = asset_lambda + "};";
-		}
-		i++;
-	}
-	// agis strategy next method
-	std::string next_method = R"(auto next_lambda = [&operationsRef](const AssetPtr& asset) -> AgisResult<double> {			
-		return asset_feature_lambda_chain(
-			asset, 
-			operationsRef
-		);
-	};
-		
-	auto ev = this->exchange->get_exchange_view(
-		next_lambda, 
-		ExchangeQueryType::{EXCHANGE_QUERY_TYPE},
-		{N}
-	);
-
-	{EV_TRANSFORM}
-
-	this->strategy_allocate(
-		ev,
-		{EPSILON},
-		{CLEAR},
-		std::nullopt,
-		AllocType::{ALLOC_TYPE}
-	);
-
-	)";
-
-	// Replace the exchange query type
-	pos = next_method.find("{EXCHANGE_QUERY_TYPE}");
-	next_method.replace(pos, 21, ev_query_type(ev_lambda_ref.query_type));
-
-	pos = next_method.find("{N}");
-	next_method.replace(pos, 3, std::to_string(ev_lambda_ref.N));
-
-	auto& strat_alloc_struct = *ev_lambda_ref.strat_alloc_struct;
-	// Replace epsilon
-	pos = next_method.find("{EPSILON}");
-	next_method.replace(pos, 9, std::to_string(strat_alloc_struct.epsilon));
-
-	// Clear position if missing
-	pos = next_method.find("{CLEAR}");
-	next_method.replace(pos, 7, std::to_string(strat_alloc_struct.clear_missing));
-
-	// Strategy allocation type
-	pos = next_method.find("{ALLOC_TYPE}");
-	next_method.replace(pos, 12, alloc_to_str(strat_alloc_struct.alloc_type));
-
-	// Replace ev transform
-	auto target_leverage = std::to_string(strat_alloc_ref.target_leverage);
-	std::string ev_opp_str;
-	if (strat_alloc_ref.ev_opp_type == "UNIFORM")
-		ev_opp_str = R"(ev.uniform_weights({LEV});)";
-	else if (strat_alloc_ref.ev_opp_type == "LINEAR_DECREASE")
-		ev_opp_str = R"(ev.linear_decreasing_weights({LEV});)";
-	else if (strat_alloc_ref.ev_opp_type == "LINEAR_INCREASE")
-		ev_opp_str = R"(ev.linear_increasing_weights({LEV});)";
-	pos = ev_opp_str.find("{LEV}");
-	ev_opp_str.replace(pos, 5, std::to_string(strat_alloc_struct.target_leverage));
-	pos = next_method.find("{EV_TRANSFORM}");
-	next_method.replace(pos, 14, ev_opp_str);
-
-	std::string strategy_source = R"(
-// the following code is generated from an abstract strategy flow graph.
-// EDIT IT AT YOUR OWN RISK 
-
-#include "{STRATEGY_ID}_CPP.h"
-
-{LAMBDA_CHAIN}
-
-void {STRATEGY_ID}_CPP::build(){
-	// set the strategies target exchanges
-	{BUILD_METHOD}
-	
-	this->set_beta_trace({BETA_TRACE});
-	this->set_beta_scale_positions({BETA_SCALE});
-	this->set_beta_hedge_positions({BETA_HEDGE});
-	this->set_net_leverage_trace({NET_LEV});
-	this->set_step_frequency({FREQ});
-};
-
-void {STRATEGY_ID}_CPP::next(){
-	if (this->exchange->__get_exchange_index() < this->warmup) { return; }
-
-    auto& operationsRef = operations; // Create a reference to operations
-
-	// define the lambda function the strategy will apply
-	{NEXT_METHOD}
-};
-)";
-
-	// Replace the placeholder with the BUILD_METHOD
-	pos = strategy_source.find("{BUILD_METHOD}");
-	strategy_source.replace(pos, 14, build_method);
-
-	// Replace the placeholder with the NEXT_METHOD
-	pos = strategy_source.find("{NEXT_METHOD}");
-	strategy_source.replace(pos, 13, next_method);
-
-	// Replace the lambda chain
-	pos = strategy_source.find("{LAMBDA_CHAIN}");
-	strategy_source.replace(pos, 14, asset_lambda);
-
-	// Replace the lambda chain
-	pos = strategy_source.find("{BETA_TRACE}");
-	strategy_source.replace(pos, 12, (this->net_beta.has_value()) ? "true" : "false");
-
-	// Replace the lambda chain
-	pos = strategy_source.find("{BETA_SCALE}");
-	strategy_source.replace(pos, 12, (apply_beta_scale) ? "true" : "false");
-
-	// Replace the lambda chain
-	pos = strategy_source.find("{BETA_HEDGE}");
-	strategy_source.replace(pos, 12, (apply_beta_hedge) ? "true" : "false");
-
-	// Replace the lambda chain
-	pos = strategy_source.find("{NET_LEV}");
-	strategy_source.replace(pos, 9, (this->net_leverage_ratio.has_value()) ? "true" : "false");
-
-	// Replace the lambda chain
-	pos = strategy_source.find("{FREQ}");
-	// convert the frequency to a string
-	std::string freq_str = std::to_string(this->get_step_frequency());
-	str_replace_all(strategy_source, "{FREQ}", freq_str);
-
-	// Replace strategy class name
-	str_replace_all(strategy_source, place_holder, strategy_id);
-
-	auto header_path = strat_folder / (strategy_id + "_CPP.h");
-	auto source_path = strat_folder / (strategy_id + "_CPP.cpp");
-	AGIS_TRY(code_gen_write(header_path, strategy_header))
-	AGIS_TRY(code_gen_write(source_path, strategy_source))
-}
-
-AgisResult<bool> AbstractAgisStrategy::validate_market_asset()
-{
-	if (!this->ev_lambda_struct.has_value()) {
-		return AgisResult<bool>(this->get_strategy_id() + " missing abstract lambda strategy");
-	}
-
-	ExchangePtr exchange = ev_lambda_struct.value().exchange;
-	auto market_asset = exchange->__get_market_asset();
-	if (market_asset.is_exception()) return AgisResult<bool>(market_asset.get_exception());
-	return AgisResult<bool>(true);
-}
-
-
-//============================================================================
 AgisResult<bool> AgisStrategy::set_beta_trace(bool val, bool check)
 {
-	val ? this->net_beta = 0 : this->net_beta = std::nullopt;
+	if (val) this->tracers.set(Tracer::BETA);
+	else this->tracers.reset(Tracer::BETA);
+
 	auto benchmark = this->portfolio->__get_benchmark_strategy();
 	if (benchmark && this->strategy_type != AgisStrategyType::BENCHMARK) { benchmark->set_beta_trace(val); }
 	return AgisResult<bool>(true);
@@ -1257,7 +774,9 @@ AgisResult<bool> AgisStrategy::set_beta_trace(bool val, bool check)
 //============================================================================
 AgisResult<bool> AgisStrategy::set_net_leverage_trace(bool val)
 {
-	val ? this->net_leverage_ratio = 0 : this->net_leverage_ratio = std::nullopt;
+	if (val) this->tracers.set(Tracer::LEVERAGE);
+	else this->tracers.reset(Tracer::LEVERAGE);
+
 	auto benchmark = this->portfolio->__get_benchmark_strategy();
 	if (benchmark && this->strategy_type != AgisStrategyType::BENCHMARK) { benchmark->set_net_leverage_trace(val); }
 	return AgisResult<bool>(true);
@@ -1268,8 +787,9 @@ AgisResult<bool> AgisStrategy::set_net_leverage_trace(bool val)
 AgisResult<bool> AgisStrategy::set_vol_trace(bool val)
 {
 	// init the portfolio volatility tracer value
-	val ? this->portfolio_volatility = 0 : this->portfolio_volatility = std::nullopt;
-	
+	if (val) this->tracers.set(Tracer::VOLATILITY);
+	else this->tracers.reset(Tracer::VOLATILITY);
+
 	auto benchmark = this->portfolio->__get_benchmark_strategy();
 	if (benchmark && this->strategy_type != AgisStrategyType::BENCHMARK) {benchmark->set_vol_trace(val);}
 
@@ -1280,8 +800,10 @@ AgisResult<bool> AgisStrategy::set_vol_trace(bool val)
 //============================================================================
 std::optional<double> AgisStrategy::get_net_leverage_ratio() const
 {
-	if (!this->net_leverage_ratio.has_value()) return std::nullopt;
-	return this->net_leverage_ratio.value() / this->nlv;
+	if (!this->tracers.has(Tracer::LEVERAGE)) {
+		return std::nullopt;
+	}
+	return this->tracers.net_leverage_ratio / this->tracers.nlv;
 }
 
 
@@ -1298,13 +820,13 @@ AgisResult<double> AgisStrategy::calculate_portfolio_volatility()
 	// index is zeroed out automatically so only update weights at indexs that have a trade
 	for (auto& [asset_index, trade] : this->trades)
 	{
-		this->portfolio_weights(asset_index) = trade->nlv / this->nlv;
+		this->tracers.portfolio_weights(asset_index) = trade->nlv / this->tracers.nlv;
 	}
 
 	// calculate vol using the covariance matrix
-	auto res = cov_matrix->calculate_volatility(this->portfolio_weights);
+	auto res = cov_matrix->calculate_volatility(this->tracers.portfolio_weights);
 	if (res.is_exception()) return res;
-	this->portfolio_volatility = res.unwrap();
+	this->tracers.portfolio_volatility = res.unwrap();
 	return res;
 }
 
@@ -1327,28 +849,10 @@ AgisResult<double> BenchMarkStrategy::calculate_portfolio_volatility()
 
 
 //============================================================================
-AgisResult<bool> AbstractAgisStrategy::set_beta_scale_positions(bool val, bool check)
+AgisResult<VectorXd const*> AgisStrategy::get_portfolio_weights() const
 {
-	if (!val) return AgisStrategy::set_beta_scale_positions(val, check);
-	if(check) AGIS_DO_OR_RETURN(this->validate_market_asset(), bool);
-	return AgisStrategy::set_beta_scale_positions(val);
-}
-
-
-//============================================================================
-AgisResult<bool> AbstractAgisStrategy::set_beta_hedge_positions(bool val, bool check)
-{
-	if (!val) return AgisStrategy::set_beta_hedge_positions(val, check);
-	if(check) AGIS_DO_OR_RETURN(this->validate_market_asset(), bool);
-	this->apply_beta_hedge = val;
-	return AgisResult<bool>(true);
-}
-
-
-//============================================================================
-AGIS_API AgisResult<bool> AbstractAgisStrategy::set_beta_trace(bool val, bool check)
-{
-	if (!val) return AgisStrategy::set_beta_trace(val, check);
-	if (check) AGIS_DO_OR_RETURN(this->validate_market_asset(), bool);
-	return AgisStrategy::set_beta_trace(val);
+	if (!this->tracers.portfolio_weights.size() == 0) {
+		return AgisResult<VectorXd const*>(AGIS_EXCEP("missing weights vector"));
+	}
+	return AgisResult<VectorXd const*>(&this->tracers.portfolio_weights);
 }

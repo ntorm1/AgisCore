@@ -107,23 +107,23 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
     auto unrealized_pl_new = this->units*(market_price-this->average_price);
     
     // adjust strategy levels 
-    strategy->nlv += nlv_new;
+    strategy->tracers.nlv_add_assign(nlv_new);
     strategy->unrealized_pl += (unrealized_pl_new - this->unrealized_pl);
 
     // adjust strategy net beta levels
-    if (strategy->net_beta.has_value())
+    if (strategy->tracers.has(Tracer::BETA))
     {
         auto beta_dollars = (
             this->units * market_price * __asset->get_beta().unwrap_or(0.0f)
         );
-        strategy->net_beta.value() += beta_dollars;
+        strategy->tracers.net_beta_add_assign(beta_dollars);
     }
 
     // adjust the strategy net leverage ratio to the abs of the position value
-    if (strategy->net_leverage_ratio.has_value()) {
-        strategy->net_leverage_ratio.value() += (
-			abs(this->units) * market_price
-		);
+    if (strategy->tracers.has(Tracer::LEVERAGE)) {
+        strategy->tracers.net_leverage_ratio_add_assign(
+            abs(this->units) * market_price
+        );
     }
 
     this->nlv = nlv_new;

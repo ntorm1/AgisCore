@@ -89,11 +89,8 @@ struct ExchangeView
 	std::optional<size_t> market_asset_index = std::nullopt;
 	Exchange* exchange = nullptr;
 
-	ExchangeView() = default;
-	ExchangeView(Exchange* exchange_, size_t count) {
-		this->exchange = exchange_;
-		this->view.reserve(count);
-	}
+	AGIS_API ExchangeView() = default;
+	AGIS_API ExchangeView(Exchange* exchange_, size_t count);
 
 	/// <summary>
 	/// Return the number of elements in the exchange view

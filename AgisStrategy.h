@@ -8,17 +8,14 @@
 #include <utility>
 #include <filesystem>
 
-#include <Eigen/Dense>
-
 #include "AgisFunctional.h"
 #include "AgisRouter.h"
 #include "AgisRisk.h"
 #include "AgisAnalysis.h"
+#include "AgisStrategyTracers.h"
 #include "Order.h"
 #include "Portfolio.h"
 #include "Exchange.h"
-
-using namespace Eigen;
 
 namespace fs = std::filesystem;
 
@@ -43,89 +40,10 @@ NLOHMANN_JSON_SERIALIZE_ENUM(AgisStrategyType, {
 	})
 
 
-struct AGIS_API StrategyAllocLambdaStruct {
-	/// <summary>
-	/// The minimum % difference between target position size and current position size
-	/// needed to trigger a new order
-	/// </summary>
-	double epsilon;
-
-	/// <summary>
-	/// The targert portfolio leverage used to apply weights to the allocations
-	/// </summary>
-	double target_leverage;
-
-	/// <summary>
-	/// Optional extra param to pass to ev weight application function
-	/// </summary>
-	std::optional<double> ev_extra_opp = std::nullopt;
-
-	/**
-	 * @brief Option trade exit point to apply to new trades
-	*/
-	std::optional<TradeExitPtr> trade_exit = std::nullopt;
-
-	/// <summary>
-	/// Clear any positions that are currently open but not in the allocation
-	/// </summary>
-	bool clear_missing;
-
-	/// <summary>
-	/// Type of weights to apply to the exchange view
-	/// </summary>
-	std::string ev_opp_type;
-
-	/// <summary>
-	/// Type of allocation to use 
-	/// </summary>
-	AllocType alloc_type;
-};
-
-struct AGIS_API ExchangeViewLambdaStruct {
-	/**
-	 * @brief The number of assets to query for
-	*/
-	int N;
-
-	/**
-	 * @brief The warmup period needed for the lambda chain to be valid
-	*/
-	size_t warmup;
-
-	/**
-	 * @brief the lambda chain representing the operation to apply to each asset
-	*/
-	AgisAssetLambdaChain asset_lambda;
-
-	/**
-	 * @brief the lambda function that executes the get_exchange_view function
-	*/
-	ExchangeViewLambda exchange_view_labmda;
-
-	/**
-	 * @brief shred pointer to the underlying exchange 
-	*/
-	ExchangePtr exchange;
-
-	/**
-	 * @brief type of query to do, used for sorting asset values
-	*/
-	ExchangeQueryType query_type;
-
-	/**
-	* @brief optional strategy alloc struct containing info about how to process the 
-	* exchange view into portfolio weights
-	*/
-	std::optional<StrategyAllocLambdaStruct> strat_alloc_struct = std::nullopt;
-};
-
-
 AGIS_API typedef std::function<double(
 	double a,
 	double b
 	)> Operation;
-
-
 extern AGIS_API const std::function<AgisResult<double>(
 	const std::shared_ptr<Asset>&,
 	const std::vector<AssetLambdaScruct>& operations)> asset_feature_lambda_chain;
@@ -141,6 +59,7 @@ class AgisStrategy
 	friend struct Trade;
 	friend class Portfolio;
 	friend class AgisStrategyMap;
+	friend class AgisStrategyTracers;
 public:
 	virtual ~AgisStrategy() = default;
 	AgisStrategy() = default;
@@ -265,42 +184,15 @@ public:
 	
 	AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() const { return this->trade_history; }
 
-	/// <summary>
-	/// Set the strategy to store the net beta of their positions at every time step
-	/// </summary>
-	/// <param name="val"></param>
-	/// <param name="check"></param>
-	/// <returns></returns>
+
 	AGIS_API virtual AgisResult<bool> set_beta_trace(bool val, bool check = true);
-	
-	/// <summary>
-	/// Trace the net leverage ratio of the strategy at every time step
-	/// </summary>
-	/// <param name="val"></param>
-	/// <returns></returns>
 	AGIS_API virtual AgisResult<bool> set_net_leverage_trace(bool val);
-
 	AGIS_API virtual AgisResult<bool> set_vol_trace(bool val);
-
-	
-	/// <summary>
-	/// Set the trategy to scale the positions by the beta of the asset when calling strategy_allocate
-	/// </summary>
-	/// <param name="val">wether or not to add beta scaling</param>
-	/// <param name="check">validate beta asset</param>
-	/// <returns></returns>
 	AGIS_API virtual AgisResult<bool> set_beta_scale_positions(bool val, bool check = true) {apply_beta_scale = val; return AgisResult<bool>(true);}
-	
-	/// <summary>
-	/// Generate beta hedge for the strategy when calling strategy allocate
-	/// </summary>
-	/// <param name="val">wether or not to add beta hedge</param>
-	/// <param name="check">validate beta asset</param>
-	/// <returns></returns>
 	AGIS_API virtual AgisResult<bool> set_beta_hedge_positions(bool val, bool check = true) {apply_beta_hedge = val; return AgisResult<bool>(true);}
 
-	double get_nlv() const noexcept { return this->nlv; }
-	double get_cash() const noexcept { return this->cash; }
+	double get_nlv() const noexcept { return this->tracers.nlv; }
+	double get_cash() const noexcept { return this->tracers.cash; }
 	double get_allocation() const noexcept { return this->portfolio_allocation; }
 	size_t get_step_frequency() const noexcept  { return this->step_frequency.value_or(1); }
 
@@ -329,13 +221,19 @@ public:
 	 * @brief get the net beta of the strategy if it exits.
 	 * @return 
 	*/
-	AGIS_API std::optional<double> get_net_beta() const { return this->net_beta; }
+	AGIS_API std::optional<double> get_net_beta() const { 
+		return this->tracers.get(Tracer::BETA);
+	}
 
 	/**
 	 * @brief get the net beta of the strategy if it exits.
 	 * @return
 	*/
-	AGIS_API std::optional<double> get_portfolio_volatility() const { return this->portfolio_volatility; }
+	AGIS_API std::optional<double> get_portfolio_volatility() const { 
+		return this->tracers.get(Tracer::VOLATILITY); 
+	}
+
+	AGIS_API void zero_out_tracers() { this->tracers.zero_out_tracers(); }
 
 	/// <summary>
 	/// Get the unique strategy index of a strategy instance
@@ -380,7 +278,6 @@ public:
 	/// <returns>Shared pointer to the exchange</returns>
 	AGIS_API ExchangePtr const get_exchange() const;
 
-
 	/// <summary>
 	/// Get const pointer to the exchange map
 	/// </summary>
@@ -419,7 +316,6 @@ public:
 		this->set_net_leverage_trace(true);
 	}
 
-
 	/**
 	 * @brief remove the disabled flag from a strategy. This is done on the completion of a hydra run, and 
 	 * is the result of a strategy being disabled during a hydra run due to breaching risk limits.
@@ -454,12 +350,6 @@ public:
 	bool __is_disabled() const {return this->is_disabled;}
 
 	/// <summary>
-	/// Each unique trade is incrementally evaluated and the trade updates the valuation of it's parent strategy
-	/// As such, at the start of an evaluation, the strategy valuation is zeroed out so the trades can increment it properly
-	/// </summary>
-	void __zero_out_tracers();
-
-	/// <summary>
 	/// Build the strategy, called once registered to a hydra instance
 	/// </summary>
 	/// <param name="router_"></param>
@@ -470,16 +360,16 @@ public:
 	bool __is_exchange_subscribed() const { return this->exchange_subsrciption == ""; }
 	bool __is_beta_scaling() const { return this->apply_beta_scale; }
 	bool __is_beta_hedged() const { return this->apply_beta_hedge; }
-	bool __is_beta_trace() const { return this->net_beta.has_value(); }
-	bool __is_net_lev_trace() const {return this->net_leverage_ratio.has_value(); } 
-	bool __is_vol_trace() const {return this->portfolio_volatility.has_value(); }
+	bool __is_beta_trace() const { return this->tracers.has(Tracer::BETA); }
+	bool __is_net_lev_trace() const {return this->tracers.has(Tracer::LEVERAGE); }
+	bool __is_vol_trace() const {return this->tracers.has(Tracer::VOLATILITY); }
 	AGIS_API inline void __set_allocation(double allocation_) { this->portfolio_allocation = allocation_; }
 
-	AGIS_API inline std::vector<double> get_beta_history() const { return beta_history; }
-	AGIS_API inline std::vector<double> get_nlv_history() const { return nlv_history; }
-	AGIS_API inline std::vector<double> get_cash_history() const { return cash_history;}
-	AGIS_API inline std::vector<double> get_net_leverage_ratio_history() const { return net_leverage_ratio_history; }
-	AGIS_API inline std::vector<double> const& get_portfolio_vol_vec() { return this->portfolio_volatility_history; }
+	AGIS_API inline std::vector<double> get_beta_history() const { return tracers.beta_history; }
+	AGIS_API inline std::vector<double> get_nlv_history() const { return tracers.nlv_history; }
+	AGIS_API inline std::vector<double> get_cash_history() const { return tracers.cash_history;}
+	AGIS_API inline std::vector<double> get_net_leverage_ratio_history() const { return tracers.net_leverage_ratio_history; }
+	AGIS_API inline std::vector<double> const& get_portfolio_vol_vec() { return tracers.portfolio_volatility_history; }
 
 protected:
 	/**
@@ -542,6 +432,11 @@ protected:
 	/// <returns></returns>
 	AGIS_API std::optional<SharedTradePtr> get_trade(std::string const& asset_id);
 
+	/**
+	 * @brief get const pointer the strategies portfolio weights
+	*/
+	AGIS_API AgisResult<VectorXd const*> get_portfolio_weights() const;
+
 	/// <summary>
 	/// Type of AgisStrategy
 	/// </summary>
@@ -560,36 +455,7 @@ protected:
 	bool apply_beta_hedge = false;
 	bool apply_beta_scale = false;
 
-	std::vector<double> beta_history;
-	std::vector<double> nlv_history;
-	std::vector<double> cash_history;
-	std::vector<double> net_leverage_ratio_history;
-	std::vector<double> portfolio_volatility_history;
-
-	/**
-	 * @brief Defined as the net beta dollars of the portfolio. I.e. units*share_price*beta
-	*/
-	std::optional<double> net_beta = std::nullopt;
-
-	/**
-	 * @brief Defined as the net leverage ratio of the portfolio. I.e. (nlv - cash)/nlv
-	*/
-	std::optional<double> net_leverage_ratio = std::nullopt;
-
-	/**
-	 * @brief Defined as the forward looks estimate of portfolio volatility obtained by multiplying
-	 * the asset covariance matrix by the portfolio weights
-	*/
-	std::optional<double> portfolio_volatility = std::nullopt;
-
-	/**
-	 * @brief an eigen vector of portfolio weights used to calculate portfolio volatility
-	*/
-	Matrix<double, Dynamic, 1> portfolio_weights;
-
-	double nlv = 0;
-	double cash = 0;
-	double starting_cash = 0;
+	AgisStrategyTracers tracers;
 
 	/// <summary>
 	/// Pointer to the main exchange map object
@@ -657,22 +523,9 @@ private:
 	*/
 	bool* __exchange_step = nullptr;
 
-	/**
-	 * @brief the frequency in which to call the strategy next function. I.e. 5 will call 
-	 * the strategy when the exchange map steps forward 5 times
-	*/
-	std::optional<size_t> step_frequency = std::nullopt;
-	
-	/**
-	 * @brief Unique numerical rep of the strategy id to prevent string copies in new orders
-	 * and trades created.
-	*/
-	size_t strategy_index;
-	
-	/**
-	 * @brief unique string id of the strategy
-	*/
-	std::string strategy_id;
+	std::optional<size_t> step_frequency = std::nullopt; /// the frequency in which to call the strategy next function	
+	size_t strategy_index;		/// unique index of the strategy
+	std::string strategy_id;	/// unique string id of the strategy
 
 	/**
 	 * @brief struct containing all risk parameters and limitations of the strategy 
@@ -786,83 +639,9 @@ public:
 	bool __strategy_exists(std::string const& id) const { return this->strategy_id_map.count(id) > 0; }
 
 private:
-	/**
-	 * @brief mapping between strategy id and strategy index
-	*/
 	ankerl::unordered_dense::map<std::string, size_t> strategy_id_map;
-
-	/**
-	 * @brief maping between strategy index and strategy unique pointer
-	*/
 	ankerl::unordered_dense::map<size_t, AgisStrategyPtr> strategies;
 
-};
-
-
-
-class AbstractAgisStrategy : public AgisStrategy {
-public:
-	using AbstractExchangeViewLambda = std::function<
-		std::optional<ExchangeViewLambdaStruct>
-		()>;
-
-	AbstractAgisStrategy(
-		PortfolioPtr const& portfolio_,
-		std::string const& strategy_id,
-		double allocation
-	) : AgisStrategy(strategy_id, portfolio_, allocation) {
-		this->strategy_type = AgisStrategyType::FLOW;
-	}
-
-	AGIS_API void next() override;
-	
-	AGIS_API inline void reset() override {}
-
-	AGIS_API void build() override;
-
-	/**
-	 * @brief extract the information from a node editor graph and build the abstract strategy.
-	 * @return wether or not the strategy was built successfully
-	*/
-	AGIS_API [[nodiscard]] AgisResult<bool> extract_ev_lambda();
-
-	/**
-	 * @brief set the function call that will be used to extract the information from a node editor graph and build the abstract strategy.
-	 * @param f_ function call that will be used to extract the information from a node editor graph and build the abstract strategy.
-	 * @return 
-	*/
-	AGIS_API inline void set_abstract_ev_lambda(std::function<
-		std::optional<ExchangeViewLambdaStruct>
-		()> f_) { this->ev_lambda = f_; };
-
-	AGIS_API void restore(fs::path path) override;
-
-	AGIS_API void to_json(json& j);
-
-	/**
-	 * @brief output code to a file that can be used to build a concrete strategy from the abstract strategy
-	 * @param strat_folder the destiniation of the output source code.
-	 * @return 
-	*/
-	AGIS_API void code_gen(fs::path strat_folder);
-
-	AGIS_API [[nodiscard]] AgisResult<bool> set_beta_trace(bool val, bool check = true);
-	AGIS_API [[nodiscard]] AgisResult<bool> set_beta_scale_positions(bool val, bool check = true) override;
-	AGIS_API [[nodiscard]] AgisResult<bool> set_beta_hedge_positions(bool val, bool check = true) override;
-	AgisResult<bool> validate_market_asset();
-
-
-private:
-	AbstractExchangeViewLambda ev_lambda;
-	std::optional<ExchangeViewLambdaStruct> ev_lambda_struct = std::nullopt;
-	std::optional<double> ev_opp_param = std::nullopt;
-	ExchangeViewOpp ev_opp_type = ExchangeViewOpp::UNIFORM;
-
-	/// <summary>
-	/// The number if steps need to happen on the target exchange before the 
-	/// strategy next() method is called
-	/// </summary>
-	size_t warmup = 0;
 };
 
 

@@ -10,6 +10,7 @@
 #include "AgisErrors.h"
 #include "AgisRouter.h"
 #include "AgisStrategy.h"
+#include "AbstractAgisStrategy.h"
 
 #include "Exchange.h"
 #include "Portfolio.h"

@@ -3,6 +3,15 @@
 #include "Exchange.h"
 #include "Trade.h"
 
+
+//============================================================================
+ExchangeView::ExchangeView(Exchange* exchange_, size_t count)
+{
+	this->exchange = exchange_;
+	this->view.reserve(count);
+}
+
+
 //============================================================================
 AgisResult<bool> ExchangeView::beta_scale()
 {

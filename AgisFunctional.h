@@ -14,6 +14,28 @@ constexpr double AGIS_NAN = std::numeric_limits<double>::quiet_NaN();
 
 class TradeExit;
 
+
+/**
+ * @brief enum class representing the type allocation for an exchange view
+ */
+enum class AGIS_API AllocType
+{
+    UNITS,		// set strategy portfolio to have N units
+    DOLLARS,	// set strategy portfolio to have $N worth of units
+    PCT			// set strategy portfolio to have %N worth of units (% of nlv)
+};
+
+
+/**
+ * @brief enum class representing the type of target to apply when transforming an exchange view
+*/
+enum class AGIS_API AllocTypeTarget
+{
+    LEVERAGE,   // exchange view target to taget a net leverage for the strategy
+    VOL         // exchange view target to target a volatility for the strategy
+};
+
+
 /**
  * @brief An Agis operation operates on two doubles and returns a double. Used for opperating over elements
  * in an exchange to extract a single value from an asset given a series of operations.
@@ -57,12 +79,6 @@ AGIS_API extern const AgisOperation agis_divide;
 */
 AGIS_API std::string opp_to_str(const AgisOperation& func);
 
-enum class AGIS_API AllocType
-{
-    UNITS,		// set strategy portfolio to have N units
-    DOLLARS,	// set strategy portfolio to have $N worth of units
-    PCT			// set strategy portfolio to have %N worth of units (% of nlv)
-};
 
 /**
  * @brief Takes in a alloc type and returns string rep of it
@@ -70,6 +86,11 @@ enum class AGIS_API AllocType
  * @return string rep of it
 */
 AGIS_API std::string alloc_to_str(AllocType alloc_type);
+
+/**
+ * @brief takes a string like "UNIFORM" and returns the enum in a result
+*/
+AgisResult<ExchangeViewOpp> str_to_ev_opp(const std::string& ev_opp_type);
 
 /**
  * @brief mapping between string and a trade exit type
@@ -294,3 +315,64 @@ extern AGIS_API std::vector<std::string> agis_strat_alloc_strings;
 extern AGIS_API std::vector<std::string> agis_trade_exit_strings;
 extern AGIS_API std::vector<std::string> agis_trading_windows;
 extern AGIS_API std::unordered_map<std::string, TradingWindow> agis_trading_window_map;
+
+
+/**
+ * @brief hold the information regarding how an abstract strategy allocates it's portfolio
+*/
+struct AGIS_API StrategyAllocLambdaStruct {
+    double epsilon; /// he minimum % difference between target position size and current position size needed to trigger a new order
+    double target;	/// The targert portfolio leverage used to apply weights to the allocations
+
+    std::optional<double> ev_extra_opp = std::nullopt;		/// Optional extra param to pass to ev weight application function
+    std::optional<TradeExitPtr> trade_exit = std::nullopt;	/// Optional trade exit point to apply to new trades
+
+    bool clear_missing;					///Clear any positions that are currently open but not in the allocation
+    std::string ev_opp_type;			/// Type of weights to apply to the exchange view
+    AllocType alloc_type;				/// type of allocation to use	
+    AllocTypeTarget alloc_type_target;	/// type of target allocation to use
+};
+
+
+
+/**
+ * @brief Hold the information neded for an abstract strategy to call the get_exchange_view function
+ */
+struct AGIS_API ExchangeViewLambdaStruct {
+    /**
+     * @brief The number of assets to query for
+    */
+    int N;
+
+    /**
+     * @brief The warmup period needed for the lambda chain to be valid
+    */
+    size_t warmup;
+
+    /**
+     * @brief the lambda chain representing the operation to apply to each asset
+    */
+    AgisAssetLambdaChain asset_lambda;
+
+    /**
+     * @brief the lambda function that executes the get_exchange_view function
+    */
+    ExchangeViewLambda exchange_view_labmda;
+
+    /**
+     * @brief shred pointer to the underlying exchange
+    */
+    ExchangePtr exchange;
+
+    /**
+     * @brief type of query to do, used for sorting asset values
+    */
+    ExchangeQueryType query_type;
+
+    /**
+    * @brief optional strategy alloc struct containing info about how to process the
+    * exchange view into portfolio weights
+    */
+    std::optional<StrategyAllocLambdaStruct> strat_alloc_struct = std::nullopt;
+};
+

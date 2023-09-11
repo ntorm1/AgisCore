@@ -160,6 +160,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AbstractAgisStrategy.h" />
     <ClInclude Include="AgisAnalysis.h" />
     <ClInclude Include="AgisErrors.h" />
     <ClInclude Include="AgisFunctional.h" />
@@ -169,6 +170,7 @@
     <ClInclude Include="AgisRouter.h" />
     <ClInclude Include="AgisStrategy.h" />
     <ClInclude Include="AgisStrategyRegistry.h" />
+    <ClInclude Include="AgisStrategyTracers.h" />
     <ClInclude Include="Asset.h" />
     <ClInclude Include="Exchange.h" />
     <ClInclude Include="ExchangeView.h" />
@@ -183,11 +185,13 @@
     <ClInclude Include="utils_array.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AbstractAgisStrategy.cpp" />
     <ClCompile Include="AgisAnalysis.cpp" />
     <ClCompile Include="AgisFunctional.cpp" />
     <ClCompile Include="AgisRisk.cpp" />
     <ClCompile Include="AgisRouter.cpp" />
     <ClCompile Include="AgisStrategy.cpp" />
+    <ClCompile Include="AgisStrategyTracers.cpp" />
     <ClCompile Include="Asset.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="Exchange.cpp" />
@@ -203,6 +207,9 @@
     <ClCompile Include="Portfolio.cpp" />
     <ClCompile Include="Trade.cpp" />
     <ClCompile Include="Utils.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

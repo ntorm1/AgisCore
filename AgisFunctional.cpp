@@ -190,7 +190,6 @@ std::unordered_map<std::string, TradeExitType> trade_exit_type_map = {
 };
 
 
-
 //============================================================================
 std::string alloc_to_str(AllocType alloc_type)
 {
@@ -203,4 +202,25 @@ std::string alloc_to_str(AllocType alloc_type)
 	auto it = typeStrings.find(alloc_type);
 	if (it != typeStrings.end()) return it->second;
 	return "UNKNOWN";
+}
+
+
+//============================================================================
+AgisResult<ExchangeViewOpp> str_to_ev_opp(const std::string& ev_opp_type) {
+	static const std::map<std::string, ExchangeViewOpp> ev_opp_type_map = {
+		{"UNIFORM", ExchangeViewOpp::UNIFORM},
+		{"LINEAR_DECREASE", ExchangeViewOpp::LINEAR_DECREASE},
+		{"LINEAR_INCREASE", ExchangeViewOpp::LINEAR_INCREASE},
+		{"CONDITIONAL_SPLIT", ExchangeViewOpp::CONDITIONAL_SPLIT},
+		{"UNIFORM_SPLIT", ExchangeViewOpp::UNIFORM_SPLIT},
+		{"CONSTANT", ExchangeViewOpp::CONSTANT}
+	};
+
+	auto it = ev_opp_type_map.find(ev_opp_type);
+	if (it != ev_opp_type_map.end()) {
+		return AgisResult<ExchangeViewOpp>(it->second);
+	}
+
+	// Handle the case when the input string is not found in the map
+	return AgisResult<ExchangeViewOpp>(AGIS_EXCEP("Invalid ExchangeViewOpp value: " + ev_opp_type));
 }

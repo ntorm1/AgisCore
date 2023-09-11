@@ -484,7 +484,7 @@ void Portfolio::__on_phantom_order(OrderPtr const& order)
 	}
     // adjust cash levels
     auto amount = order->get_units() * order->get_average_price();
-    benchmark_strategy->cash -= amount;
+    benchmark_strategy->tracers.cash_add_assign(-amount);
 }
 
 
@@ -540,7 +540,7 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
 
     // adjust the strategy's cash
     auto strategy = this->strategies.at(order->get_strategy_index());
-    strategy->cash -= amount;
+    strategy->tracers.cash_add_assign(-amount);
     UNLOCK_GUARD
 }
 
@@ -557,9 +557,9 @@ AgisResult<bool> Portfolio::__evaluate(bool on_close, bool is_reprice)
     // be recalculated using their respective trades
     for (auto& strategy : this->strategies)
     {
-        strategy.second->__zero_out_tracers();
+        strategy.second->zero_out_tracers();
     }
-    if (benchmark_strategy) benchmark_strategy->__zero_out_tracers();
+    if (benchmark_strategy) benchmark_strategy->zero_out_tracers();
     
 
     // evalute all open positions and their respective trades

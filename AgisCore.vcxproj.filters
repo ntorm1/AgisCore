@@ -78,6 +78,12 @@
     <ClInclude Include="AgisFunctional.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AbstractAgisStrategy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AgisStrategyTracers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -125,5 +131,14 @@
     <ClCompile Include="AgisFunctional.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AbstractAgisStrategy.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AgisStrategyTracers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
   </ItemGroup>
 </Project>
