@@ -23,43 +23,44 @@ void AbstractAgisStrategy::next()
 	auto& strat_alloc_ref = *ev_lambda_ref.strat_alloc_struct;
 	switch (this->ev_opp_type)
 	{
-	case ExchangeViewOpp::UNIFORM: {
-		ev.uniform_weights(strat_alloc_ref.target);
-		break;
+		case ExchangeViewOpp::UNIFORM: {
+			ev.uniform_weights(strat_alloc_ref.target);
+			break;
+		}
+		case ExchangeViewOpp::LINEAR_INCREASE: {
+			ev.linear_increasing_weights(strat_alloc_ref.target);
+			break;
+		}
+		case ExchangeViewOpp::LINEAR_DECREASE: {
+			ev.linear_decreasing_weights(strat_alloc_ref.target);
+			break;
+		}
+		case ExchangeViewOpp::CONDITIONAL_SPLIT: {
+			ev.conditional_split(strat_alloc_ref.target, this->ev_opp_param.value());
+			break;
+		}
+		case ExchangeViewOpp::UNIFORM_SPLIT: {
+			ev.uniform_split(strat_alloc_ref.target);
+			break;
+		}
+		case ExchangeViewOpp::CONSTANT: {
+			auto c = this->ev_opp_param.value() * strat_alloc_ref.target;
+			ev.constant_weights(c, this->trades);
+			break;
+		}
+		default: {
+			throw std::runtime_error("invalid exchange view operation");
+		}
 	}
-	case ExchangeViewOpp::LINEAR_INCREASE: {
-		ev.linear_increasing_weights(strat_alloc_ref.target);
-		break;
-	}
-	case ExchangeViewOpp::LINEAR_DECREASE: {
-		ev.linear_decreasing_weights(strat_alloc_ref.target);
-		break;
-	}
-	case ExchangeViewOpp::CONDITIONAL_SPLIT: {
-		ev.conditional_split(strat_alloc_ref.target, this->ev_opp_param.value());
-		break;
-	}
-	case ExchangeViewOpp::UNIFORM_SPLIT: {
-		ev.uniform_split(strat_alloc_ref.target);
-		break;
-	}
-	case ExchangeViewOpp::CONSTANT: {
-		auto c = this->ev_opp_param.value() * strat_alloc_ref.target;
-		ev.constant_weights(c, this->trades);
-		break;
-	}
-	default: {
-		throw std::runtime_error("invalid exchange view operation");
-	}
-	}
-
-	this->strategy_allocate(
-		ev,
-		strat_alloc_ref.epsilon,
-		strat_alloc_ref.clear_missing,
-		strat_alloc_ref.trade_exit,
-		strat_alloc_ref.alloc_type
-	);
+	AGIS_TRY(
+		this->strategy_allocate(
+			ev,
+			strat_alloc_ref.epsilon,
+			strat_alloc_ref.clear_missing,
+			strat_alloc_ref.trade_exit,
+			strat_alloc_ref.alloc_type
+		);
+	)
 }
 
 
@@ -87,7 +88,7 @@ void AbstractAgisStrategy::build()
 	this->warmup = this->ev_lambda_struct.value().warmup;
 
 	// set the strategy target leverage
-	this->target_leverage = this->ev_lambda_struct.value().strat_alloc_struct.value().target;
+	this->alloc_target = this->ev_lambda_struct.value().strat_alloc_struct.value().target;
 }
 
 
@@ -128,7 +129,13 @@ AgisResult<bool> AbstractAgisStrategy::extract_ev_lambda()
 	}
 
 	// set target leverage
-	this->target_leverage = strat_alloc_ref.target;
+	this->alloc_target = strat_alloc_ref.target;
+
+	// set the target type
+	this->alloc_type_target = strat_alloc_ref.alloc_type_target;
+	if (this->alloc_type_target == AllocTypeTarget::VOL && !this->get_max_leverage().has_value()) {
+		return AgisResult<bool>(AGIS_EXCEP("target vol must have max leverage set"));
+	}
 
 	return AgisResult<bool>(true);
 }

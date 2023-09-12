@@ -2,7 +2,7 @@
 #include "ExchangeView.h"
 #include "Exchange.h"
 #include "Trade.h"
-
+#include "AgisRisk.h"
 
 //============================================================================
 ExchangeView::ExchangeView(Exchange* exchange_, size_t count)
@@ -30,6 +30,36 @@ AgisResult<bool> ExchangeView::beta_scale()
 	for(auto& pair : this->view)
 	{
 		pair.allocation_amount *= original_sum / new_sum;
+	}
+	return AgisResult<bool>(true);
+}
+
+
+//============================================================================
+AgisResult<bool> ExchangeView::vol_target(double target)
+{
+	// extract vector representation of portfolio weights
+	auto exchange_map = this->exchange->__get_exchange_map();
+	VectorXd weights(exchange_map->get_asset_count());
+	weights.setZero();
+	for(auto& alloc: this->view)
+	{
+		weights(alloc.asset_index) = alloc.allocation_amount;
+	}
+	
+	// calculate vol of existing exchange view allocation
+	auto cov_matrix = exchange_map->get_covariance_matrix();
+	if (cov_matrix.is_exception()) return AgisResult<bool>(cov_matrix.get_exception());
+	auto vol = calculate_portfolio_volatility(weights, cov_matrix.unwrap()->get_eigen_matrix());
+	if (vol.is_exception()) return AgisResult<bool>(vol.get_exception());
+
+	// calculate the vol target
+	double vol_target = target / vol.unwrap();
+
+	// scale exsiting allocations
+	for (auto& alloc : this->view)
+	{
+		alloc.allocation_amount *= vol_target;
 	}
 	return AgisResult<bool>(true);
 }

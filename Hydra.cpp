@@ -318,9 +318,9 @@ void Hydra::save_state(json& j)
     // save exchanges
     j["exchanges"] = this->exchanges.to_json();
     auto cov_matrix = this->exchanges.get_covariance_matrix();
-    if (cov_matrix) {
-        j["covariance_lookback"] = cov_matrix->lookback;
-        j["covariance_step"] = cov_matrix->step_size;
+    if (!cov_matrix.is_exception()) {
+        j["covariance_lookback"] = cov_matrix.unwrap()->get_lookback();
+        j["covariance_step"] = cov_matrix.unwrap()->get_step_size();
     }
 
     // save portfolios

@@ -196,80 +196,25 @@ public:
 	double get_allocation() const noexcept { return this->portfolio_allocation; }
 	size_t get_step_frequency() const noexcept  { return this->step_frequency.value_or(1); }
 
-	/**
-	 * @brief get the current max leverage setting of the strategy
-	 * @return 
-	*/
 	AGIS_API std::optional<double> get_max_leverage() const { return this->limits.max_leverage; }
-
-	/**
-	 * @brief get the current net leverage ratio of the portfolio. If there is a max leverage set on the 
-	 * portfolio then the cash requirements of any pending orders are also taken into account via phantom
-	 * cash set during order validation.
-	 * @return 
-	*/
 	AGIS_API std::optional<double> get_net_leverage_ratio() const;
+	AGIS_API std::optional<double> get_net_beta() const { return this->tracers.get(Tracer::BETA);}
+	AGIS_API std::optional<double> get_portfolio_volatility() const { return this->tracers.get(Tracer::VOLATILITY); }
 
-	/**
-	 * @brief get the currernt portfolio volatility level by multiplying the covariance matrix by 
-	 * the portfolios current weights.
-	 * @return 
-	*/
-	AGIS_API virtual AgisResult<double> calculate_portfolio_volatility();
+	size_t get_strategy_index() const { return this->strategy_index; }
+	size_t get_portfolio_index() const { return this->portfolio->__get_index(); }
+	std::string get_strategy_id() const { return this->strategy_id; }
+	std::string get_portfolio_id() const { return this->portfolio->__get_portfolio_id(); }
+	Frequency get_frequency() const { return this->frequency; }
 
-	/**
-	 * @brief get the net beta of the strategy if it exits.
-	 * @return 
-	*/
-	AGIS_API std::optional<double> get_net_beta() const { 
-		return this->tracers.get(Tracer::BETA);
-	}
-
-	/**
-	 * @brief get the net beta of the strategy if it exits.
-	 * @return
-	*/
-	AGIS_API std::optional<double> get_portfolio_volatility() const { 
-		return this->tracers.get(Tracer::VOLATILITY); 
-	}
 
 	AGIS_API void zero_out_tracers() { this->tracers.zero_out_tracers(); }
-
-	/// <summary>
-	/// Get the unique strategy index of a strategy instance
-	/// </summary>
-	/// <returns> unique strategy index of a strategy instance </returns>
-	size_t get_strategy_index() const { return this->strategy_index; }
-
-	/// <summary>
-	/// Get the unique strategy id of a strategy instance
-	/// </summary>
-	/// <returns> unique strategy id of a strategy instance</returns>
-	std::string get_strategy_id() const { return this->strategy_id; }
 
 	/// <summary>
 	/// Get the unique strategy id of a strategy instance
 	/// </summary>
 	/// <returns> unique strategy id of a strategy instance</returns>
 	AgisStrategyType get_strategy_type() const { return this->strategy_type; }
-
-	/// <summary>
-	/// Get the unique strategy id of a strategy instance
-	/// </summary>
-	/// <returns> unique strategy id of a strategy instance</returns>
-	Frequency get_frequency() const { return this->frequency; }
-
-	/// <summary>
-	/// Get the index of the portfolio the strategy is registered to 
-	/// </summary>
-	/// <returns>Unique index of the portfolio the strategy is registered to</returns>
-	size_t get_portfolio_index() const { return this->portfolio->__get_index(); }
-
-	/// <summary>
-	/// Get the id of the portfolio the strategy is registered to 
-	/// </summary>
-	/// <returns>Unique id of the portfolio the strategy is registered to</returns>
-	std::string get_portfolio_id() const { return this->portfolio->__get_portfolio_id(); }
 
 	/// <summary>
 	/// Get an exchange ptr by unique id 
@@ -311,10 +256,7 @@ public:
 	 * @brief set the target leverage of the strategy
 	 * @param t target leverage of the strategy
 	*/
-	void set_target_leverage(std::optional<double> t) {
-		this->target_leverage = t; 
-		this->set_net_leverage_trace(true);
-	}
+	AGIS_API void set_target(std::optional<double> t, AllocTypeTarget type_target = AllocTypeTarget::LEVERAGE);
 
 	/**
 	 * @brief remove the disabled flag from a strategy. This is done on the completion of a hydra run, and 
@@ -462,10 +404,15 @@ protected:
 	/// </summary>
 	ExchangeMap const* exchange_map = nullptr;
 
-	/// <summary>
-	/// Optional target leverage of the strategy
-	/// </summary>
-	std::optional<double> target_leverage = std::nullopt;
+	/**
+	 * @brief Optional target leverage of the strategy
+	*/
+	std::optional<double> alloc_target = 1.0f;
+
+	/**
+	 * @brief optional target type of the strategy
+	*/
+	AllocTypeTarget alloc_type_target = AllocTypeTarget::LEVERAGE;
 
 	/// <summary>
 	/// Mapping between asset_index and trade owned by the strategy
@@ -661,13 +608,6 @@ public:
 	AGIS_API void build() override;
 
 	AGIS_API inline void reset() override { this->i = 0; }
-
-	/**
-	 * @brief override portfolio vol calculation to return the benchmark volatility. Benchmark strategy is 100% 
-	 * allocated to 1 asset so vol is just the vol of that asset
-	 * @return 
-	*/
-	AGIS_API AgisResult<double> calculate_portfolio_volatility() override;
 
 	AGIS_API inline void set_asset_id(std::string const& asset_id) { this->asset_id = asset_id; }
 

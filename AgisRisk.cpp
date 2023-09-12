@@ -178,6 +178,24 @@ std::vector<double> rolling_volatility(std::span<double> const prices, size_t wi
     return rolling_volatility;
 }
 
+
+//============================================================================
+AgisResult<double> calculate_portfolio_volatility(
+    VectorXd const& portfolio_weights,
+    MatrixXd const& covariance_matrix
+)
+{
+    // check dimensions
+    if (portfolio_weights.size() != covariance_matrix.rows()) {
+        return AgisResult<double>(AGIS_EXCEP("Weights vector size does not match covariance matrix size"));
+    }
+
+    auto res = std::sqrt(portfolio_weights.transpose().dot(covariance_matrix * 252 * portfolio_weights));
+    return AgisResult<double>(res);
+}
+
+
+//============================================================================
 AgisResult<AssetPtr> get_enclosing_asset(
     std::shared_ptr<Asset> a1,
     std::shared_ptr<Asset> a2
@@ -449,17 +467,3 @@ void AgisCovarianceMatrix::clear_observers() noexcept
     }
     this->built = false;
 }
-
-
-//============================================================================
-AgisResult<double> AgisCovarianceMatrix::calculate_volatility(VectorXd const& weights) const noexcept
-{
-    // check dimensions
-    if (weights.size() != this->covariance_matrix.rows()) {
-		return AgisResult<double>(AGIS_EXCEP("Weights vector size does not match covariance matrix size"));
-	}
-
-    auto res = std::sqrt(weights.transpose().dot(this->covariance_matrix * 252 * weights));
-    return AgisResult<double>(res);
-}
-

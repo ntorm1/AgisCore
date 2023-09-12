@@ -609,7 +609,12 @@ AgisResult<bool> Portfolio::__evaluate(bool on_close, bool is_reprice)
     // log strategy levels
     for (const auto& strat : this->strategies)
     {
-        AGIS_DO_OR_RETURN(strat.second->__evaluate(on_close), bool);
+        auto res = strat.second->__evaluate(on_close);
+        if (res.is_exception()) {
+            UNLOCK_GUARD;
+            return res;
+        }
+
     }
     if (this->benchmark_strategy)  this->benchmark_strategy->evluate();
     UNLOCK_GUARD

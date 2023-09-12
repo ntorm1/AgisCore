@@ -170,6 +170,7 @@ public:
 	AGIS_API inline size_t __get_vol_lookback() const { return this->volatility_lookback; }
 	size_t __get_exchange_index() const { return this->current_index - 1; };
 	AGIS_API [[nodiscard]] AgisResult<AssetPtr> __get_market_asset();
+	AGIS_API [[nodiscard]] ExchangeMap const* __get_exchange_map() const { return this->exchanges; };
 	AGIS_API [[nodiscard]] MarketAsset& __get_market_asset_struct_ref() { return this->market_asset.value(); };
 	AGIS_API [[nodiscard]] std::optional<MarketAsset> __get_market_asset_struct() const { return this->market_asset;};
 
@@ -370,7 +371,7 @@ public:
 	 * @brief get a const pointer to the agis covariance matrix
 	 * @return 
 	*/
-	AGIS_API std::shared_ptr<AgisCovarianceMatrix> const get_covariance_matrix() const;
+	AGIS_API AgisResult<std::shared_ptr<AgisCovarianceMatrix>> get_covariance_matrix() const;
 
 	/**
 	 * @brief does an exchange with this id exist already

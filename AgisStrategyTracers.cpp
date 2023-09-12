@@ -2,6 +2,7 @@
 #include "AgisStrategyTracers.h"
 #include "AgisStrategy.h"
 
+
 //============================================================================
 std::optional<double> AgisStrategyTracers::get(Tracer tracer) const
 {
@@ -67,6 +68,54 @@ void AgisStrategyTracers::reset_history()
 
 
 //============================================================================
+AgisResult<double> AgisStrategyTracers::get_portfolio_volatility()
+{
+	// check if benchmark strategy, if so use the benchmark asset's variance to calculate volatility
+	if (this->strategy->get_strategy_type() == AgisStrategyType::BENCHMARK) {
+		return this->get_benchmark_volatility();
+	}
+	auto cov_matrix = this->strategy->exchange_map->get_covariance_matrix();
+	if (cov_matrix.is_exception()) {
+		return AgisResult<double>(AGIS_FORWARD_EXCEP(cov_matrix.get_exception()));
+	}
+
+	// set the portfolio weights to the trades, note the vector already has the nlv of the trades.
+	// so all we have to do is divide by the nlv to get the pct portfolio weights
+	for (auto& [asset_index, trade] : this->strategy->trades)
+	{
+		this->portfolio_weights(asset_index) /= this->nlv;
+	}
+
+	// calculate vol using the covariance matrix
+	auto res = calculate_portfolio_volatility(this->portfolio_weights, cov_matrix.unwrap()->get_eigen_matrix());
+	if (res.is_exception()) return res;
+	this->portfolio_volatility = res.unwrap();
+	return res;
+
+}
+
+
+//============================================================================
+AgisResult<double> AgisStrategyTracers::get_benchmark_volatility()
+{
+	// override the portfolio volatility calculation to use the benchmark asset's variance 
+	// to shortcut the valculation of portfolio volatility. This relies on the fact the benchmark
+	// strategy invests all funds into the benchmark asset at t0 and does nothing after.
+	auto cov_matrix = this->strategy->exchange_map->get_covariance_matrix();
+	if (cov_matrix.is_exception()) {
+		return AgisResult<double>(AGIS_FORWARD_EXCEP(cov_matrix.get_exception()));
+	}
+
+	auto bench_strategy = dynamic_cast<BenchMarkStrategy*>(this->strategy);
+	auto& eigen_matrix = cov_matrix.unwrap()->get_eigen_matrix();
+	auto variance = eigen_matrix(bench_strategy->asset_index, bench_strategy->asset_index);
+	
+	this->portfolio_volatility = std::sqrt(variance * 252);
+	return AgisResult<double>(this->portfolio_volatility);
+}
+
+   
+//============================================================================
 AgisResult<bool> AgisStrategyTracers::evaluate()
 {
 	// Note: at this point all trades have been evaluated and the cash balance has been updated
@@ -85,7 +134,7 @@ AgisResult<bool> AgisStrategyTracers::evaluate()
 	}
 
 	if (this->has(Tracer::VOLATILITY)) {
-		auto v = this->strategy->calculate_portfolio_volatility();
+		auto v = this->get_portfolio_volatility();
 		if (v.is_exception()) {
 			return AgisResult<bool>(AGIS_FORWARD_EXCEP(v.get_exception()));
 		}

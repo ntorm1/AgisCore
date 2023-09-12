@@ -126,6 +126,12 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
         );
     }
 
+    // if strategy is tracing volatility, set the portfolio weight equah to the nlv of the trade
+    // must be divided by the total nlv of the strategy after all trades are evaluated
+    if (strategy->tracers.has(Tracer::VOLATILITY)) {
+        strategy->tracers.set_portfolio_weight(this->asset_index, nlv_new);
+    }
+
     this->nlv = nlv_new;
     this->unrealized_pl = unrealized_pl_new;
     this->last_price = market_price;

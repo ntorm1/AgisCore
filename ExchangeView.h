@@ -132,6 +132,13 @@ struct ExchangeView
 	AGIS_API AgisResult<bool> beta_scale();
 
 	/**
+	 * @brief takes an exchange view with current portfolio allocations and scales it 
+	 * to target a specific level of volatility using the main exchange map covaraince matrix
+	 * @return 
+	*/
+	AGIS_API AgisResult<bool> vol_target(double target);
+
+	/**
 	 * @brief takes a portfolio allocation in terms of percentage of nlv and scales it to target a specific level
 	 * of overall portfolio volatility using the main exchange map covaraince matrix
 	 * @param agis_cov_matrix const ref to an agis covariance matrix

@@ -61,14 +61,11 @@ public:
 	AGIS_API [[nodiscard]] AgisResult<bool> set_beta_hedge_positions(bool val, bool check = true) override;
 	AgisResult<bool> validate_market_asset();
 
-
-protected:
-	AgisResult<VectorXd const*> get_portfolio_weights() const;
-
 private:
 	AbstractExchangeViewLambda ev_lambda;
 	std::optional<ExchangeViewLambdaStruct> ev_lambda_struct = std::nullopt;
 	std::optional<double> ev_opp_param = std::nullopt;
+
 	ExchangeViewOpp ev_opp_type = ExchangeViewOpp::UNIFORM;
 
 	/// <summary>

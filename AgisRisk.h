@@ -12,6 +12,7 @@
 #include <Eigen/Dense>
 #include "Asset.h"
 
+
 using namespace Eigen;
 
 typedef Matrix<double, Dynamic, Dynamic> MatrixXd;
@@ -21,6 +22,7 @@ class Order;
 class AgisStrategy;
 class ExchangeMap;
 struct AgisCovarianceMatrix;
+
 
 class IncrementalCovariance : public AssetObserver
 {
@@ -117,18 +119,15 @@ struct AgisCovarianceMatrix
 	void clear_observers() noexcept;
 
 	/**
-	 * @brief take a vector of portfolio weights and calculate the portfolio volatility
-	 * @param weights 
-	 * @return 
-	*/
-	AgisResult<double> calculate_volatility(VectorXd const& weights) const noexcept;
-	 
-	/**
 	 * @brief get the underlying eigen matrix of covariance values
 	 * @return 
 	*/
 	auto const & get_eigen_matrix() const noexcept {return this->covariance_matrix; }
 
+	size_t get_step_size() const noexcept { return this->step_size; }
+	size_t get_lookback() const noexcept { return this->lookback; }
+
+private:
 	/**
 	 * @brief container for incremental covariance structs used to update the
 	 * covariance matrix on exchange step forward. Not only lower diagonal is stored, use symmetry to fill rest
@@ -186,6 +185,12 @@ std::vector<double> rolling_beta(
 AGIS_API std::vector<double> rolling_volatility(
 	std::span<double> const returns,
 	size_t windowSize
+);
+
+
+AGIS_API AgisResult<double> calculate_portfolio_volatility(
+	VectorXd const& portfolio_weights,
+	MatrixXd const& covariance_matrix
 );
 
 

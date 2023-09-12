@@ -52,6 +52,7 @@ public:
     void net_beta_add_assign(double v) { this->net_beta += v; }
     void net_leverage_ratio_add_assign(double v) { this->net_leverage_ratio += v; }
 
+
 protected:
     std::vector<double> nlv_history;
     std::vector<double> cash_history;
@@ -65,6 +66,9 @@ protected:
     VectorXd portfolio_weights;
 
 private:
+    AgisResult<double> get_portfolio_volatility();
+    AgisResult<double> get_benchmark_volatility();
+
     double net_beta = 0;
     double net_leverage_ratio = 0;
     double portfolio_volatility = 0;

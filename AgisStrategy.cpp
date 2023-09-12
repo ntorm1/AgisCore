@@ -219,7 +219,8 @@ AGIS_API void AgisStrategy::strategy_allocate(
 	AllocType alloc_type)
 {
 	if (this->apply_beta_scale) AGIS_DO_OR_THROW(exchange_view.beta_scale());
-	if (this->apply_beta_hedge) AGIS_DO_OR_THROW(exchange_view.beta_hedge(this->target_leverage));
+	if (this->apply_beta_hedge) AGIS_DO_OR_THROW(exchange_view.beta_hedge(this->alloc_target));
+	if (this->alloc_type_target == AllocTypeTarget::VOL) AGIS_DO_OR_THROW(exchange_view.vol_target(this->alloc_target.value()));
 
 	auto& allocation = exchange_view.view;
 
@@ -330,6 +331,14 @@ AGIS_API void AgisStrategy::strategy_allocate(
 	}
 }
 
+
+//============================================================================
+void AgisStrategy::set_target(std::optional<double> t, AllocTypeTarget type_target)
+{
+	this->alloc_target = t;
+	this->alloc_type_target = type_target;
+	if(type_target == AllocTypeTarget::VOL) this->set_vol_trace(true);
+}
 
 //============================================================================
 AgisResult<bool> AgisStrategy::set_trading_window(std::string const& window_name)
@@ -804,47 +813,6 @@ std::optional<double> AgisStrategy::get_net_leverage_ratio() const
 		return std::nullopt;
 	}
 	return this->tracers.net_leverage_ratio / this->tracers.nlv;
-}
-
-
-//============================================================================
-AgisResult<double> AgisStrategy::calculate_portfolio_volatility()
-{
-	auto cov_matrix = this->exchange_map->get_covariance_matrix();
-	if (!cov_matrix) {
-		return AgisResult<double>(AGIS_EXCEP("missing covariance matrix"));
-	}
-	auto& eigen_matrix = cov_matrix->get_eigen_matrix();
-
-	// set the portfolio weights to the trades, note that when a trade is closed the vector at that
-	// index is zeroed out automatically so only update weights at indexs that have a trade
-	for (auto& [asset_index, trade] : this->trades)
-	{
-		this->tracers.portfolio_weights(asset_index) = trade->nlv / this->tracers.nlv;
-	}
-
-	// calculate vol using the covariance matrix
-	auto res = cov_matrix->calculate_volatility(this->tracers.portfolio_weights);
-	if (res.is_exception()) return res;
-	this->tracers.portfolio_volatility = res.unwrap();
-	return res;
-}
-
-
-//============================================================================
-AgisResult<double> BenchMarkStrategy::calculate_portfolio_volatility()
-{
-	// override the portfolio volatility calculation to use the benchmark asset's variance 
-	// to shortcut the valculation of portfolio volatility. This relies on the fact the benchmark
-	// strategy invests all funds into the benchmark asset at t0 and does nothing after.
-	auto cov_matrix = this->exchange_map->get_covariance_matrix();
-	if (!cov_matrix) {
-		return AgisResult<double>(AGIS_EXCEP("missing covariance matrix"));
-	}
-	auto& eigen_matrix = cov_matrix->get_eigen_matrix();
-
-	auto variance = eigen_matrix(this->asset_index, this->asset_index);
-	return AgisResult<double>(std::sqrt(variance * 252));
 }
 
 
