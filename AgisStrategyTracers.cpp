@@ -46,8 +46,8 @@ void AgisStrategyTracers::build(AgisStrategy* strategy, size_t n)
 	this->cash = strategy->portfolio_allocation * strategy->portfolio->get_cash();
 	this->nlv = this->cash;
 
-	this->nlv_history.reserve(n);
-	this->cash_history.reserve(n);
+	if (this->has(Tracer::NLV)) this->nlv_history.reserve(n);
+	if (this->has(Tracer::CASH)) this->cash_history.reserve(n);
 }
 
 
@@ -120,8 +120,8 @@ AgisResult<bool> AgisStrategyTracers::evaluate()
 {
 	// Note: at this point all trades have been evaluated and the cash balance has been updated
 	// so we only have to observer the values or use them to calculate other values.
-	this->nlv_history.push_back(this->nlv);
-	this->cash_history.push_back(this->cash);
+	if (this->has(Tracer::NLV)) this->nlv_history.push_back(this->nlv);
+	if (this->has(Tracer::CASH)) this->cash_history.push_back(this->cash);
 
 	if (this->has(Tracer::BETA)) {
 		this->beta_history.push_back(this->net_beta);

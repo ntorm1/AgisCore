@@ -36,7 +36,7 @@ public:
         for (const Tracer& opt : opts)
             value_.set(opt);
     }
-    bool has(Tracer o) const { return value_[o]; }
+    inline bool has(Tracer o) const noexcept { return value_[o]; }
     std::optional<double> get(Tracer o) const;
     void set(Tracer o) { value_.set(o); }
     void reset(Tracer o) { value_.reset(o); }
@@ -47,10 +47,10 @@ public:
     void build(AgisStrategy* strategy, size_t n);
     void reset_history();
 
-    void cash_add_assign(double v) { this->cash += v; }
-    void nlv_add_assign(double v) { this->nlv += v; }
-    void net_beta_add_assign(double v) { this->net_beta += v; }
-    void net_leverage_ratio_add_assign(double v) { this->net_leverage_ratio += v; }
+    void cash_add_assign(double v) noexcept { this->cash += v; }
+    void nlv_add_assign(double v) noexcept { this->nlv += v; }
+    void net_beta_add_assign(double v) noexcept { this->net_beta += v; }
+    void net_leverage_ratio_add_assign(double v) noexcept { this->net_leverage_ratio += v; }
 
 
 protected:

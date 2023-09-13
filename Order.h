@@ -126,8 +126,6 @@ private:
     size_t strategy_index;          /// unique id of the strategy that placed the order
     size_t portfolio_index;         /// unique id of the portflio the order was placed to
 
-
-
     /// <summary>
     /// An option trade exit to be given to the trade created by this order
     /// </summary>
@@ -144,8 +142,6 @@ public:
     bool phantom_order = false;     /// is the order a phantom order (placed by benchmark strategy)
     bool force_close = false;       /// force an order to close out a position
     AssetPtr __asset = nullptr;		/// pointer to the asset the order is for
-
-    typedef std::shared_ptr<Order> order_sp_t;
 
     /**
      * @brief pointer to the trade altered by this order
