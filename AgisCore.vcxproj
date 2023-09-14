@@ -161,6 +161,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AbstractAgisStrategy.h" />
+    <ClInclude Include="AbstractStrategyTree.h" />
     <ClInclude Include="AgisAnalysis.h" />
     <ClInclude Include="AgisErrors.h" />
     <ClInclude Include="AgisFunctional.h" />
@@ -207,9 +208,6 @@
     <ClCompile Include="Portfolio.cpp" />
     <ClCompile Include="Trade.cpp" />
     <ClCompile Include="Utils.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="cpp.hint" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

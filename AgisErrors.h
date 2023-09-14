@@ -52,6 +52,12 @@ public:
         return this->is_value_exception;
     }
 
+    // Check if the stored value is NaN (specialization for double)
+    bool is_nan() const {
+        static_assert(std::is_same_v<T, double>, "is_nan is only applicable for double");
+        return std::isnan(std::get<double>(value));
+    }
+
     inline T unwrap(bool panic = true)
     {
         if (!this->is_value_exception)

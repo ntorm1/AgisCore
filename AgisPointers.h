@@ -7,6 +7,7 @@
 #define AGIS_API __declspec(dllimport)
 #endif
 #include <mutex>
+#include <stdexcept>
 #include <memory>
 
 #define LOCK_GUARD _mutex.lock();
@@ -250,4 +251,47 @@ private:
     T* _data;              // Pointer to the data
     std::size_t _rows;     // Number of rows
     std::size_t _columns;  // Number of columns
+};
+
+template <typename T>
+class NonNullSharedPtr {
+public:
+    // Delete the default constructor
+    NonNullSharedPtr() = delete;
+
+    explicit NonNullSharedPtr(std::shared_ptr<T> ptr_) : ptr(ptr_) {
+        if (!ptr) {
+            throw std::invalid_argument("Shared pointer cannot be null.");
+        }
+    }
+
+    // Constructor that accepts a std::shared_ptr of the same type
+    explicit NonNullSharedPtr(const std::shared_ptr<T>& ptr_) : ptr(ptr_) {
+        if (!ptr) {
+            throw std::invalid_argument("Shared pointer cannot be null.");
+        }
+    }
+
+
+    T& operator*() const {
+        return *ptr;
+    }
+
+    T* operator->() const {
+        return ptr.get();
+    }
+
+    std::shared_ptr<T> get() const {
+        return ptr;
+    }
+
+    operator bool() const {
+        return bool(ptr);
+    }
+
+private:
+    std::shared_ptr<T> ptr;
+
+    // Static compile-time check to prevent assignment to nullptr
+    static_assert(!std::is_assignable_v<decltype(ptr), decltype(nullptr)>, "Assignment to nullptr is not allowed.");
 };

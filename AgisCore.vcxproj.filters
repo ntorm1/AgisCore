@@ -84,6 +84,9 @@
     <ClInclude Include="AgisStrategyTracers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AbstractStrategyTree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -137,8 +140,5 @@
     <ClCompile Include="AgisStrategyTracers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="cpp.hint" />
   </ItemGroup>
 </Project>

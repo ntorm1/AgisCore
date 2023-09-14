@@ -229,6 +229,32 @@ public:
     bool __is_valid_time(long long& datetime);
     long long __get_asset_time() const { return this->dt_index[this->current_index];}
 
+
+    /// <summary>
+    /// Does the asset's datetime index match the exchange's datetime index
+    /// </summary>
+    bool __is_aligned = false;
+
+    /// <summary>
+    /// Is the asset currently streaming //TODO: remove?
+    /// </summary>
+    bool __is_streaming = false;
+
+    /// <summary>
+    /// Has the asset finished streaming
+    /// </summary>
+    bool __is_expired = false;
+
+    /// <summary>
+    /// Will the asset be included in the exchange view
+    /// </summary>
+    bool __in_exchange_view = true;
+
+    /// <summary>
+    /// Is the current time step of the asset that last available time step.
+    /// </summary>
+    bool __is_valid_next_time = true;
+
 protected:
     /// <summary>
     /// Load in a asset's data from a filepath. Supported types: csv, Parquet, HDF5.
@@ -271,31 +297,6 @@ protected:
     bool __set_beta(std::vector<double> beta_column);
     void __set_index(size_t index_) { this->asset_index = index_; }
     void __set_exchange_offset(size_t offset) { this->exchange_offset = offset; }
-
-    /// <summary>
-    /// Does the asset's datetime index match the exchange's datetime index
-    /// </summary>
-    bool __is_aligned = false;
-
-    /// <summary>
-    /// Is the asset currently streaming //TODO: remove?
-    /// </summary>
-    bool __is_streaming = false;
-
-    /// <summary>
-    /// Has the asset finished streaming
-    /// </summary>
-    bool __is_expired = false;
-
-    /// <summary>
-    /// Will the asset be included in the exchange view
-    /// </summary>
-    bool __in_exchange_view = true;
-
-    /// <summary>
-    /// Is the current time step of the asset that last available time step.
-    /// </summary>
-    bool __is_valid_next_time = true;
 
     /**
      * @brief is the asset a market asset, i.e. benchmark asset

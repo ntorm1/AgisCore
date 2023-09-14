@@ -158,7 +158,8 @@ public:
 	AGIS_API AgisResult<size_t> get_column_index(std::string const& col) const;
 
 
-	AGIS_API size_t get_candle_count() { return this->candles; };
+	AGIS_API size_t get_candle_count() const { return this->candles; };
+	AGIS_API size_t get_asset_count() const { return this->assets.size(); }
 	AGIS_API inline auto get_frequency() const { return this->freq; }
 	AGIS_API inline std::string get_source() const { return this->source_dir; }
 	AGIS_API inline std::string get_dt_format() const { return this->dt_format; }
@@ -170,6 +171,7 @@ public:
 	AGIS_API inline size_t __get_vol_lookback() const { return this->volatility_lookback; }
 	size_t __get_exchange_index() const { return this->current_index - 1; };
 	AGIS_API [[nodiscard]] AgisResult<AssetPtr> __get_market_asset();
+	AGIS_API [[nodiscard]] auto const& __get_assets() const { return this->assets; };
 	AGIS_API [[nodiscard]] ExchangeMap const* __get_exchange_map() const { return this->exchanges; };
 	AGIS_API [[nodiscard]] MarketAsset& __get_market_asset_struct_ref() { return this->market_asset.value(); };
 	AGIS_API [[nodiscard]] std::optional<MarketAsset> __get_market_asset_struct() const { return this->market_asset;};
