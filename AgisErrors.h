@@ -53,9 +53,15 @@ public:
     }
 
     // Check if the stored value is NaN (specialization for double)
-    bool is_nan() const {
-        static_assert(std::is_same_v<T, double>, "is_nan is only applicable for double");
+    template <typename U = T>
+    std::enable_if_t<std::is_same_v<U, double>, bool> is_nan() const {
         return std::isnan(std::get<double>(value));
+    }
+
+    // Provide an implementation for other types (e.g., return false)
+    template <typename U = T>
+    std::enable_if_t<!std::is_same_v<U, double>, bool> is_nan() const {
+        return false;
     }
 
     inline T unwrap(bool panic = true)
@@ -76,6 +82,14 @@ public:
 	{
 		this->value = val;
 	}
+
+
+    inline void set_excep(AgisException val)
+    {
+        this->value = val;
+        this->is_value_exception = true;
+    }
+
 
     inline T unwrap_or(T val)
     {

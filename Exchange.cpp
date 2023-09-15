@@ -262,7 +262,7 @@ AgisResult<bool> Exchange::__set_market_asset(
 
 
 //============================================================================
-AGIS_API [[nodiscard]] AgisResult<AssetPtr> Exchange::__get_market_asset()
+AGIS_API [[nodiscard]] AgisResult<AssetPtr> Exchange::__get_market_asset() const
 {
 	if(!this->market_asset.has_value()) return AgisResult<AssetPtr>(AGIS_EXCEP("market asset not set"));
 	return AgisResult<AssetPtr>(this->market_asset.value().asset);

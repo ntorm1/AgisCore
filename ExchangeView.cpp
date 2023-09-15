@@ -5,10 +5,18 @@
 #include "AgisRisk.h"
 
 //============================================================================
-ExchangeView::ExchangeView(Exchange* exchange_, size_t count)
+ExchangeView::ExchangeView(const Exchange* exchange_, size_t count, bool reserve)
 {
 	this->exchange = exchange_;
-	this->view.reserve(count);
+	if (reserve) { 
+		this->view.reserve(count); this->view.reserve(count); 
+	}
+	else {
+		this->view.resize(count);
+		for (size_t i = 0; i < count; i++) {
+			this->view[i].asset_index = i;
+		}
+	}
 }
 
 

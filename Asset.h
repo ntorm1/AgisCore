@@ -198,6 +198,7 @@ public:
     AGIS_API inline  std::string const& get_exchange_id() { return this->exchange_id; }
     AGIS_API std::vector<std::string> get_column_names() const;
     AGIS_API inline ankerl::unordered_dense::map<std::string, size_t> const& get_headers() { return this->headers; };
+    AGIS_API void assign_asset_feature(size_t col, int index, AgisResult<double>& res);
     AGIS_API AgisResult<double> get_asset_feature(std::string const& col, int index) const;
     AGIS_API AgisResult<double> get_asset_feature(size_t col, int index) const;
     AGIS_API AgisResult<double> get_beta() const;

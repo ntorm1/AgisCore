@@ -16,10 +16,10 @@ class ASTNode;
 
 class AssetNode;
 
-class AssetLambdaNode;
-class AssetLambdaRead;
-class AssetLambdaChain;
-
+class AbstractAssetLambdaNode;
+class AbstractAssetLambdaRead;
+class AbstractAssetLambdaChain;
+class AbstractSortNode;
 typedef NonNullSharedPtr<Asset> NonNullAssetPtr;
 
 //============================================================================
@@ -39,9 +39,13 @@ public:
 
 
 //============================================================================
-class StatementNode : public ASTNode<void> {
+template <typename T>
+class StatementNode : public ASTNode<T> {
 public:
 	virtual void execute() = 0;
+	virtual T& fetch() = 0;
+	virtual T move() = 0;
+	virtual T copy() = 0;
 };
 
 
@@ -54,23 +58,23 @@ public:
 
 
 //============================================================================
-class AssetLambdaNode : public ValueReturningStatementNode<AgisResult<double>> {
+class AbstractAssetLambdaNode : public ValueReturningStatementNode<AgisResult<double>> {
 public:
-	virtual ~AssetLambdaNode() {}
-	AssetLambdaNode() = default;
-	AgisResult<double> execute() const override {};
+	virtual ~AbstractAssetLambdaNode() {}
+	AbstractAssetLambdaNode() = default;
+	AgisResult<double> execute() const override { return AgisResult<double>(AGIS_EXCEP("not impl")); };
 	virtual AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const = 0;
 };
 
 
 //============================================================================
-class AssetLambdaRead : public AssetLambdaNode {
+class AbstractAssetLambdaRead : public AbstractAssetLambdaNode {
 public:
-	AssetLambdaRead(
-		AgisResult<double> (*func)(std::shared_ptr<const Asset> const&)
-	)
+	AbstractAssetLambdaRead(
+		AgisResult<double> (*func_)(std::shared_ptr<const Asset> const&)
+	) : func(func_)
 	{}
-	~AssetLambdaRead() {}
+	~AbstractAssetLambdaRead() {}
 	AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const override {
 		return this->func(asset);
 	};
@@ -81,17 +85,17 @@ private:
 
 
 //============================================================================
-class AssetLambdaOpp : public AssetLambdaNode {
+class AbstractAssetLambdaOpp : public AbstractAssetLambdaNode {
 public:
-	AssetLambdaOpp(
-		std::shared_ptr<AssetLambdaNode> left_node_,
-		NonNullSharedPtr<AssetLambdaRead> right_read_,
+	AbstractAssetLambdaOpp(
+		std::unique_ptr<AbstractAssetLambdaNode> left_node_,
+		std::unique_ptr<AbstractAssetLambdaRead> right_read_,
 		AgisOperation opperation_
-	) : left_node(left_node_),
-		right_read(right_read_),
+	) : left_node(std::move(left_node_)),
+		right_read(std::move(right_read_)),
 		opperation(opperation_)
 		{}
-	~AssetLambdaOpp() {}
+	~AbstractAssetLambdaOpp() {}
 
 	AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const override {
 		// check if right opp is null or nan
@@ -104,32 +108,32 @@ public:
 		);
 
 		// if left node apply opp to left and right node
-		auto left_res = left_node->execute();
+		auto left_res = left_node->execute(asset);
 		if (left_res.is_exception() || left_res.is_nan()) return left_res;
 		res.set_value(opperation(left_res.unwrap(), res.unwrap()));
 		return res;
 	}
 
 private:
-	std::shared_ptr<AssetLambdaNode> left_node = nullptr;
-	NonNullSharedPtr<AssetLambdaRead> right_read;
+	std::unique_ptr<AbstractAssetLambdaNode> left_node = nullptr;
+	NonNullUniquePtr<AbstractAssetLambdaRead> right_read;
 	AgisOperation opperation;
 };
 
 
 //============================================================================
-class AssetLambdaFilter : public AssetLambdaNode {
+class AbstractAssetLambdaFilter : public AbstractAssetLambdaNode {
 public:
-	AssetLambdaFilter(
-		NonNullSharedPtr<AssetLambdaNode> const left_node_,
+	AbstractAssetLambdaFilter(
+		NonNullUniquePtr<AbstractAssetLambdaNode> left_node_,
 		AssetFilterRange const filter_range_
-	) : left_node(left_node_)
+	) : left_node(std::move(left_node_))
 	{
 		this->filter = filter_range_.get_filter();
 	}
-	~AssetLambdaFilter() {}
+	~AbstractAssetLambdaFilter() {}
 	
-	AgisResult<double> execute() const override {
+	AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const override {
 		// execute left node to get value
 		auto res = left_node->execute();
 		if (res.is_exception() || res.is_nan()) return res;
@@ -141,82 +145,124 @@ public:
 	}
 
 private:
-	NonNullSharedPtr<AssetLambdaNode> left_node;
+	NonNullUniquePtr<AbstractAssetLambdaNode> left_node;
 	std::function<bool(double)> filter;
 };
 
 
 //============================================================================
-class ExchangeNode : public ExpressionNode<NonNullSharedPtr<Exchange>> {
+class AbstractExchangeNode : public ExpressionNode<const Exchange*> {
 public:
-	ExchangeNode(NonNullSharedPtr<Exchange> exchange_)
-		: exchange(exchange_) {
+	AbstractExchangeNode(NonNullSharedPtr<Exchange> exchange_)
+		: exchange(exchange_.get().get()) {
 		if (this->exchange->get_asset_count() == 0) {
 			AGIS_THROW("Exchange must have at least one asset");
 		}
 	}
-	~ExchangeNode() {}
-	NonNullSharedPtr<Exchange> evaluate() const override {
+	~AbstractExchangeNode() {}
+	const Exchange* evaluate() const override {
 		return this->exchange;
 	}
 
 private:
-	NonNullSharedPtr<Exchange> exchange;
-
+	const Exchange* exchange; // Store a const pointer to Exchange
 };
 
 
 //============================================================================
-class ExchangeViewNode : public ValueReturningStatementNode<ExchangeView> {
+class AbstractExchangeViewNode : public StatementNode<ExchangeView>{
 
 public:
-	ExchangeViewNode(
-		NonNullSharedPtr<ExchangeNode> exchange_node_,
-		NonNullSharedPtr<AssetLambdaOpp> asset_lambda_op_) :
-		exchange_node(exchange_node),
-		asset_lambda_op(asset_lambda_op_),
-		assets(exchange_node->evaluate()->get_assets())
+	AbstractExchangeViewNode(
+		std::unique_ptr<AbstractExchangeNode> exchange_node_,
+		std::unique_ptr<AbstractAssetLambdaOpp> asset_lambda_op_) :
+		exchange_node(std::move(exchange_node_)),
+		asset_lambda_op(std::move(asset_lambda_op_))
 	{
-		this->exchange = exchange_node->evaluate().get().get();
+		this->exchange = exchange_node->evaluate();
+		this->exchange_view = ExchangeView(
+			this->exchange, 
+			this->exchange->get_asset_count(),
+			false
+		);
 	}
-	~ExchangeViewNode() {}
+	~AbstractExchangeViewNode() {}
 
-	// Factory function for creating AST nodes of various types
-	template <typename NodeType, typename... Args>
-	std::shared_ptr<AssetLambdaRead> create_asset_lambda_read(Args&&... args) {
-		return std::make_shared<AssetLambdaRead>(
-			this->asset,
-			std::forward<Args>(args)...);
+	ExchangeView& fetch() override {
+		return this->exchange_view;
 	}
 
-	ExchangeView execute() const override {
-		ExchangeView exchange_view(exchange, this->assets.size());
+	ExchangeView move() override {
+		return std::move(this->exchange_view);
+	}
+
+	ExchangeView copy() override {
+		return this->exchange_view;
+	}
+
+	size_t size() {
+		return this->exchange_view.view.size();
+	}
+
+	void execute() override {
 		auto& view = exchange_view.view;
 
-		for (auto& asset : this->assets)
+		for (auto& asset : this->exchange->get_assets())
 		{
 			if (!asset || !asset->__in_exchange_view) continue;
-			if (!asset->__is_streaming)
-			{
-				if (false) throw std::runtime_error("invalid asset found");
-				continue;
-			}
+			if (!asset->__is_streaming) continue;
 			auto val = this->asset_lambda_op->execute(asset);
-			if (val.is_exception() && !false)
-			{
-				continue;
+			if (val.is_exception()) {
+
 			}
 			auto v = val.unwrap();
-			view.emplace_back(asset->get_asset_index(), v);
+			view[asset->get_asset_index()].allocation_amount = v;
 		}
-		if (view.size() == 1) { return exchange_view; }
-		//exchange_view.sort(number_assets, query_type);
-		return exchange_view;
 	}
 
 private:
-	Exchange* exchange;
-	std::vector<std::shared_ptr<Asset>> const& assets;
-	NonNullSharedPtr<ExchangeNode> exchange_node;
-	NonNullSharedPtr<AssetLambdaOpp> asset_lambda_op;
+	ExchangeView exchange_view;
+	const Exchange* exchange;
+	NonNullUniquePtr<AbstractExchangeNode> exchange_node;
+	NonNullUniquePtr<AbstractAssetLambdaOpp> asset_lambda_op;
+};
+
+
+
+//============================================================================
+class AbstractSortNode : StatementNode<ExchangeView> {
+public:
+	AbstractSortNode(
+		std::unique_ptr<AbstractExchangeViewNode> ev_,
+		int N_,
+		ExchangeQueryType query_type_
+	) : 
+		ev(std::move(ev_))	{
+		this->N = (N_ == -1) ? ev->size() : static_cast<size_t>(N);
+		this->query_type = query_type_;
+	}
+
+	ExchangeView& fetch() override {
+		return this->ev->fetch();
+	}
+
+	ExchangeView copy() override {
+		return this->view;
+	}
+
+	ExchangeView move() override {
+		return std::move(view);
+	}
+
+	void execute() override {
+		this->ev->execute();
+		this->view = this->ev->copy();
+		this->view.sort(N, query_type);
+	}
+
+private:
+	NonNullUniquePtr<AbstractExchangeViewNode> ev;
+	ExchangeView view;
+	size_t N;
+	ExchangeQueryType query_type;
 };

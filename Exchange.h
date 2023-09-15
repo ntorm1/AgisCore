@@ -170,7 +170,7 @@ public:
 	AGIS_API inline long long __get_market_time() { return this->dt_index[this->current_index]; }
 	AGIS_API inline size_t __get_vol_lookback() const { return this->volatility_lookback; }
 	size_t __get_exchange_index() const { return this->current_index - 1; };
-	AGIS_API [[nodiscard]] AgisResult<AssetPtr> __get_market_asset();
+	AGIS_API [[nodiscard]] AgisResult<AssetPtr> __get_market_asset() const;
 	AGIS_API [[nodiscard]] auto const& __get_assets() const { return this->assets; };
 	AGIS_API [[nodiscard]] ExchangeMap const* __get_exchange_map() const { return this->exchanges; };
 	AGIS_API [[nodiscard]] MarketAsset& __get_market_asset_struct_ref() { return this->market_asset.value(); };

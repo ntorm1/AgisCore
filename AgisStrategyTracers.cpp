@@ -24,6 +24,7 @@ std::optional<double> AgisStrategyTracers::get(Tracer tracer) const
 		return this->nlv;
 		break;
 	}
+	return std::nullopt;
 }
 
 

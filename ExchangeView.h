@@ -56,6 +56,7 @@ AGIS_API std::string ev_opp_to_str(ExchangeViewOpp ev_opp);
 AGIS_API std::string ev_query_type(ExchangeQueryType ev_query);
 
 struct ExchangeViewAllocation {
+	ExchangeViewAllocation() = default;
 	ExchangeViewAllocation(size_t asset_index_, double allocation_amount_) {
 		this->asset_index = asset_index_;
 		this->allocation_amount = allocation_amount_;
@@ -87,10 +88,10 @@ struct ExchangeView
 	std::vector<ExchangeViewAllocation> view;
 	std::optional<double> market_asset_price = std::nullopt;
 	std::optional<size_t> market_asset_index = std::nullopt;
-	Exchange* exchange = nullptr;
+	const Exchange* exchange = nullptr;
 
 	AGIS_API ExchangeView() = default;
-	AGIS_API ExchangeView(Exchange* exchange_, size_t count);
+	AGIS_API ExchangeView(const Exchange* exchange_, size_t count, bool reserve = true);
 
 	/// <summary>
 	/// Return the number of elements in the exchange view
@@ -109,7 +110,7 @@ struct ExchangeView
 	/// </summary>
 	/// <param name="N">number of elements to retunr</param>
 	/// <param name="sort_type">type of sort to do</param>
-	void sort(size_t N, ExchangeQueryType sort_type);
+	AGIS_API void sort(size_t N, ExchangeQueryType sort_type);
 
 	/// <summary>
 	/// Sum of all weights in the exchange view

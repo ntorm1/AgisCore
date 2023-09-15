@@ -258,20 +258,12 @@ class NonNullSharedPtr {
 public:
     // Delete the default constructor
     NonNullSharedPtr() = delete;
-
+    NonNullSharedPtr(std::nullptr_t) = delete;
     explicit NonNullSharedPtr(std::shared_ptr<T> ptr_) : ptr(ptr_) {
         if (!ptr) {
             throw std::invalid_argument("Shared pointer cannot be null.");
         }
     }
-
-    // Constructor that accepts a std::shared_ptr of the same type
-    explicit NonNullSharedPtr(const std::shared_ptr<T>& ptr_) : ptr(ptr_) {
-        if (!ptr) {
-            throw std::invalid_argument("Shared pointer cannot be null.");
-        }
-    }
-
 
     T& operator*() const {
         return *ptr;
@@ -291,7 +283,41 @@ public:
 
 private:
     std::shared_ptr<T> ptr;
+};
 
-    // Static compile-time check to prevent assignment to nullptr
-    static_assert(!std::is_assignable_v<decltype(ptr), decltype(nullptr)>, "Assignment to nullptr is not allowed.");
+
+template <typename T>
+class NonNullUniquePtr {
+public:
+    NonNullUniquePtr() = delete;
+    NonNullUniquePtr(std::nullptr_t) = delete;
+
+    explicit NonNullUniquePtr(std::unique_ptr<T> ptr_) : ptr(std::move(ptr_)) {
+        if (!ptr) {
+            throw std::invalid_argument("Unique pointer cannot be null.");
+        }
+    }
+
+    T& operator*() const {
+        return *ptr;
+    }
+
+    T* operator->() const {
+        return ptr.get();
+    }
+
+    std::unique_ptr<T>& get() {
+        return ptr;
+    }
+
+    const std::unique_ptr<T>& get() const {
+        return ptr;
+    }
+
+    operator bool() const {
+        return bool(ptr);
+    }
+
+private:
+    std::unique_ptr<T> ptr;
 };
