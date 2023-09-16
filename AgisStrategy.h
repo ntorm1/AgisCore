@@ -29,6 +29,7 @@ enum class AGIS_API AgisStrategyType {
 	FLOW,			// a flow strategy used by the Nexus Node Editor to create Abstract strategies
 	PY,				// a python strategy tramploine off PyAgisStrategy from AgisCorePy
 	BENCHMARK,		// a benchmark strategy that does not interfer with portfolio values
+	LUAJIT, 		// a lua jit strategy
 };
 
 
@@ -203,7 +204,7 @@ public:
 
 	size_t get_strategy_index() const { return this->strategy_index; }
 	size_t get_portfolio_index() const { return this->portfolio->__get_index(); }
-	std::string get_strategy_id() const { return this->strategy_id; }
+	std::string const& get_strategy_id() const { return this->strategy_id; }
 	std::string get_portfolio_id() const { return this->portfolio->__get_portfolio_id(); }
 	Frequency get_frequency() const { return this->frequency; }
 

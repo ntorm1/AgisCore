@@ -13,6 +13,7 @@
 #define H5_HAVE_H5CPP
 #define USE_TBB
 #define USER_ANKERL
+#define USE_LUAJIT
 
 // add headers that you want to pre-compile here
 #include "framework.h"
@@ -27,6 +28,12 @@
 #include "AgisPointers.h"
 #include "AgisErrors.h"
 #include "json.hpp"
+
+#ifdef USE_LUAJIT
+#define SOL_LUAJIT 1
+#include <sol/sol.hpp>
+#endif
+
 typedef unsigned int uint;
 
 

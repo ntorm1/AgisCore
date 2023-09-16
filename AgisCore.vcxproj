@@ -74,11 +74,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(oneTBBLibDir)\vc_mt;$(LibraryPath);</LibraryPath>
-    <IncludePath>$(oneTBBdpstdDir);$(IncludePath);$(SolutionDir)AgisCore\external\include</IncludePath>
+    <LibraryPath>$(oneTBBLibDir)\vc_mt;$(LibraryPath);;C:\Users\natha\luajit\src</LibraryPath>
+    <IncludePath>$(oneTBBdpstdDir);$(IncludePath);$(SolutionDir)AgisCore\external\include;$(SolutionDir)AgisCore\external\sol2\include;C:\Users\natha\luajit\src</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(oneTBBdpstdDir);$(IncludePath);$(SolutionDir)AgisCore\external\include</IncludePath>
+    <IncludePath>$(oneTBBdpstdDir);$(IncludePath);$(SolutionDir)AgisCore\external\include;$(SolutionDir)AgisCore\external\sol2\include;C:\Users\natha\luajit\src</IncludePath>
+    <LibraryPath>$(oneTBBLibDir)\vc_mt;$(LibraryPath);;C:\Users\natha\luajit\src</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <VcpkgConfiguration>Debug</VcpkgConfiguration>
@@ -134,6 +135,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);luajit.lib;lua51.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -157,6 +159,7 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <StripPrivateSymbols>/Zi</StripPrivateSymbols>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);luajit.lib;lua51.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -165,6 +168,7 @@
     <ClInclude Include="AgisAnalysis.h" />
     <ClInclude Include="AgisErrors.h" />
     <ClInclude Include="AgisFunctional.h" />
+    <ClInclude Include="AgisLuaStrategy.h" />
     <ClInclude Include="AgisOverloads.h" />
     <ClInclude Include="AgisPointers.h" />
     <ClInclude Include="AgisRisk.h" />
@@ -189,6 +193,7 @@
     <ClCompile Include="AbstractAgisStrategy.cpp" />
     <ClCompile Include="AgisAnalysis.cpp" />
     <ClCompile Include="AgisFunctional.cpp" />
+    <ClCompile Include="AgisLuaStrategy.cpp" />
     <ClCompile Include="AgisRisk.cpp" />
     <ClCompile Include="AgisRouter.cpp" />
     <ClCompile Include="AgisStrategy.cpp" />

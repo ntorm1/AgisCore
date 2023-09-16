@@ -11,7 +11,6 @@
 #include "AgisErrors.h"
 #include "AgisPointers.h"
 
-template <typename T>
 class ASTNode;
 
 class AssetNode;
@@ -23,7 +22,6 @@ class AbstractSortNode;
 typedef NonNullSharedPtr<Asset> NonNullAssetPtr;
 
 //============================================================================
-template <typename T>
 class ASTNode {
 public:
 	virtual ~ASTNode() {}
@@ -32,26 +30,22 @@ public:
 
 //============================================================================
 template <typename T>
-class ExpressionNode : public ASTNode<T> {
+class ExpressionNode : public ASTNode {
 public:
 	virtual T evaluate() const = 0;
 };
 
 
 //============================================================================
-template <typename T>
-class StatementNode : public ASTNode<T> {
+class StatementNode : public ASTNode {
 public:
 	virtual void execute() = 0;
-	virtual T& fetch() = 0;
-	virtual T move() = 0;
-	virtual T copy() = 0;
 };
 
 
 //============================================================================
 template <typename ExpressionReturnType>
-class ValueReturningStatementNode : public ASTNode<ExpressionReturnType> {
+class ValueReturningStatementNode : public ASTNode {
 public:
 	virtual ExpressionReturnType execute() const = 0;
 };
@@ -170,7 +164,7 @@ private:
 
 
 //============================================================================
-class AbstractExchangeViewNode : public StatementNode<ExchangeView>{
+class AbstractExchangeViewNode : public StatementNode{
 
 public:
 	AbstractExchangeViewNode(
@@ -188,15 +182,7 @@ public:
 	}
 	~AbstractExchangeViewNode() {}
 
-	ExchangeView& fetch() override {
-		return this->exchange_view;
-	}
-
-	ExchangeView move() override {
-		return std::move(this->exchange_view);
-	}
-
-	ExchangeView copy() override {
+	ExchangeView get_view() {
 		return this->exchange_view;
 	}
 
@@ -228,9 +214,8 @@ private:
 };
 
 
-
 //============================================================================
-class AbstractSortNode : StatementNode<ExchangeView> {
+class AbstractSortNode : ValueReturningStatementNode<ExchangeView> {
 public:
 	AbstractSortNode(
 		std::unique_ptr<AbstractExchangeViewNode> ev_,
@@ -242,27 +227,76 @@ public:
 		this->query_type = query_type_;
 	}
 
-	ExchangeView& fetch() override {
-		return this->ev->fetch();
-	}
-
-	ExchangeView copy() override {
-		return this->view;
-	}
-
-	ExchangeView move() override {
-		return std::move(view);
-	}
-
-	void execute() override {
+	ExchangeView execute() const override {
 		this->ev->execute();
-		this->view = this->ev->copy();
-		this->view.sort(N, query_type);
+		auto view = this->ev->get_view();
+		view.sort(N, query_type);
+		return view;
 	}
 
 private:
 	NonNullUniquePtr<AbstractExchangeViewNode> ev;
-	ExchangeView view;
 	size_t N;
 	ExchangeQueryType query_type;
 };
+
+
+//============================================================================
+class AbstractGenAllocationNode : public StatementNode {
+public:
+	AbstractGenAllocationNode(
+		ExchangeView(*func_)(),
+		ExchangeViewOpp ev_opp_type_,
+		double target,
+		std::optional<double> ev_opp_param
+	) :
+		func(func_),
+		ev_opp_type(ev_opp_type_),
+		target(target),
+		ev_opp_param(ev_opp_param)
+	{}
+
+	void execute() override {
+		auto view = func();
+		switch (this->ev_opp_type)
+		{
+			case ExchangeViewOpp::UNIFORM: {
+				view.uniform_weights(target);
+				break;
+			}
+			case ExchangeViewOpp::LINEAR_INCREASE: {
+				view.linear_increasing_weights(target);
+				break;
+			}
+			case ExchangeViewOpp::LINEAR_DECREASE: {
+				view.linear_decreasing_weights(target);
+				break;
+			}
+			case ExchangeViewOpp::CONDITIONAL_SPLIT: {
+				if (!this->ev_opp_param.has_value()) throw std::runtime_error("conditional split requires parameter");
+				view.conditional_split(target, this->ev_opp_param.value());
+				break;
+			}
+			case ExchangeViewOpp::UNIFORM_SPLIT: {
+				view.uniform_split(target);
+				break;
+			}
+			case ExchangeViewOpp::CONSTANT: {
+				auto c = this->ev_opp_param.value() * target;
+				//ev.constant_weights(c, this->trades);
+				break;
+			}
+			default: {
+				throw std::runtime_error("invalid exchange view operation");
+			}
+		}
+	}
+
+private:
+	ExchangeView(*func)();
+	ExchangeViewOpp ev_opp_type;
+	double target;
+	std::optional<double> ev_opp_param;
+};
+
+

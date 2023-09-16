@@ -7,8 +7,11 @@
 #include "Hydra.h"
 #include "Exchange.h"
 
-constexpr auto NUM_THREADS = 2;
 
+#ifdef USE_LUAJIT
+#include "AgisLuaStrategy.h"
+sol::state Hydra::lua;
+#endif
 
 //============================================================================
 Hydra::Hydra(int logging_):
@@ -17,6 +20,17 @@ Hydra::Hydra(int logging_):
         &this->portfolios)
 {
     this->logging = logging_;
+
+    #ifdef USE_LUAJIT
+	init_lua_interface(this->lua);
+    AgisLuaStrategy::set_lua_ptr(&this->lua);
+    #endif
+}
+
+
+//============================================================================
+Hydra::~Hydra()
+{
 }
 
 
@@ -102,20 +116,22 @@ AGIS_API PortfolioPtr const Hydra::new_portfolio(std::string id, double cash)
 AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
 {
     // Only benchmark strategies can have spaces in their names
-    if (strategy->get_strategy_type() != AgisStrategyType::BENCHMARK &&
-        !is_valid_class_name(strategy->get_strategy_id()))
+    auto strategy_id = strategy->get_strategy_id();
+    auto strategy_type = strategy->get_strategy_type();
+    if (strategy_type != AgisStrategyType::BENCHMARK &&
+        !is_valid_class_name(strategy_id))
 	{
 		AGIS_THROW("Strategy ID must not contain spaces");
 	}
 
-    if (this->strategies.__strategy_exists(strategy->get_strategy_id()))
+    if (this->strategies.__strategy_exists(strategy_id))
     {
         AGIS_THROW("strategy already exsits");
     }
 
     // register the strategy to the strategy map
     this->strategies.register_strategy(std::move(strategy));
-    this->portfolios.__reload_strategies(&this->strategies);     // because of pointer invalidation
+    this->portfolios.__reload_strategies(&this->strategies);     // because of pointer invalidation    
     this->is_built = false;
 }
 

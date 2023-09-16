@@ -16,8 +16,6 @@
 #include "Portfolio.h"
 
 
-
-
 class Hydra
 {
 private:
@@ -46,12 +44,16 @@ private:
 	/// </summary>
 	size_t current_index = 0;
 
+	#ifdef USE_LUAJIT
+	static sol::state lua;
+	#endif
+
 	int logging;
 	bool is_built = false;
 
 public:
 	AGIS_API Hydra(int logging_ = 0);
-	AGIS_API ~Hydra() = default;
+	AGIS_API ~Hydra();
 
 	/// <summary>
 	/// Restore hydra instance from a json object
