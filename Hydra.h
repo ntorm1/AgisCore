@@ -49,14 +49,14 @@ private:
 	size_t current_index = 0;
 
 	#ifdef USE_LUAJIT
-	static sol::state* lua;
+	sol::state* lua = nullptr;
 	#endif
 
 	int logging;
 	bool is_built = false;
 
 public:
-	AGIS_API Hydra(int logging_ = 0);
+	AGIS_API Hydra(int logging_ = 0, bool init_lua_state = false);
 	AGIS_API ~Hydra();
 
 	/// <summary>
@@ -259,7 +259,7 @@ public:
 	AGIS_API AgisResult<std::string> strategy_index_to_id(size_t const& index) const;
 	AGIS_API AgisResult<std::string> portfolio_index_to_id(size_t const& index) const;
 
-	AGIS_API auto __get_dt_index() const {return this->exchanges.__get_dt_index();}
+	AGIS_API auto __get_dt_index(bool cutoff = false) const {return this->exchanges.__get_dt_index(cutoff);}
 	AGIS_API size_t get_candle_count() { return this->exchanges.get_candle_count(); };
 	AGIS_API bool asset_exists(std::string asset_id) const;
 	AGIS_API bool portfolio_exists(std::string const& portfolio_id) const;

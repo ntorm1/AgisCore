@@ -38,7 +38,7 @@ void AgisStrategy::__reset()
 	this->order_history.clear();
 	this->limits.__reset();
 	this->tracers.reset_history();
-	this->reset();
+	AGIS_TRY(this->reset());
 }
 
 
@@ -510,7 +510,7 @@ bool AgisStrategyMap::__next()
 void AgisStrategyMap::__reset()
 {
 	auto strategy_reset = [&](auto& strategy) {
-		strategy.second->__reset();
+		AGIS_TRY(strategy.second->__reset());
 	};
 
 	std::for_each(

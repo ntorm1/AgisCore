@@ -6,25 +6,24 @@
 #include "Exchange.h"
 
 
-#ifdef USE_LUAJIT
-sol::state* Hydra::lua = nullptr;
-#endif
-
-
 //============================================================================
-Hydra::Hydra(int logging_):
+Hydra::Hydra(int logging_, bool init_lua_state):
     router(
         this->exchanges,
         &this->portfolios)
 {
     this->logging = logging_;
-
-    // init lua stat if needed
-    #ifdef USE_LUAJIT
-    this->lua = new sol::state();
-	init_lua_interface(this->lua);
-    AgisLuaStrategy::set_lua_ptr(this->lua);
-    #endif
+#ifdef USE_LUAJIT
+    if (init_lua_state) {
+        this->lua = new sol::state();
+        init_lua_interface(this->lua);
+        AgisLuaStrategy::set_lua_ptr(this->lua);
+    }
+#else
+    if (init_lua_state) {
+		AGIS_THROW("Lua not enabled");
+	}
+#endif
 }
 
 
@@ -74,15 +73,20 @@ AGIS_API AgisResult<bool> Hydra::__run()
         AGIS_DO_OR_RETURN(this->build(), bool);
         this->is_built = true; 
     }
-    this->__reset();
-
-    size_t step_count = this->exchanges.__get_dt_index().size();
-    for (size_t i = this->current_index; i < step_count; i++)
+    
+    try {
+        this->__reset();
+    }
+    catch (std::exception& e) {
+		return AgisResult<bool>(AGIS_EXCEP(e.what()));
+	}
+    
+    auto index = this->exchanges.__get_dt_index(false);
+    for (size_t i = this->current_index; i < index.size(); i++)
     {
         AGIS_TRY_RESULT(this->__step(), bool);
         this->current_index++;
     }
-    
     return this->__cleanup();
 }
 
@@ -134,6 +138,15 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
     {
         AGIS_THROW("strategy already exsits");
     }
+
+#ifdef USE_LUAJIT
+    if (strategy->get_strategy_type() == AgisStrategyType::LUAJIT && !this->lua) {
+        // init lua state if needed
+        this->lua = new sol::state();
+        init_lua_interface(this->lua);
+        AgisLuaStrategy::set_lua_ptr(this->lua);
+    }
+#endif
 
     // set strategy exchange map pointer
     strategy->__set_exchange_map(&this->exchanges);
@@ -273,7 +286,7 @@ void Hydra::clear()
 //============================================================================
 AGIS_API AgisResult<bool> Hydra::build()
 {
-    size_t n = this->exchanges.__get_dt_index().size();
+    size_t n = this->exchanges.__get_dt_index(false).size();
     this->exchanges.__build();
     this->portfolios.__build(n);
 
@@ -288,7 +301,6 @@ AGIS_API AgisResult<bool> Hydra::build()
     }
 
     AGIS_DO_OR_RETURN(this->strategies.build(), bool);
-
     return AgisResult<bool>(true);
 }
 
@@ -300,7 +312,7 @@ void Hydra::__reset()
     this->exchanges.__reset();
     this->portfolios.__reset();
     this->router.__reset();
-    this->strategies.__reset();
+    AGIS_TRY(this->strategies.__reset();)
 
     Order::__reset_counter();
     Trade::__reset_counter();

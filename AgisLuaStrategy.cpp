@@ -134,6 +134,7 @@ void init_lua_interface(sol::state* lua_ptr) {
 	);
 }
 
+
 //============================================================================
 AgisLuaStrategy::AgisLuaStrategy(
 	PortfolioPtr const& portfolio_,
@@ -144,6 +145,7 @@ AgisLuaStrategy::AgisLuaStrategy(
 {
 	this->strategy_type = AgisStrategyType::LUAJIT;
 	try {
+		if(!lua_ptr) throw std::runtime_error("lua_ptr not set");
 		lua_ptr->script(script);
 	}
 	catch (sol::error& e) {
@@ -256,7 +258,7 @@ void AgisLuaStrategy::next() {
 
 
 //============================================================================
-void AgisLuaStrategy::reset() {
+void AgisLuaStrategy::reset() {	
 	AGIS_TRY(this->call_lua("_reset"););
 }
 

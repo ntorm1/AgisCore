@@ -1099,6 +1099,7 @@ NexusStatusCode ExchangeMap::remove_exchange(std::string const& exchange_id_)
 //============================================================================
 std::span<long long> const ExchangeMap::__get_dt_index(bool cutoff) const
 {
+	if (!this->dt_index) return std::span<long long>();
 	if (!cutoff) return std::span(this->dt_index, this->dt_index_size);
 	return std::span(this->dt_index, this->current_index - 1);
 }
@@ -1271,6 +1272,7 @@ TimePoint ExchangeMap::epoch_to_tp(long long epoch)
 //============================================================================
 AGIS_API void ExchangeMap::__build()
 {
+	if (this->assets.size() == 0) return;
 	size_t exchange_offset = 0;
 	for (auto& exchange_pair : this->exchanges)
 	{
