@@ -176,7 +176,10 @@ AGIS_API void AgisLuaStrategy::load_script(fs::path script_path_)
 {
 	// force garbage collection to remove any references to the old strategy logic
 	lua_ptr->collect_garbage();
-
+	auto& lua = *lua_ptr;
+	lua[this->get_strategy_id() + "_build"] = sol::lua_nil;
+	lua[this->get_strategy_id() + "_next"] = sol::lua_nil;
+	lua[this->get_strategy_id() + "_reset"] = sol::lua_nil;
 	// reset allocation node
 	this->allocation_node = nullptr;
 
@@ -205,6 +208,7 @@ AGIS_API void AgisLuaStrategy::load_script(fs::path script_path_)
 	}
 	this->script_path = script_path_;
 	this->loaded = true;
+	AGIS_TRY(this->build());
 }
 
 
@@ -214,7 +218,7 @@ void AgisLuaStrategy::call_lua(const std::string& functionName) {
 	sol::function lua_function = (*AgisLuaStrategy::lua_ptr)[this->get_strategy_id() + functionName];
 
 	// Check if the Lua function is valid
-	if (!lua_function.valid()) {
+	if (!lua_function.valid() || lua_function == sol::lua_nil) {
 		AGIS_THROW("Invalid lua function call: " + this->get_strategy_id() + functionName);
 	}
 
