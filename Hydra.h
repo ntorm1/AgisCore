@@ -4,7 +4,12 @@
 #else
 #define AGIS_API __declspec(dllimport)
 #endif
+
 #include "pch.h"
+
+#ifdef USE_LUAJIT
+#include "AgisLuaStrategy.h"
+#endif
 
 #include "AgisPointers.h"
 #include "AgisErrors.h"

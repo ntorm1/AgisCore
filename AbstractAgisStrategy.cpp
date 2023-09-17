@@ -128,15 +128,12 @@ AgisResult<bool> AbstractAgisStrategy::extract_ev_lambda()
 		}
 	}
 
-	// set target leverage
-	this->alloc_target = strat_alloc_ref.target;
-
 	// set the target type
 	this->alloc_type_target = strat_alloc_ref.alloc_type_target;
 	if (this->alloc_type_target == AllocTypeTarget::VOL && !this->get_max_leverage().has_value()) {
 		return AgisResult<bool>(AGIS_EXCEP("target vol must have max leverage set"));
 	}
-
+	this->build();
 	return AgisResult<bool>(true);
 }
 

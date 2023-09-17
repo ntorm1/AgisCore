@@ -1,4 +1,8 @@
+#include "AgisLuaStrategy.h"
+#include "AgisLuaStrategy.h"
+#include "AgisLuaStrategy.h"
 #include "pch.h"
+#include <fstream>
 #include "AbstractStrategyTree.h"
 #include "AgisLuaStrategy.h"
 
@@ -123,6 +127,8 @@ void init_lua_interface(sol::state* lua_ptr) {
 		sol::no_constructor,
 		"set_allocation_node", &AgisLuaStrategy::set_allocation_node,
 		"set_net_leverage_trace", &AgisLuaStrategy::set_net_leverage_trace,
+		"set_beta_trace", &AgisLuaStrategy::set_beta_trace,
+
 		"get_exchange", &AgisLuaStrategy::get_exchange,
 		"exchange_subscribe", &AgisLuaStrategy::exchange_subscribe
 	);
@@ -143,6 +149,62 @@ AgisLuaStrategy::AgisLuaStrategy(
 	catch (sol::error& e) {
 		AGIS_THROW("invalid lua strategy script: " + this->get_strategy_id() + "\n" + e.what());
 	}
+}
+
+
+//============================================================================
+AgisLuaStrategy::AgisLuaStrategy(
+	PortfolioPtr const& portfolio_,
+	std::string const& strategy_id,
+	double allocation,
+	fs::path const& script_path_,
+	bool lazy_load
+)
+	: AgisStrategy(strategy_id, portfolio_, allocation)
+{
+	this->strategy_type = AgisStrategyType::LUAJIT;
+	if (!fs::exists(script_path_)) {
+		AGIS_THROW("invalid lua strategy script path: " + script_path_.string());
+	}
+	if(!lazy_load) this->load_script(script_path_);
+	else this->script_path = script_path_;
+}
+
+
+//============================================================================
+AGIS_API void AgisLuaStrategy::load_script(fs::path script_path_)
+{
+	// force garbage collection to remove any references to the old strategy logic
+	lua_ptr->collect_garbage();
+
+	// reset allocation node
+	this->allocation_node = nullptr;
+
+	// Open the file for reading
+	std::ifstream fileStream(script_path_);
+
+	// Check if the file was opened successfully
+	if (!fileStream.is_open()) {
+		AGIS_THROW("Failed to open file: " + script_path_.string());
+	}
+
+	// Read the contents of the file into a string
+	std::string script;
+	std::string line;
+	while (std::getline(fileStream, line)) {
+		script += line + "\n"; // Add newline character if needed
+	}
+
+	// Close the file
+	fileStream.close();
+	try {
+		lua_ptr->script(script);
+	}
+	catch (sol::error& e) {
+		AGIS_THROW("invalid lua strategy script: " + this->get_strategy_id() + "\n" + e.what());
+	}
+	this->script_path = script_path_;
+	this->loaded = true;
 }
 
 
@@ -168,6 +230,13 @@ void AgisLuaStrategy::call_lua(const std::string& functionName) {
 
 //============================================================================
 void AgisLuaStrategy::next() {
+	if (!this->exchange) {
+		if (!this->__is_exchange_subscribed()){
+			AGIS_THROW("lua strategy built without subscription: " + this->get_strategy_id());
+		}
+		this->exchange = this->get_exchange();
+	}
+
 	if (this->exchange->__get_exchange_index() < this->warmup) { return; }
 
 	if (this->allocation_node) {
@@ -190,9 +259,40 @@ void AgisLuaStrategy::reset() {
 
 //============================================================================
 void AgisLuaStrategy::build() {
+	if (!this->loaded && this->script_path.has_value()) this->load_script(this->script_path.value());
 	AGIS_TRY(this->call_lua("_build");)
 	if (this->allocation_node) {
 		this->warmup = this->allocation_node->get_warmup();
 	}
-	this->exchange = this->get_exchange();
+	
 }
+
+AGIS_API void AgisLuaStrategy::to_json(json& j) const
+{
+	if (script_path.has_value()) {
+		j["lua_script_path"] = this->script_path.value().string();
+	}
+	AgisStrategy::to_json(j);
+}
+
+
+//============================================================================
+AGIS_API std::string AgisLuaStrategy::get_script_template(std::string const& strategy_id)
+{
+	std::string script = R"(
+function {STRATEGY_ID}_next(strategy)
+	-- Custom Lua implementation of next()
+end
+
+function {STRATEGY_ID}_reset(strategy)   
+ -- Custom Lua implementation of reset()
+end
+
+function {STRATEGY_ID}_build(strategy)
+    -- Custom Lua implementation of build() 
+end
+)";
+	str_replace_all(script, "{STRATEGY_ID}", strategy_id);
+	return script;
+}
+

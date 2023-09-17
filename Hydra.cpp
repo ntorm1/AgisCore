@@ -7,9 +7,9 @@
 
 
 #ifdef USE_LUAJIT
-#include "AgisLuaStrategy.h"
 sol::state* Hydra::lua = nullptr;
 #endif
+
 
 //============================================================================
 Hydra::Hydra(int logging_):
@@ -19,6 +19,7 @@ Hydra::Hydra(int logging_):
 {
     this->logging = logging_;
 
+    // init lua stat if needed
     #ifdef USE_LUAJIT
     this->lua = new sol::state();
 	init_lua_interface(this->lua);
@@ -133,6 +134,9 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
     {
         AGIS_THROW("strategy already exsits");
     }
+
+    // set strategy exchange map pointer
+    strategy->__set_exchange_map(&this->exchanges);
 
     // register the strategy to the strategy map
     this->strategies.register_strategy(std::move(strategy));
@@ -278,7 +282,7 @@ AGIS_API AgisResult<bool> Hydra::build()
     auto& strats = this->strategies.__get_strategies_mut();
     for (auto& strat : strats)
     {
-        strat.second->__build(&this->router, &this->exchanges);
+        strat.second->__build(&this->router);
         auto strat_ref = std::ref(strat.second);
         this->portfolios.__register_strategy(strat_ref);
     }
@@ -391,6 +395,24 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
             portfolio,
             strategy_id
         );
+    }
+    else if (strategy_type == AgisStrategyType::LUAJIT) {
+        if (!strategy_json.contains("lua_script_path")) {
+            return AgisResult<AgisStrategyPtr>(AGIS_EXCEP("LUAJIT strategy missing script path"));
+        }
+        std::string script_path = strategy_json.at("lua_script_path");
+        try {
+            strategy = std::make_unique<AgisLuaStrategy>(
+                portfolio,
+                strategy_id,
+                allocation,
+                fs::path(script_path),
+                true
+            );
+        }
+        catch (std::exception& e) {
+			return AgisResult<AgisStrategyPtr>(AGIS_EXCEP(e.what()));
+		}
     }
     else return AgisResult<AgisStrategyPtr>(AGIS_EXCEP("Invalid strategy type"));
 

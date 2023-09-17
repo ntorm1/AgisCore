@@ -37,7 +37,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(AgisStrategyType, {
 	{AgisStrategyType::CPP, "CPP"},
 	{AgisStrategyType::FLOW, "FLOW"},
 	{AgisStrategyType::PY, "PY"},
-	{AgisStrategyType::BENCHMARK, "BENCHMARK"}
+	{AgisStrategyType::BENCHMARK, "BENCHMARK"},
+	{AgisStrategyType::LUAJIT, "LUAJIT"}
 	})
 
 
@@ -297,8 +298,7 @@ public:
 	/// </summary>
 	/// <param name="router_"></param>
 	/// <param name="portfolo_map"></param>
-	/// <param name="exchange_map"></param>
-	void __build(AgisRouter* router_, ExchangeMap* exchange_map);
+	void __build(AgisRouter* router_);
 
 	bool __is_exchange_subscribed() const { return this->exchange_subsrciption != ""; }
 	bool __is_beta_scaling() const { return this->apply_beta_scale; }
@@ -307,6 +307,7 @@ public:
 	bool __is_net_lev_trace() const {return this->tracers.has(Tracer::LEVERAGE); }
 	bool __is_vol_trace() const {return this->tracers.has(Tracer::VOLATILITY); }
 	AGIS_API inline void __set_allocation(double allocation_) { this->portfolio_allocation = allocation_; }
+	AGIS_API inline void __set_exchange_map(ExchangeMap const* exchange_map_) { this->exchange_map = exchange_map_; }
 
 	AGIS_API inline std::vector<double> get_beta_history() const { return tracers.beta_history; }
 	AGIS_API inline std::vector<double> get_nlv_history() const { return tracers.nlv_history; }

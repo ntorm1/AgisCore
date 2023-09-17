@@ -9,7 +9,6 @@
 
 std::atomic<size_t> AgisStrategy::strategy_counter(0);
 
-
 //============================================================================
 AgisStrategy::AgisStrategy(
 	std::string id,
@@ -45,13 +44,10 @@ void AgisStrategy::__reset()
 
 //============================================================================
 void AgisStrategy::__build(
-	AgisRouter* router_,
-	ExchangeMap* exchange_map
+	AgisRouter* router_
 )
 {
 	this->router = router_;
-	this->exchange_map = exchange_map;
-
 	// init required tracing and limit values
 	auto n = exchange_map->__get_dt_index().size();
 	this->tracers.build(this, n);

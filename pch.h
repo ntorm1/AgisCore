@@ -29,11 +29,6 @@
 #include "AgisErrors.h"
 #include "json.hpp"
 
-#ifdef USE_LUAJIT
-#define SOL_LUAJIT 1
-#include <sol/sol.hpp>
-#endif
-
 typedef unsigned int uint;
 
 
