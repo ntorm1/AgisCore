@@ -300,7 +300,7 @@ public:
 	/// <param name="exchange_map"></param>
 	void __build(AgisRouter* router_, ExchangeMap* exchange_map);
 
-	bool __is_exchange_subscribed() const { return this->exchange_subsrciption == ""; }
+	bool __is_exchange_subscribed() const { return this->exchange_subsrciption != ""; }
 	bool __is_beta_scaling() const { return this->apply_beta_scale; }
 	bool __is_beta_hedged() const { return this->apply_beta_hedge; }
 	bool __is_beta_trace() const { return this->tracers.has(Tracer::BETA); }

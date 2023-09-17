@@ -191,6 +191,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AbstractAgisStrategy.cpp" />
+    <ClCompile Include="AbstractStrategyTree.cpp" />
     <ClCompile Include="AgisAnalysis.cpp" />
     <ClCompile Include="AgisFunctional.cpp" />
     <ClCompile Include="AgisLuaStrategy.cpp" />

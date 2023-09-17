@@ -14,7 +14,7 @@ ExchangeView::ExchangeView(const Exchange* exchange_, size_t count, bool reserve
 	else {
 		this->view.resize(count);
 		for (size_t i = 0; i < count; i++) {
-			this->view[i].asset_index = i;
+			this->view[i].asset_index = i + exchange_->__get_exchange_offset();
 		}
 	}
 }
@@ -180,4 +180,24 @@ AgisResult<double> ExchangeView::net_beta() const
 		net_beta += pair.beta_hedge_size.value_or(0);
 	}
 	return AgisResult<double>(net_beta);
+}
+
+//============================================================================
+AGIS_API void ExchangeView::clean()
+{
+	// loop over the view and remove any allocations where live is false by swapping
+	// elements to the end of the vector and then popping them off
+	size_t i = 0;
+	while (i < this->view.size())
+	{
+		if (!this->view[i].live)
+		{
+			std::swap(this->view[i], this->view.back());
+			this->view.pop_back();
+		}
+		else
+		{
+			i++;
+		}
+	}
 }

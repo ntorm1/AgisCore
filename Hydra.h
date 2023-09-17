@@ -9,7 +9,6 @@
 #include "AgisPointers.h"
 #include "AgisErrors.h"
 #include "AgisRouter.h"
-#include "AgisStrategy.h"
 #include "AbstractAgisStrategy.h"
 
 #include "Exchange.h"
@@ -45,7 +44,7 @@ private:
 	size_t current_index = 0;
 
 	#ifdef USE_LUAJIT
-	static sol::state lua;
+	static sol::state* lua;
 	#endif
 
 	int logging;

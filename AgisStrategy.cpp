@@ -229,6 +229,7 @@ AGIS_API void AgisStrategy::strategy_allocate(
 	// generate orders based on the allocation passed
 	for (auto& alloc : allocation)
 	{
+		if (!alloc.live) continue;
 		size_t asset_index = alloc.asset_index;
 		double size = alloc.allocation_amount;
 		switch (alloc_type)
@@ -495,7 +496,7 @@ bool AgisStrategyMap::__next()
 	
 	auto strategy_next = [&](auto& strategy) {
 		if (!strategy.second->__is_step()) { return; }
-		strategy.second->next();
+		AGIS_TRY(strategy.second->next());
 		flag.store(true, std::memory_order_relaxed);
 	};
 	

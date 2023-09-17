@@ -175,7 +175,7 @@ public:
 	AGIS_API [[nodiscard]] ExchangeMap const* __get_exchange_map() const { return this->exchanges; };
 	AGIS_API [[nodiscard]] MarketAsset& __get_market_asset_struct_ref() { return this->market_asset.value(); };
 	AGIS_API [[nodiscard]] std::optional<MarketAsset> __get_market_asset_struct() const { return this->market_asset;};
-
+	AGIS_API [[nodiscard]] size_t __get_exchange_offset() const { return this->exchange_offset; };
 
 	void __goto(long long datetime);
 	bool __is_valid_order(std::unique_ptr<Order>& order) const;

@@ -1,5 +1,3 @@
-#include "Hydra.h"
-#include "Hydra.h"
 #pragma once
 #include "pch.h" 
 
@@ -10,7 +8,7 @@
 
 #ifdef USE_LUAJIT
 #include "AgisLuaStrategy.h"
-sol::state Hydra::lua;
+sol::state* Hydra::lua = nullptr;
 #endif
 
 //============================================================================
@@ -22,8 +20,9 @@ Hydra::Hydra(int logging_):
     this->logging = logging_;
 
     #ifdef USE_LUAJIT
+    this->lua = new sol::state();
 	init_lua_interface(this->lua);
-    AgisLuaStrategy::set_lua_ptr(&this->lua);
+    AgisLuaStrategy::set_lua_ptr(this->lua);
     #endif
 }
 
@@ -31,6 +30,11 @@ Hydra::Hydra(int logging_):
 //============================================================================
 Hydra::~Hydra()
 {
+    #ifdef USE_LUAJIT
+    if (this->lua) {
+        delete this->lua;
+    }
+	#endif
 }
 
 
@@ -45,7 +49,8 @@ void Hydra::__step()
     this->portfolios.__evaluate(true, true);
 
     // process strategy logic at end of each time step
-    bool step = this->strategies.__next();
+    bool step;
+    AGIS_TRY(step = this->strategies.__next());
     if (step) { this->router.__process(); };
 
     // process orders on the exchange and route to their portfolios on fill

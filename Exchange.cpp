@@ -164,6 +164,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 		}
 		auto v = val.unwrap();
 		view.emplace_back( asset->get_asset_index(), v );
+		view.back().live = true;
 	}
 	if (view.size() == 1) { return exchange_view; }
 	exchange_view.sort(number_assets, query_type);
@@ -196,6 +197,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 		// check if x is nan (asset filter operations will cause this)
 		if(std::isnan(x)) continue;
 		view.emplace_back(asset->get_asset_index(), x);
+		view.back().live = true;
 	}
 
 	exchange_view.sort(number_assets, query_type);

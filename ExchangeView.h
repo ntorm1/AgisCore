@@ -81,6 +81,11 @@ struct ExchangeViewAllocation {
 	 * This allows for more flexibility, i.e. if some order is rejected than the beta hedge is still correct.
 	*/
 	std::optional<double> beta_hedge_size = std::nullopt;
+
+	/**
+	* @brief wether or not the allocation has been touched by the strategy, useful for reusing evs
+	*/
+	bool live = false;
 };
 
 struct ExchangeView
@@ -104,6 +109,12 @@ struct ExchangeView
 	 * @param asset_index unique id of the asset allocation to remove 
 	*/
 	void remove_allocation(size_t asset_index);
+
+	/**
+	 * @brief removes all allocations that have live set to false, does not preserver ordering
+	 * @return 
+	*/
+	AGIS_API void clean();
 
 	/// <summary>
 	/// Take an exchange view, then sort and extract a subset of the view

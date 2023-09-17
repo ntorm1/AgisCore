@@ -639,6 +639,7 @@ std::optional<PositionRef> Portfolio::get_position(size_t asset_index) const
 //============================================================================
 AGIS_API std::optional<TradeRef> Portfolio::get_trade(size_t asset_index, std::string const& strategy_id)
 {
+    if(!this->strategy_ids.contains(strategy_id)) return std::nullopt;
     auto strategy_index = this->strategy_ids.at(strategy_id);
     auto position = this->get_position(asset_index);
     if (!position.has_value()) { return std::nullopt; }
