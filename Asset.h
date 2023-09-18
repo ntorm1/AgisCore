@@ -25,10 +25,10 @@
 #include <ankerl/unordered_dense.h>
 #endif // !USER_ANKERL
 
-
 #include "Utils.h"
 #include "AgisPointers.h"
 
+class AssetObserver;
 
 /// <summary>
 /// Enum for the data frequency of an asset. 
@@ -111,14 +111,6 @@ AGIS_API typedef std::shared_ptr<Asset> AssetPtr;
 
 class Exchange;
 class ExchangeMap;
-
-
-// Observer base class
-class AssetObserver {
-public:
-    virtual void on_step() = 0;
-    virtual void on_reset() = 0;
-};
 
 
 class  Asset

@@ -7,6 +7,7 @@
 
 #include "Asset.h"
 #include "AgisRisk.h"
+#include "AgisObservers.h"
 
 #ifdef ARROW_API_H
 #include <arrow/api.h>

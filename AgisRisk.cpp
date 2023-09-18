@@ -229,7 +229,7 @@ AgisResult<AssetPtr> get_enclosing_asset(
 //============================================================================
 IncrementalCovariance::IncrementalCovariance(
     std::shared_ptr<Asset> a1,
-    std::shared_ptr<Asset> a2)
+    std::shared_ptr<Asset> a2) : AssetObserver(nullptr)
 {
 #ifdef _DEBUG
     if (a1->get_frequency() != a2->get_frequency())
@@ -263,7 +263,7 @@ IncrementalCovariance::IncrementalCovariance(
     // add this to the encosing asset observer list. The enclosing asset must be used as the index into 
     // the enclosing span assumes alignment with the closing span.
     this->enclosing_asset->add_observer(this);
-
+    this->set_asset_ptr(this->enclosing_asset.get());
     this->enclosing_span = enclosing_asset->__get_column((enclosing_asset->__get_close_index()));
     this->child_span = child_asset->__get_column((child_asset->__get_close_index()));
     this->enclosing_span_start_index = enclosing_asset->encloses_index(child_asset).unwrap();
@@ -429,10 +429,12 @@ AgisCovarianceMatrix::AgisCovarianceMatrix(
             if (assets[i]->get_rows() <= lookback || assets[j]->get_rows() <= lookback) continue;
             std::shared_ptr<IncrementalCovariance> incremental_covariance;
             try {
-                incremental_covariance = std::make_shared<IncrementalCovariance>(
+                auto observer = create_observer(
+                    ObeserverType::IncrementalCovariance,
                     assets[i],
                     assets[j]
                 );
+                incremental_covariance = std::dynamic_pointer_cast<IncrementalCovariance>(observer);
             }
             catch (std::runtime_error& e) {
 			    throw e;

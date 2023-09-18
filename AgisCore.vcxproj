@@ -169,6 +169,7 @@
     <ClInclude Include="AgisErrors.h" />
     <ClInclude Include="AgisFunctional.h" />
     <ClInclude Include="AgisLuaStrategy.h" />
+    <ClInclude Include="AgisObservers.h" />
     <ClInclude Include="AgisOverloads.h" />
     <ClInclude Include="AgisPointers.h" />
     <ClInclude Include="AgisRisk.h" />

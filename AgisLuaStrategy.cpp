@@ -203,7 +203,7 @@ AGIS_API void AgisLuaStrategy::load_script(fs::path script_path_)
 	// Close the file
 	fileStream.close();
 	try {
-		lua_ptr->safe_script_file(script);
+		lua_ptr->script(script);
 	}
 	catch (sol::error& e) {
 		AGIS_THROW("invalid lua strategy script: " + this->get_strategy_id() + "\n" + e.what());

@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 #ifdef AGISCORE_EXPORTS
 #define AGIS_API __declspec(dllexport)
 #else
@@ -11,7 +10,7 @@
 #include <optional>
 #include <Eigen/Dense>
 #include "Asset.h"
-
+#include "AgisObservers.h"
 
 using namespace Eigen;
 
@@ -22,7 +21,7 @@ class Order;
 class AgisStrategy;
 class ExchangeMap;
 struct AgisCovarianceMatrix;
-
+class AssetObserver;
 
 class IncrementalCovariance : public AssetObserver
 {
