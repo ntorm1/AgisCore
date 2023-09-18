@@ -6,6 +6,7 @@
 #endif
 #ifdef _DEBUG
 #define SOL_ALL_SAFETIES_ON 1
+#define SOL_EXCEPTIONS_SAFE_PROPAGATION 1
 #endif
 
 #include "pch.h"
@@ -54,7 +55,6 @@ protected:
 private:
 	ExchangePtr exchange;
 	std::unique_ptr<AbstractStrategyAllocationNode> allocation_node= nullptr;
-	size_t warmup = 0;
 	AGIS_API static sol::state* lua_ptr;
 	std::optional<fs::path> script_path = std::nullopt;
 	bool loaded = false;

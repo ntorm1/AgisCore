@@ -6,10 +6,6 @@
 void AbstractAgisStrategy::next()
 {
 	auto& ev_lambda_ref = *this->ev_lambda_struct;
-
-	// verify strategy warmup period has passed
-	if (ev_lambda_ref.exchange->__get_exchange_index() < ev_lambda_ref.warmup) { return; }
-
 	ExchangeView ev;
 	AGIS_TRY(
 		ev = ev_lambda_ref.exchange_view_labmda(

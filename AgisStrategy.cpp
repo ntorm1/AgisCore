@@ -115,8 +115,7 @@ AgisResult<bool> AgisStrategy::exchange_subscribe(std::string const& exchange_id
 	{
 		return AgisResult<bool>(AGIS_EXCEP("Invalid exchange id: " + exchange_id));
 	}
-	auto exchange = this->exchange_map->get_exchange(exchange_id);
-
+	this->exchange = this->exchange_map->get_exchange(exchange_id);
 	this->exchange_subsrciption = exchange_id;
 	this->__exchange_step = &exchange->__took_step;
 	return AgisResult<bool>(true);
@@ -131,6 +130,9 @@ bool AgisStrategy::__is_step()
 
 	// check to see if the strategy has subsribed to an exchange and if the exchange took step
 	if (!this->__exchange_step || !(*this->__exchange_step)) { return false; }
+
+	// check warmup period
+	if (this->exchange->__get_exchange_index() < this->warmup) { return false; }
 
 	// check to see if the step frequency is set and if the current step is a multiple of the frequency
 	if (this->step_frequency.has_value() && this->step_frequency.value() != 1) {

@@ -391,6 +391,11 @@ protected:
 	/// </summary>
 	Frequency frequency = Frequency::Day1;
 
+	/**
+	 * @brief minimum rows needed to pass before calling strategy next
+	*/
+	size_t warmup = 0;
+
 	/// <summary>
 	/// Valid window in which the strategy next function is called
 	/// </summary>
@@ -465,6 +470,8 @@ private:
 	 * @brief unique id of the exchange the strategy is subscribed to
 	*/
 	std::string exchange_subsrciption = "";
+
+	ExchangePtr exchange = nullptr;
 
 	/**
 	* @brief Pointer to the exchange's step boolean telling us wether or not the subscribed 

@@ -272,7 +272,8 @@ public:
 		// extract exchange from node
 		this->exchange = exchange_node->evaluate();
 		// for all read opps get size_t col index and set lambda func
-		this->asset_lambda_op->set_read_opp_col_index(this->exchange);
+		auto res = this->asset_lambda_op->set_read_opp_col_index(this->exchange);
+		if (res.is_exception()) throw std::runtime_error(res.get_exception());
 		// build exchange view used for all opps
 		this->exchange_view = ExchangeView(
 			this->exchange, 

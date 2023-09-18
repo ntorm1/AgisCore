@@ -128,7 +128,7 @@ void init_lua_interface(sol::state* lua_ptr) {
 		"set_allocation_node", &AgisLuaStrategy::set_allocation_node,
 		"set_net_leverage_trace", &AgisLuaStrategy::set_net_leverage_trace,
 		"set_beta_trace", &AgisLuaStrategy::set_beta_trace,
-
+		"set_step_frequency", &AgisLuaStrategy::set_step_frequency,
 		"get_exchange", &AgisLuaStrategy::get_exchange,
 		"exchange_subscribe", &AgisLuaStrategy::exchange_subscribe
 	);
@@ -203,7 +203,7 @@ AGIS_API void AgisLuaStrategy::load_script(fs::path script_path_)
 	// Close the file
 	fileStream.close();
 	try {
-		lua_ptr->script(script);
+		lua_ptr->safe_script_file(script);
 	}
 	catch (sol::error& e) {
 		AGIS_THROW("invalid lua strategy script: " + this->get_strategy_id() + "\n" + e.what());
@@ -215,36 +215,31 @@ AGIS_API void AgisLuaStrategy::load_script(fs::path script_path_)
 
 
 //============================================================================
-void AgisLuaStrategy::call_lua(const std::string& functionName) {
+void AgisLuaStrategy::call_lua(const std::string& function_name) {
 	// Get the Lua function
-	sol::function lua_function = (*AgisLuaStrategy::lua_ptr)[this->get_strategy_id() + functionName];
+	sol::function lua_function = (*AgisLuaStrategy::lua_ptr)[this->get_strategy_id() + function_name];
 
 	// Check if the Lua function is valid
 	if (!lua_function.valid() || lua_function == sol::lua_nil) {
-		AGIS_THROW("Invalid lua function call: " + this->get_strategy_id() + functionName);
+		AGIS_THROW("Invalid lua function call: " + this->get_strategy_id() + function_name);
 	}
 
 	// Call the Lua function, passing 'this' pointer
 	try {
-		lua_function(this);
+		auto res = lua_function(this);
+		if (!res.valid()) {
+			sol::error error = res;
+			AGIS_THROW(function_name + " failed: " + error.what());
+		}
 	}
 	catch (sol::error& e) {
-		AGIS_THROW("Invalid lua function call: " + this->get_strategy_id() + functionName + "\n" + e.what());
+		AGIS_THROW("Invalid lua function call: " + this->get_strategy_id() + function_name + "\n" + e.what());
 	}
 }
 
 
 //============================================================================
 void AgisLuaStrategy::next() {
-	if (!this->exchange) {
-		if (!this->__is_exchange_subscribed()){
-			AGIS_THROW("lua strategy built without subscription: " + this->get_strategy_id());
-		}
-		this->exchange = this->get_exchange();
-	}
-
-	if (this->exchange->__get_exchange_index() < this->warmup) { return; }
-
 	if (this->allocation_node) {
 		auto res = this->allocation_node->execute();
 		if (res.is_exception()) {
@@ -270,7 +265,6 @@ void AgisLuaStrategy::build() {
 	if (this->allocation_node) {
 		this->warmup = this->allocation_node->get_warmup();
 	}
-	
 }
 
 AGIS_API void AgisLuaStrategy::to_json(json& j) const
