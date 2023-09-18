@@ -19,7 +19,9 @@ class Exchange;
 class ExchangeMap;
 struct ExchangeView;
 class AgisRouter;
+class AssetObserver;
 
+typedef std::shared_ptr<AssetObserver> AssetObserverPtr;
 AGIS_API typedef ankerl::unordered_dense::map<std::string, std::shared_ptr<Exchange>> Exchanges;
 AGIS_API typedef std::shared_ptr<Exchange> ExchangePtr;
 
@@ -176,6 +178,7 @@ public:
 	AGIS_API [[nodiscard]] MarketAsset& __get_market_asset_struct_ref() { return this->market_asset.value(); };
 	AGIS_API [[nodiscard]] std::optional<MarketAsset> __get_market_asset_struct() const { return this->market_asset;};
 	AGIS_API [[nodiscard]] size_t __get_exchange_offset() const { return this->exchange_offset; };
+	AGIS_API [[nodiscard]] auto const& __get_asset_observers() const { return this->asset_observers; };
 
 	void __goto(long long datetime);
 	bool __is_valid_order(std::unique_ptr<Order>& order) const;
@@ -185,6 +188,9 @@ public:
 	void __process_market_order(std::unique_ptr<Order>& order, bool on_close);
 	void __process_limit_order(std::unique_ptr<Order>& order, bool on_close);
 	AGIS_API void __set_volatility_lookback(size_t window_size);
+	void __add_asset_observer(AssetObserverPtr&& observer) { this->asset_observers.push_back(std::move(observer)); }
+
+
 
 	AgisResult<bool> validate();
 	void reset();
@@ -219,7 +225,8 @@ private:
 
 	std::vector<std::unique_ptr<Order>> orders;
 	std::vector<std::unique_ptr<Order>> filled_orders;
-	std::vector<std::shared_ptr<Asset>> assets;
+	std::vector<AssetPtr> assets;
+	std::vector<std::shared_ptr<AssetObserver>> asset_observers;
 	ankerl::unordered_dense::map<std::string, size_t> headers;
 	ExchangeMap* exchanges;
 
@@ -524,3 +531,22 @@ private:
 	size_t asset_counter = 0;
 	bool is_built = false;
 };
+
+
+//============================================================================
+template <typename Func, typename... Args>
+AgisResult<bool> exchange_add_observer(
+	ExchangePtr exchange,
+	Func func, 
+	Args&&... args
+) {
+	auto& observers = exchange->__get_asset_observers();
+	for (auto& asset : exchange->get_assets()) {
+		AgisResult<AssetObserverPtr> observer = func(asset.get(), std::forward<Args>(args)...);
+		if (observer.is_exception()) return AgisResult<bool>(observer.get_exception());
+		exchange->__add_asset_observer(observer.unwrap());
+		auto asset_obv_raw = observers.back().get();
+		asset->add_observer(asset_obv_raw);
+	}
+	return AgisResult<bool>(true);
+}

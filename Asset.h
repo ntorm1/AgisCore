@@ -158,13 +158,13 @@ public:
      * @brief add a new asset observer if it does not already exist
      * @param observer the observer to add
     */
-    void add_observer(AssetObserver* observer);
+    AGIS_API void add_observer(AssetObserver* observer);
 
     /**
      * @brief remove an observer from the asset
      * @param observer 
     */
-    void remove_observer(AssetObserver* observer);
+    AGIS_API void remove_observer(AssetObserver* observer);
 
     /**
      * @brief remove all observers from the asset
@@ -193,6 +193,7 @@ public:
     AGIS_API void assign_asset_feature(size_t col, int index, AgisResult<double>& res);
     AGIS_API AgisResult<double> get_asset_feature(std::string const& col, int index) const;
     AGIS_API AgisResult<double> get_asset_feature(size_t col, int index) const;
+    AGIS_API AgisResult<double> get_asset_observer_result(std::string const& observer_name);
     AGIS_API AgisResult<double> get_beta() const;
     AGIS_API AgisResult<double> get_volatility() const;
     AGIS_API const std::span<double const> get_beta_column() const;
@@ -340,9 +341,9 @@ private:
     std::vector<double> beta_vector;
 
     /**
-     * @brief a vector of observers linked for this asset
+     * @brief mapping between observer's string rep and pointer to it.
     */
-    std::vector<AssetObserver*> observers;
+    ankerl::unordered_dense::map<std::string, AssetObserver*> observers;
 
     std::optional<std::pair<long long, long long>> window = std::nullopt;
 

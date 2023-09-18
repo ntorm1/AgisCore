@@ -1422,6 +1422,7 @@ void ExchangeView::sort(size_t N, ExchangeQueryType sort_type)
 }
 
 
+//============================================================================
 AGIS_API std::string ev_opp_to_str(ExchangeViewOpp ev_opp)
 {
 	switch (ev_opp) {
@@ -1437,6 +1438,8 @@ AGIS_API std::string ev_opp_to_str(ExchangeViewOpp ev_opp)
 	
 }
 
+
+//============================================================================
 AGIS_API std::string ev_query_type(ExchangeQueryType ev_query)
 {
 	switch (ev_query) {

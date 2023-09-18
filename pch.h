@@ -14,6 +14,7 @@
 #define USE_TBB
 #define USER_ANKERL
 #define USE_LUAJIT
+#define USE_DATAFRAME
 
 // add headers that you want to pre-compile here
 #include "framework.h"

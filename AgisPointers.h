@@ -321,3 +321,68 @@ public:
 private:
     std::unique_ptr<T> ptr;
 };
+
+template <typename T>
+class NonNullRawPtr {
+public:
+    NonNullRawPtr() = delete;
+    NonNullRawPtr(std::nullptr_t) = delete;
+
+    explicit NonNullRawPtr(T* ptr_) : ptr(ptr_) {
+        if (!ptr) {
+            throw std::invalid_argument("Raw pointer cannot be null.");
+        }
+    }
+
+    // Copy assignment operator from raw pointer
+    NonNullRawPtr& operator=(T* ptr_) {
+        if (ptr != ptr_) {
+			ptr = ptr_;
+            if (!ptr) {
+				throw std::invalid_argument("Raw pointer cannot be null.");
+			}
+		}
+		return *this;
+	}
+
+    // Copy constructor
+    NonNullRawPtr(const NonNullRawPtr& other) : ptr(other.ptr) {
+        if (!ptr) {
+            throw std::invalid_argument("Raw pointer cannot be null.");
+        }
+    }
+
+    // Copy assignment operator
+    NonNullRawPtr& operator=(const NonNullRawPtr& other) {
+        if (this != &other) {
+            ptr = other.ptr;
+            if (!ptr) {
+                throw std::invalid_argument("Raw pointer cannot be null.");
+            }
+        }
+        return *this;
+    }
+
+    T& operator*() const {
+        return *ptr;
+    }
+
+    T* operator->() const {
+        return ptr;
+    }
+
+    T* get() {
+        return ptr;
+    }
+
+    const T* get() const {
+        return ptr;
+    }
+
+    operator bool() const {
+        return ptr != nullptr;
+    }
+
+private:
+    T* ptr;
+};

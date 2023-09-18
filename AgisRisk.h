@@ -4,13 +4,11 @@
 #else
 #define AGIS_API __declspec(dllimport)
 #endif
-#include <cmath> // For std::sqrt
 #include <vector>
 #include <span>
 #include <optional>
 #include <Eigen/Dense>
 #include "Asset.h"
-#include "AgisObservers.h"
 
 using namespace Eigen;
 
@@ -21,76 +19,8 @@ class Order;
 class AgisStrategy;
 class ExchangeMap;
 struct AgisCovarianceMatrix;
+class IncrementalCovariance;
 class AssetObserver;
-
-class IncrementalCovariance : public AssetObserver
-{
-	friend struct AgisCovarianceMatrix;
-public:
-	IncrementalCovariance(
-		std::shared_ptr<Asset> a1,
-		std::shared_ptr<Asset> a2
-	);
-
-	static size_t step_size;
-	static size_t period;
-
-	/**
-	 * @brief set the pointers into the covariance matrix that this incremental covariance struct will update
-	 * @param upper_triangular_ pointer to the upper triangular portion of the covariance matrix
-	 * @param lower_triangular_ pointer to the lower triangular portion of the covariance matrix
-	*/
-	void set_pointers(double* upper_triangular_, double* lower_triangular_);
-
-	/**
-	 * @brief function called on step of exchange to update this incremental covariance struct
-	*/
-	void on_step() override;
-
-	/**
-	 * @brief function called on reset of exchange to reset this incremental covariance struct
-	*/
-	void on_reset() override;
-
-	/**
-	 * @brief add the observer to the enclosing asset, used to re add after the observer has been removed
-	*/
-	void add_observer() {
-		this->enclosing_asset->add_observer(this);
-	}
-
-	/**
-	 * @brief remove the observer from the enclosing asset, used before the observer is deleted
-	*/
-	void remove_observer() {
-		this->enclosing_asset->remove_observer(this);
-	}
-
-	/**
-	 * @brief get the current covariance value
-	 * @return the current covariance value
-	*/
-	inline double get_covariance() noexcept
-	{
-		return covariance;
-	}
-
-private:
-	AssetPtr enclosing_asset = nullptr;
-	std::span<double const> enclosing_span;
-	std::span<double const> child_span;
-	size_t enclosing_span_start_index;
-	size_t index = 0;
-	double sum1 = 0;
-	double sum2 = 0;
-	double sum_product = 0;
-	double sum1_squared = 0;
-	double sum2_squared = 0;
-	double covariance = 0;
-
-	double* upper_triangular = nullptr;
-	double* lower_triangular = nullptr;
-};
 
 
 /**

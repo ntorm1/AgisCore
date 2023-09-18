@@ -196,6 +196,7 @@
     <ClCompile Include="AgisAnalysis.cpp" />
     <ClCompile Include="AgisFunctional.cpp" />
     <ClCompile Include="AgisLuaStrategy.cpp" />
+    <ClCompile Include="AgisObservers.cpp" />
     <ClCompile Include="AgisRisk.cpp" />
     <ClCompile Include="AgisRouter.cpp" />
     <ClCompile Include="AgisStrategy.cpp" />

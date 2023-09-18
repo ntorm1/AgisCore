@@ -6,44 +6,240 @@
 #endif
 #include "pch.h"
 
+#ifdef USE_DATAFRAME
+#pragma warning(disable: 4996)
+#include <DataFrame/DataFrame.h>                   // Main DataFrame header
+#include <DataFrame/DataFrameFinancialVisitors.h>  // Financial algorithms
+#include <DataFrame/DataFrameStatsVisitors.h>      // Statistical algorithms
+using namespace hmdf;
+#endif
+
 class Asset;
+class AssetObserver;
 class IncrementalCovariance;
 
-enum class ObeserverType {
-    IncrementalCovariance,
-    MeanVistor
+typedef std::shared_ptr<Asset> AssetPtr;
+typedef std::shared_ptr<AssetObserver> AssetObserverPtr;
+
+
+//============================================================================
+enum class AGIS_API AssetObserverType {
+	COL_ROL_MEAN,
 };
 
-// Observer base class
+
+//============================================================================
+static std::map<AssetObserverType, std::string> AssetObserverTypeMap = {
+	{ AssetObserverType::COL_ROL_MEAN, "COL_ROL_MEAN" },
+};
+
+
+//============================================================================
 class AssetObserver {
 public:
     virtual ~AssetObserver() {}
+    AssetObserver(NonNullRawPtr<Asset> asset_) : asset(asset_) {}
     AssetObserver(Asset* asset_) : asset(asset_) {}
+
     virtual void on_step() = 0;
     virtual void on_reset() = 0;
+	virtual inline double get_result() const noexcept = 0;
+	virtual inline std::string str_rep() const noexcept = 0;
+
+	auto get_result_func() const noexcept {
+		return [this]() { return this->get_result(); };
+	}
 
 protected:
     void set_asset_ptr(Asset* asset_) { this->asset = asset_; }
+	void add_observer();
+	void remove_observer();
+	void set_warmup(size_t w) { this->warmup = w; }
 
-private:
-    Asset* asset = nullptr;
+	NonNullRawPtr<Asset> asset;
+	size_t warmup = 0;
 };
 
 
-// Observer Factory
-template <typename... Args>
-std::shared_ptr<AssetObserver> create_observer(
-    ObeserverType type,
-    Args&&... args
-    ){
-    switch (type) {
-        case ObeserverType::IncrementalCovariance:
-            return std::make_unique<IncrementalCovariance>(
-                std::forward<Args>(args)...
-            );
-        case ObeserverType::MeanVistor:
-            throw std::invalid_argument("not impl");
-        default:
-            throw std::invalid_argument("Invalid ObjectType");
-    }
-}
+#ifdef USE_DATAFRAME
+//============================================================================
+template <typename Vistor>
+class DataFrameColObserver : public AssetObserver {
+public:
+	virtual ~DataFrameColObserver() {}
+
+	DataFrameColObserver(
+		Asset* asset_,
+		Vistor&& visitor_,
+		AssetObserverType type_
+	): 
+		AssetObserver(asset_),
+		visitor(std::forward<Vistor>(visitor_)),
+		observer_type(type_)
+	{}
+
+	/**
+	 * @brief pure virtual call used to build the visitor column on init (only call one)
+	*/
+	virtual void build() = 0;
+
+	/**
+	 * @brief on asset rest move the index to start and build if needed
+	*/
+	void on_reset() override {
+		if (!this->is_built) {
+			this->build();
+		}
+		this->index = 0;
+	}
+
+	/**
+	 * @brief on asset step increment the index
+	*/
+	void on_step() override {
+		this->index++;
+	}
+
+	/**
+	 * @brief accessor for the visitor index column
+	 * @return 
+	*/
+	inline double get_result() const noexcept override {
+		assert(this->index - 1 <= this->result.size());
+		return this->result[this->index - 1];
+	}
+
+protected:
+	std::vector<double> result;
+	Vistor visitor;
+	AssetObserverType observer_type;
+
+private:
+	bool is_built = false;
+	size_t index = 0;
+};
+
+
+//============================================================================
+template <typename Visitor>
+class RollingVisitor
+: public DataFrameColObserver<SimpleRollAdopter<Visitor, double, long long>>
+{
+public:
+	using RollType = SimpleRollAdopter<Visitor, double, long long>;
+	using BaseType = DataFrameColObserver<SimpleRollAdopter<Visitor, double, long long>>;
+
+	~RollingVisitor() = default;
+	RollingVisitor(
+		Asset* asset_,
+		std::string col_name_,
+		size_t r_count_,
+		AssetObserverType type_
+	) :
+		BaseType(asset_, RollType(Visitor(), r_count_), type_)
+	{
+		this->col_name = col_name_;
+		this->r_count = r_count_;
+		this->set_warmup(r_count_);
+	}
+
+	void build() override {
+		auto idx = this->asset->__get_dt_index(false);
+		auto col = this->asset->__get_column(this->col_name);
+		this->visitor(idx.begin(), idx.end(), col.begin(), col.end());
+		this->result = this->visitor.get_result();
+	}
+
+	std::string str_rep() const noexcept override {
+		return col_name + "_" + AssetObserverTypeMap.at(this->observer_type) + "_" + std::to_string(this->r_count);
+	}
+
+private:
+	std::string col_name;
+	size_t r_count;
+};
+#endif
+
+
+//============================================================================
+class IncrementalCovariance : public AssetObserver
+{
+	friend struct AgisCovarianceMatrix;
+public:
+	IncrementalCovariance(
+		std::shared_ptr<Asset> a1,
+		std::shared_ptr<Asset> a2
+	);
+
+	static size_t step_size;
+	static size_t period;
+
+	/**
+	 * @brief set the pointers into the covariance matrix that this incremental covariance struct will update
+	 * @param upper_triangular_ pointer to the upper triangular portion of the covariance matrix
+	 * @param lower_triangular_ pointer to the lower triangular portion of the covariance matrix
+	*/
+	void set_pointers(double* upper_triangular_, double* lower_triangular_);
+
+	/**
+	 * @brief function called on step of exchange to update this incremental covariance struct
+	*/
+	void on_step() override;
+
+	/**
+	 * @brief function called on reset of exchange to reset this incremental covariance struct
+	*/
+	void on_reset() override;
+
+	/**
+	 * @brief get the string representation of this incremental covariance struct
+	 * @return the string representation of this incremental covariance struct
+	*/
+	std::string str_rep() const noexcept override;
+
+	/**
+	 * @brief get the current covariance value
+	 * @return the current covariance value
+	*/
+	inline double get_result() const noexcept override
+	{
+		return covariance;
+	}
+
+private:
+	AssetPtr enclosing_asset = nullptr;
+	AssetPtr child_asset = nullptr;
+	std::span<double const> enclosing_span;
+	std::span<double const> child_span;
+	size_t enclosing_span_start_index;
+	size_t index = 0;
+	double sum1 = 0;
+	double sum2 = 0;
+	double sum_product = 0;
+	double sum1_squared = 0;
+	double sum2_squared = 0;
+	double covariance = 0;
+
+	double* upper_triangular = nullptr;
+	double* lower_triangular = nullptr;
+};
+
+
+
+
+//============================================================================
+AGIS_API AgisResult<AssetObserverPtr> create_inc_cov_observer(
+	std::shared_ptr<Asset> a1,
+	std::shared_ptr<Asset> a2
+);
+
+
+#ifdef USE_DATAFRAME
+//============================================================================
+AGIS_API AgisResult<AssetObserverPtr> create_roll_col_observer(
+	Asset* asset_,
+	AssetObserverType type_,
+	std::string col_name_,
+	size_t r_count_
+);
+#endif

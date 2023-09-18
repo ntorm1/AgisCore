@@ -1,10 +1,8 @@
-#include "AgisLuaStrategy.h"
-#include "AgisLuaStrategy.h"
-#include "AgisLuaStrategy.h"
 #include "pch.h"
 #include <fstream>
 #include "AbstractStrategyTree.h"
 #include "AgisLuaStrategy.h"
+#include "AgisObservers.h"
 
 SOL_BASE_CLASSES(AgisLuaStrategy, AgisStrategy);
 SOL_DERIVED_CLASSES(AgisLuaStrategy, AgisLuaStrategy);
@@ -40,6 +38,11 @@ void init_lua_enums(sol::state& lua)
 			{"UNITS", AllocType::UNITS},
 			{"DOLLARS", AllocType::DOLLARS},
 			{"PCT", AllocType::PCT},
+		}
+	);
+	lua.new_enum<AssetObserverType>("AssetObserverType",
+		{
+			{"COL_ROL_MEAN", AssetObserverType::COL_ROL_MEAN}
 		}
 	);
 }
@@ -108,10 +111,40 @@ void init_lua_interface(sol::state* lua_ptr) {
 		)
 	);
 
+	auto exchange_add_observer_lambda = [](
+		ExchangePtr const exchange,
+		sol::variadic_args va)
+	{
+		AssetObserverType type;
+		AGIS_TRY(type = va[0].as<AssetObserverType>();)
+		switch (type)
+		{
+		case AssetObserverType::COL_ROL_MEAN: {
+			if (va.size() != 3) AGIS_THROW("invalid number of arguments");
+			std::string col;
+			size_t window;
+			AGIS_TRY(col = va[1].as<std::string>();)
+			AGIS_TRY(window = va[2].as<size_t>();)
+			exchange_add_observer(
+				exchange,
+				create_roll_col_observer,
+				AssetObserverType::COL_ROL_MEAN,
+				col,
+				window
+			);
+			break;
+		}
+		default:
+			AGIS_THROW("invalid asset observer type");
+		}
+		return AgisResult<bool>(true);
+	};
+
 	// Bind the Exchange class with no constructors.
 	lua.new_usertype<Exchange>("Exchange",
 		sol::no_constructor,
-		"get_exchange_id" , &Exchange::get_exchange_id
+		"get_exchange_id" , &Exchange::get_exchange_id,
+		"add_observer", exchange_add_observer_lambda
 	);
 
 	// Bind the AgisStrategy class with no constructors.

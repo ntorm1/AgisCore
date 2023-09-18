@@ -1,11 +1,9 @@
 #include "Asset.h"
-#include "Asset.h"
 #include "pch.h"
 #include <string>
 #include <fstream>
 #include <algorithm>
 
-#include "Asset.h"
 #include "AgisRisk.h"
 #include "AgisObservers.h"
 
@@ -218,10 +216,10 @@ AgisResult<size_t> Asset::encloses_index(AssetPtr asset_b)
 void Asset::add_observer(AssetObserver* observer)
 {
     // add observer if it does not already exist
-    auto it = std::find(this->observers.begin(), this->observers.end(), observer);
-    if (it == this->observers.end())
+    auto str_rep = observer->str_rep();
+    if (!this->observers.contains(str_rep))
     {
-		this->observers.push_back(observer);
+		this->observers.emplace(std::move(str_rep), observer);
 	}
 }
 
@@ -230,11 +228,11 @@ void Asset::add_observer(AssetObserver* observer)
 void Asset::remove_observer(AssetObserver* observer)
 {
     // remove observer if it exists
-	auto it = std::find(this->observers.begin(), this->observers.end(), observer);
-    if (it != this->observers.end())
+    auto str_rep = observer->str_rep();
+    if (this->observers.contains(str_rep))
     {
-		this->observers.erase(it);
-	}
+        this->observers.erase(str_rep);
+    }
 }
 
 
@@ -615,7 +613,7 @@ void Asset::__step()
 
     if (this->observers.size()) {
         for (auto& observer : observers) {
-            observer->on_step();
+            observer.second->on_step();
         }
     }
 }
@@ -626,7 +624,7 @@ void Asset::__goto(long long datetime)
 {
     //goto date is beyond the datetime index
     // search for datetime in the index
-    for (int i = this->current_index; i < this->rows; i++)
+    for (size_t i = this->current_index; i < this->rows; i++)
     {
         if (this->__get_asset_time() >= datetime)
         {
@@ -642,7 +640,7 @@ void Asset::__reset()
 {
     if (this->observers.size()) {
         for (auto& observer : observers) {
-            observer->on_reset();
+            observer.second->on_reset();
         }
     }
 
@@ -739,7 +737,22 @@ AgisResult<double> Asset::get_asset_feature(size_t col, int index) const
 
 
 //============================================================================
-AGIS_API void Asset::assign_asset_feature(size_t col, int index, AgisResult<double>& res)
+AgisResult<double> Asset::get_asset_observer_result(std::string const& observer_name)
+{
+#ifdef _DEBUG
+	if (!this->observers.contains(observer_name))
+	{
+		return AgisResult<double>(AGIS_EXCEP("Observer does not exist: " + observer_name));
+	}
+#endif
+    auto v = this->observers.at(observer_name);
+    return AgisResult<double>(v->get_result());
+}
+
+
+
+//============================================================================
+void Asset::assign_asset_feature(size_t col, int index, AgisResult<double>& res)
 {
 #ifdef _DEBUG
     if (abs(index) > static_cast<int>(current_index - 1) || index > 0)

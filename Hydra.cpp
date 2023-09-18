@@ -4,7 +4,7 @@
 #include "Utils.h"
 #include "Hydra.h"
 #include "Exchange.h"
-
+#include "AgisObservers.h"
 
 //============================================================================
 Hydra::Hydra(int logging_, bool init_lua_state):
@@ -503,3 +503,4 @@ template struct AGIS_API AgisResult<json>;
 template struct AGIS_API AgisResult<std::string>;
 template struct AGIS_API AgisResult<size_t>;
 template struct AGIS_API AgisResult<TradeExitPtr>;
+template struct AGIS_API AgisResult<AssetObserverPtr>;
