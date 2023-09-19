@@ -188,7 +188,7 @@ public:
 	void __process_market_order(std::unique_ptr<Order>& order, bool on_close);
 	void __process_limit_order(std::unique_ptr<Order>& order, bool on_close);
 	AGIS_API void __set_volatility_lookback(size_t window_size);
-	void __add_asset_observer(AssetObserverPtr&& observer) { this->asset_observers.push_back(std::move(observer)); }
+	void __add_asset_observer(AssetObserverPtr&& observer) {this->asset_observers.push_back(std::move(observer));}
 
 
 
@@ -226,7 +226,10 @@ private:
 	std::vector<std::unique_ptr<Order>> orders;
 	std::vector<std::unique_ptr<Order>> filled_orders;
 	std::vector<AssetPtr> assets;
+
 	std::vector<std::shared_ptr<AssetObserver>> asset_observers;
+	std::vector<std::string> asset_observer_ids;
+
 	ankerl::unordered_dense::map<std::string, size_t> headers;
 	ExchangeMap* exchanges;
 
@@ -541,12 +544,14 @@ AgisResult<bool> exchange_add_observer(
 	Args&&... args
 ) {
 	auto& observers = exchange->__get_asset_observers();
+	int i = 0;
 	for (auto& asset : exchange->get_assets()) {
 		AgisResult<AssetObserverPtr> observer = func(asset.get(), std::forward<Args>(args)...);
 		if (observer.is_exception()) return AgisResult<bool>(observer.get_exception());
 		exchange->__add_asset_observer(observer.unwrap());
 		auto asset_obv_raw = observers.back().get();
 		asset->add_observer(asset_obv_raw);
+		if(!i)i++;
 	}
 	return AgisResult<bool>(true);
 }

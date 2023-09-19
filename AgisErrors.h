@@ -155,6 +155,15 @@ AgisResult<U> ExtractException(AgisResult<T>& result) {
         } \
     }()
 
+#define AGIS_DO(functionCall) \
+    do { \
+        auto res = functionCall; \
+        if (res.is_exception()) { \
+            return res;\
+        } \
+    } while (false)
+
+
 #define AGIS_DO_OR_RETURN(functionCall, AgisResultType) \
     do { \
         AgisResult<AgisResultType> res = functionCall; \

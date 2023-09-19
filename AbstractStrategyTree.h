@@ -54,8 +54,10 @@ public:
 enum class AssetLambdaType {
 	READ,
 	OPP,
-	FILTER
+	FILTER,
+	OBSERVE
 };
+
 
 //============================================================================
 class AbstractAssetLambdaNode : public ValueReturningStatementNode<AgisResult<double>> {
@@ -66,26 +68,61 @@ public:
 
 	AgisResult<double> execute() override { return AgisResult<double>(AGIS_EXCEP("not impl")); };
 	virtual AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const = 0;
-	virtual size_t get_warmup() = 0;
+	size_t get_warmup() const { return this->warmup; };
 
 	void set_type(AssetLambdaType type) { this->asset_lambda_type = type; }
 	AssetLambdaType get_type() { return this->asset_lambda_type; }
 protected:
+	size_t warmup = 0;
 	AssetLambdaType asset_lambda_type;
+};
+
+
+
+//============================================================================
+class AbstractAssetObserve : public AbstractAssetLambdaNode {
+public:
+	//============================================================================
+	AbstractAssetObserve(
+		std::string observer_name_,
+		int index_ = 0
+	) : 
+		observer_name(observer_name_),
+		index(index_),
+		AbstractAssetLambdaNode(AssetLambdaType::OBSERVE)
+	{}
+
+
+	//============================================================================
+	AGIS_API AgisResult<bool> set_warmup(const Exchange* exchange);
+
+
+	//============================================================================
+	AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const override {
+		return asset->get_asset_observer_result(this->observer_name);
+	};
+
+private:
+	std::string observer_name;
+	int index;
 };
 
 
 //============================================================================
 class AbstractAssetLambdaRead : public AbstractAssetLambdaNode {
 public:
+	//============================================================================
 	AbstractAssetLambdaRead(
 		std::function<AgisResult<double>(std::shared_ptr<const Asset> const&)> func_,
 		size_t warmup_ = 0
 	) : func(func_),
-		warmup(warmup_),
 		AbstractAssetLambdaNode(AssetLambdaType::READ)
-	{}
+	{
+		this->warmup = warmup_;
+	}
 
+
+	//============================================================================
 	AbstractAssetLambdaRead(std::string col, int index) : AbstractAssetLambdaNode(AssetLambdaType::READ)
 	{
 		this->col = col;
@@ -93,12 +130,18 @@ public:
 		this->warmup = static_cast<size_t>(abs(index));
 	}
 
+
+	//============================================================================
 	~AbstractAssetLambdaRead() {}
 
+
+	//============================================================================
 	std::optional<std::string> get_col() {
 		return this->col;
 	}
 
+
+	//============================================================================
 	void set_col_index_lambda(size_t col_index) {
 		auto l = [=](std::shared_ptr<const Asset> const& asset) -> AgisResult<double> {
 			return asset->get_asset_feature(col_index, index.value());
@@ -106,16 +149,13 @@ public:
 		this->func = l;
 	}
 
-	size_t get_warmup() override {
-		return this->warmup;
-	}
 
+	//============================================================================
 	AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const override {
 		return this->func(asset);
 	};
 
 private:
-	size_t warmup;
 	std::optional<std::string> col;
 	std::optional<int> index;
 	std::function<AgisResult<double>(std::shared_ptr<const Asset> const&)> func;
@@ -141,39 +181,59 @@ public:
 	}
 	~AbstractAssetLambdaOpp() {}
 
-	size_t get_warmup() override {
-		return this->warmup;
-	}
 
-	AgisResult<bool> set_read_opp_col_index(const Exchange* exchange) {
-		// search through all asset lambda nodes and set the size_t column 
-		// index for all read opps.
-		if (this->left_node && this->left_node->get_type() == AssetLambdaType::READ) {
-			// cast to lambda read
-			auto left_read = static_cast<AbstractAssetLambdaRead*>(this->left_node.get());
-			auto str_col = left_read->get_col();
-			if (str_col.has_value()) {
-				auto col_res = exchange->get_column_index(str_col.value());
-				if(col_res.is_exception()) return AgisResult<bool>(col_res.get_exception());
-				left_read->set_col_index_lambda(col_res.unwrap());
+	//============================================================================
+	[[nodiscard]] AgisResult<bool> build_node(AbstractAssetLambdaNode* node, const Exchange* exchange) {
+		assert(node);
+		auto type = node->get_type();
+		switch (type) {
+			case AssetLambdaType::READ: {
+				auto left_read = static_cast<AbstractAssetLambdaRead*>(node);
+				auto str_col = left_read->get_col();
+				if (str_col.has_value()) {
+					auto col_res = exchange->get_column_index(str_col.value());
+					if (col_res.is_exception()) return AgisResult<bool>(col_res.get_exception());
+					left_read->set_col_index_lambda(col_res.unwrap());
+				}
+				break;
 			}
-		}
-		// if left node is opp recursively call set_read_opp_col_index to set all nodes
-		else if (this->left_node && this->left_node->get_type() == AssetLambdaType::OPP) {
-			auto left_opp = static_cast<AbstractAssetLambdaOpp*>(this->left_node.get());
-			auto res = left_opp->set_read_opp_col_index(exchange);
-			if (res.is_exception()) return AgisResult<bool>(res.get_exception());
-		}
-		// set right node 
-		auto str_col = this->right_read->get_col();
-		if (str_col.has_value()) {
-			auto col_res = exchange->get_column_index(str_col.value());
-			if (col_res.is_exception()) return AgisResult<bool>(col_res.get_exception());
-			this->right_read->set_col_index_lambda(col_res.unwrap());
+			case AssetLambdaType::OBSERVE: {
+				auto left_read = static_cast<AbstractAssetObserve*>(node);
+				AGIS_DO(left_read->set_warmup(exchange));
+				break;
+			}
+			case AssetLambdaType::OPP: {
+				auto left_opp = static_cast<AbstractAssetLambdaOpp*>(node);
+				auto res = left_opp->build(exchange);
+				if (res.is_exception()) return AgisResult<bool>(res.get_exception());
+				break;
+			}
+			case AssetLambdaType::FILTER: {
+				break;
+			}
+			default: {
+				return AgisResult<bool>(AGIS_EXCEP("invalid asset lambda type"));
+			}
 		}
 		return AgisResult<bool>(true);
 	}
 
+
+	//============================================================================
+	AgisResult<bool> build(const Exchange* exchange) {
+		// search through all asset lambda nodes and set the size_t column 
+		// index for all read opps.
+		if (this->left_node) {
+			AGIS_DO(this->build_node(this->left_node.get(), exchange));
+		}
+		// set right node 
+		auto p = static_cast<AbstractAssetLambdaNode*>(this->right_read.get().get());
+		AGIS_DO(this->build_node(p, exchange));
+		return AgisResult<bool>(true);
+	}
+
+
+	//============================================================================
 	AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const override {
 		// check if right opp is null or nan
 		auto res = right_read->execute(asset);
@@ -195,13 +255,13 @@ private:
 	std::unique_ptr<AbstractAssetLambdaNode> left_node = nullptr;
 	NonNullUniquePtr<AbstractAssetLambdaRead> right_read;
 	AgisOperation opperation;
-	size_t warmup = 0;
 };
 
 
 //============================================================================
 class AbstractAssetLambdaFilter : public AbstractAssetLambdaNode {
 public:
+	//============================================================================
 	AbstractAssetLambdaFilter(
 		NonNullUniquePtr<AbstractAssetLambdaNode> left_node_,
 		AssetFilterRange const filter_range_
@@ -211,12 +271,13 @@ public:
 	{
 		this->filter = filter_range_.get_filter();
 	}
-	~AbstractAssetLambdaFilter() {}
 
-	size_t get_warmup() override {
-		return 0;
-	}
+
+	//============================================================================
+	~AbstractAssetLambdaFilter() {}
 	
+
+	//============================================================================
 	AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const override {
 		// execute left node to get value
 		auto res = left_node->execute();
@@ -237,18 +298,23 @@ private:
 //============================================================================
 class AbstractExchangeNode : public ExpressionNode<const Exchange*> {
 public:
+	//============================================================================
 	AbstractExchangeNode(NonNullSharedPtr<Exchange> exchange_)
 		: exchange(exchange_.get().get()) {
 		if (this->exchange->get_asset_count() == 0) {
 			AGIS_THROW("Exchange must have at least one asset");
 		}
 	}
+
+	//============================================================================
 	AbstractExchangeNode(ExchangePtr const exchange_)
 		: exchange(exchange_.get()) {
 		if (this->exchange->get_asset_count() == 0) {
 			AGIS_THROW("Exchange must have at least one asset");
 		}
 	}
+
+	//============================================================================
 	~AbstractExchangeNode() {}
 	const Exchange* evaluate() const override {
 		return this->exchange;
@@ -263,6 +329,7 @@ private:
 class AbstractExchangeViewNode : public ValueReturningStatementNode<AgisResult<bool>>{
 
 public:
+	//============================================================================
 	AbstractExchangeViewNode(
 		std::unique_ptr<AbstractExchangeNode> exchange_node_,
 		std::unique_ptr<AbstractAssetLambdaOpp> asset_lambda_op_) :
@@ -272,7 +339,7 @@ public:
 		// extract exchange from node
 		this->exchange = exchange_node->evaluate();
 		// for all read opps get size_t col index and set lambda func
-		auto res = this->asset_lambda_op->set_read_opp_col_index(this->exchange);
+		auto res = this->asset_lambda_op->build(this->exchange);
 		if (res.is_exception()) throw std::runtime_error(res.get_exception());
 		// build exchange view used for all opps
 		this->exchange_view = ExchangeView(
@@ -283,20 +350,30 @@ public:
 		// set the minimum warmup for all opps
 		this->warmup = this->asset_lambda_op->get_warmup();
 	}
+
+	//============================================================================
 	~AbstractExchangeViewNode() {}
 
+
+	//============================================================================
 	ExchangeView get_view() {
 		return this->exchange_view;
 	}
 
+
+	//============================================================================
 	size_t size() {
 		return this->exchange_view.view.size();
 	}
 
+
+	//============================================================================
 	size_t get_warmup() {
 		return this->warmup;
 	}
 
+
+	//============================================================================
 	AgisResult<bool> execute() override {
 		auto& view = exchange_view.view;
 
@@ -334,6 +411,7 @@ private:
 //============================================================================
 class AbstractSortNode : ValueReturningStatementNode<AgisResult<ExchangeView>> {
 public:
+	//============================================================================
 	AbstractSortNode(
 		std::unique_ptr<AbstractExchangeViewNode> ev_,
 		int N_,
@@ -344,10 +422,14 @@ public:
 		this->query_type = query_type_;
 	}
 
+
+	//============================================================================
 	size_t get_warmup() {
 		return this->ev->get_warmup();
 	}
 
+
+	//============================================================================
 	AgisResult<ExchangeView> execute() override {
 		auto res = this->ev->execute();
 		if(res.is_exception()) return AgisResult<ExchangeView>(res.get_exception());
@@ -367,6 +449,7 @@ private:
 //============================================================================
 class AbstractGenAllocationNode : public ValueReturningStatementNode<AgisResult<ExchangeView>> {
 public:
+	//============================================================================
 	AbstractGenAllocationNode(
 		std::unique_ptr<AbstractSortNode> sort_node_,
 		ExchangeViewOpp ev_opp_type_,
@@ -379,6 +462,8 @@ public:
 		ev_opp_param(ev_opp_param)
 	{}
 
+
+	//============================================================================
 	AgisResult<ExchangeView> execute() override {
 		auto view_res = sort_node->execute();
 		if (view_res.is_exception()) return view_res;
@@ -433,6 +518,7 @@ private:
 //============================================================================
 class AbstractStrategyAllocationNode : public ValueReturningStatementNode<AgisResult<bool>> {
 public:
+	//============================================================================
 	AbstractStrategyAllocationNode(
 		AgisStrategy* strategy_,
 		std::unique_ptr<AbstractGenAllocationNode> gen_alloc_node_,
@@ -448,10 +534,14 @@ public:
 		alloc_type(alloc_type_)
 	{}
 
+
+	//============================================================================
 	size_t get_warmup() {
 		return this->gen_alloc_node->get_warmup();
 	}
 
+
+	//============================================================================
 	AgisResult<bool> execute() override {
 		auto ev_res = this->gen_alloc_node->execute();
 		if (ev_res.is_exception()) return AgisResult<bool>(ev_res.get_exception());

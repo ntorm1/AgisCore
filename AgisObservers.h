@@ -41,6 +41,7 @@ public:
     virtual void on_reset() = 0;
 	virtual inline double get_result() const noexcept = 0;
 	virtual inline std::string str_rep() const noexcept = 0;
+	size_t get_warmup() const noexcept { return this->warmup; }
 
 	auto get_result_func() const noexcept {
 		return [this]() { return this->get_result(); };

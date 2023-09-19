@@ -1,11 +1,22 @@
 #include "pch.h"
 #include "AbstractStrategyTree.h"
+#include "AgisObservers.h"
 
 //============================================================================
 AGIS_API std::unique_ptr<AbstractAssetLambdaRead> create_asset_lambda_read(std::string col, int index) {
 	return std::make_unique<AbstractAssetLambdaRead>(col, index);
 }
 
+
+//============================================================================
+AgisResult<bool> AbstractAssetObserve::set_warmup(const Exchange* exchange)
+{
+	auto& assets = exchange->get_assets();
+	auto observer = assets[0]->get_observer(this->observer_name);
+	if (observer.is_exception()) return AgisResult<bool>(observer.get_exception());
+	this->warmup = observer.unwrap()->get_warmup();
+	return AgisResult<bool>(true);
+}
 
 //============================================================================
 AGIS_API std::unique_ptr<AbstractAssetLambdaOpp> create_asset_lambda_opp(

@@ -193,7 +193,8 @@ public:
     AGIS_API void assign_asset_feature(size_t col, int index, AgisResult<double>& res);
     AGIS_API AgisResult<double> get_asset_feature(std::string const& col, int index) const;
     AGIS_API AgisResult<double> get_asset_feature(size_t col, int index) const;
-    AGIS_API AgisResult<double> get_asset_observer_result(std::string const& observer_name);
+    AGIS_API AgisResult<AssetObserver*> get_observer(std::string const& id);
+    AGIS_API AgisResult<double> get_asset_observer_result(std::string const& observer_name) const ;
     AGIS_API AgisResult<double> get_beta() const;
     AGIS_API AgisResult<double> get_volatility() const;
     AGIS_API const std::span<double const> get_beta_column() const;

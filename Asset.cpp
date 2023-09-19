@@ -737,18 +737,28 @@ AgisResult<double> Asset::get_asset_feature(size_t col, int index) const
 
 
 //============================================================================
-AgisResult<double> Asset::get_asset_observer_result(std::string const& observer_name)
+AgisResult<double> Asset::get_asset_observer_result(std::string const& observer_name) const
 {
+    auto it = this->observers.find(observer_name);
 #ifdef _DEBUG
-	if (!this->observers.contains(observer_name))
+	if (it == this->observers.end())
 	{
 		return AgisResult<double>(AGIS_EXCEP("Observer does not exist: " + observer_name));
 	}
 #endif
-    auto v = this->observers.at(observer_name);
-    return AgisResult<double>(v->get_result());
+    return AgisResult<double>((*it).second->get_result());
 }
 
+
+//============================================================================
+AgisResult<AssetObserver*> Asset::get_observer(std::string const& id)
+{
+    if (!this->observers.contains(id))
+	{
+		return AgisResult<AssetObserver*>(AGIS_EXCEP("Observer does not exist: " + id));
+	}
+	return AgisResult<AssetObserver*>(this->observers.at(id));
+}
 
 
 //============================================================================

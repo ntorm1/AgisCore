@@ -207,19 +207,19 @@ void VarVisitor::build() {
     this->result.clear();
     this->result.resize(col.size());
     double sum = 0;
-    double sumOfSquares = 0;
+    double sos = 0;
 
     for (size_t i = 0; i < col.size(); i++) {
         if (i >= r_count) {
             sum -= col[i - r_count];
-            sumOfSquares -= col[i - r_count] * col[i - r_count];
+            sos -= col[i - r_count] * col[i - r_count];
         }
         sum += col[i];
-        sumOfSquares += col[i] * col[i];
+        sos += col[i] * col[i];
 
-        if (i >= r_count - 1) { // Start pushing variance only after the window is filled
+        if (i >= r_count - 1) { 
             double mean = sum / r_count;
-            double variance = (sumOfSquares - 2 * sum * mean + r_count * mean * mean) / r_count;
+            double variance = (sos / (r_count - 1)) - (mean * mean);
             this->result[i] = variance;
         }
         else {
