@@ -40,12 +40,16 @@ public:
     virtual void on_step() = 0;
     virtual void on_reset() = 0;
 	virtual inline double get_result() const noexcept = 0;
-	virtual inline std::string str_rep() const noexcept = 0;
+	bool get_touch() const noexcept { return this->touch; }
 	size_t get_warmup() const noexcept { return this->warmup; }
+	NonNullRawPtr<Asset> get_asset_ptr() const noexcept { return this->asset; }
 
 	auto get_result_func() const noexcept {
 		return [this]() { return this->get_result(); };
 	}
+	virtual inline std::string str_rep() const noexcept = 0;
+
+	void set_touch(bool t) { this->touch = t; }
 
 protected:
     void set_asset_ptr(Asset* asset_) { this->asset = asset_; }
@@ -55,10 +59,21 @@ protected:
 
 	NonNullRawPtr<Asset> asset;
 	size_t warmup = 0;
+
+private:
+	/**
+	 * @brief when an observer is created by a strategy it is added to the exchange. However
+	 * if no strategy attempts to create it when build method is called it will be removed
+	*/
+	bool touch = true;
 };
 
 
 //============================================================================
+/**
+ * @brief base class for all column observers that compute their entire column on build
+ * then index into it on step
+*/
 class DataFrameColObserver : public AssetObserver {
 public:
 	virtual ~DataFrameColObserver() {}

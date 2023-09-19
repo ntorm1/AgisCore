@@ -178,7 +178,7 @@ public:
 	AGIS_API [[nodiscard]] MarketAsset& __get_market_asset_struct_ref() { return this->market_asset.value(); };
 	AGIS_API [[nodiscard]] std::optional<MarketAsset> __get_market_asset_struct() const { return this->market_asset;};
 	AGIS_API [[nodiscard]] size_t __get_exchange_offset() const { return this->exchange_offset; };
-	AGIS_API [[nodiscard]] auto const& __get_asset_observers() const { return this->asset_observers; };
+	AGIS_API [[nodiscard]] auto& __get_asset_observers() { return this->asset_observers; };
 
 	void __goto(long long datetime);
 	bool __is_valid_order(std::unique_ptr<Order>& order) const;
@@ -226,9 +226,7 @@ private:
 	std::vector<std::unique_ptr<Order>> orders;
 	std::vector<std::unique_ptr<Order>> filled_orders;
 	std::vector<AssetPtr> assets;
-
 	std::vector<std::shared_ptr<AssetObserver>> asset_observers;
-	std::vector<std::string> asset_observer_ids;
 
 	ankerl::unordered_dense::map<std::string, size_t> headers;
 	ExchangeMap* exchanges;
@@ -253,6 +251,7 @@ public:
 	AGIS_API ~ExchangeMap();
 
 	AGIS_API void __build();
+	AGIS_API void __clean_up();
 	AGIS_API bool step();
 	AGIS_API void __clear();
 
@@ -544,14 +543,12 @@ AgisResult<bool> exchange_add_observer(
 	Args&&... args
 ) {
 	auto& observers = exchange->__get_asset_observers();
-	int i = 0;
 	for (auto& asset : exchange->get_assets()) {
 		AgisResult<AssetObserverPtr> observer = func(asset.get(), std::forward<Args>(args)...);
 		if (observer.is_exception()) return AgisResult<bool>(observer.get_exception());
 		exchange->__add_asset_observer(observer.unwrap());
 		auto asset_obv_raw = observers.back().get();
 		asset->add_observer(asset_obv_raw);
-		if(!i)i++;
 	}
 	return AgisResult<bool>(true);
 }

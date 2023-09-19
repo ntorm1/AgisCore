@@ -11,7 +11,9 @@ AGIS_API std::unique_ptr<AbstractAssetLambdaRead> create_asset_lambda_read(std::
 //============================================================================
 AgisResult<bool> AbstractAssetObserve::set_warmup(const Exchange* exchange)
 {
+	// set the warmup by finding the observer in the first asset in the exchange
 	auto& assets = exchange->get_assets();
+	assert(assets.size());
 	auto observer = assets[0]->get_observer(this->observer_name);
 	if (observer.is_exception()) return AgisResult<bool>(observer.get_exception());
 	this->warmup = observer.unwrap()->get_warmup();

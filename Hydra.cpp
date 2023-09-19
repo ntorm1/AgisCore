@@ -299,8 +299,8 @@ AGIS_API AgisResult<bool> Hydra::build()
         auto strat_ref = std::ref(strat.second);
         this->portfolios.__register_strategy(strat_ref);
     }
-
     AGIS_DO_OR_RETURN(this->strategies.build(), bool);
+    this->exchanges.__clean_up();
     return AgisResult<bool>(true);
 }
 

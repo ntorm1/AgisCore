@@ -217,10 +217,15 @@ void Asset::add_observer(AssetObserver* observer)
 {
     // add observer if it does not already exist
     auto str_rep = observer->str_rep();
-    if (!this->observers.contains(str_rep))
+    auto it = this->observers.find(str_rep);
+    if (it == this->observers.end())
     {
 		this->observers.emplace(std::move(str_rep), observer);
 	}
+    else 
+    {
+        (*it).second->set_touch(true);
+    }
 }
 
 

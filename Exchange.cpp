@@ -7,6 +7,7 @@
 #include "Exchange.h"
 
 #include "AgisRouter.h"
+#include "AgisObservers.h"
 #include "AgisRisk.h"
 
 std::atomic<size_t> Exchange::exchange_counter(0);
@@ -486,6 +487,12 @@ void Exchange::build(size_t exchange_offset_)
 
 		this->candles += asset->get_rows();
 	}
+
+	// disable all observers, force strategy to re-init them
+	for (auto& obv : this->asset_observers) {
+		obv->set_touch(false);
+	}
+
 	this->exchange_offset = exchange_offset_;
 	this->is_built = true;
 }
@@ -1300,6 +1307,29 @@ AGIS_API void ExchangeMap::__build()
 	// empty vector to contain expired assets
 	this->assets_expired.resize(this->assets.size());
 	std::fill(assets_expired.begin(), assets_expired.end(), nullptr);
+}
+
+AGIS_API void ExchangeMap::__clean_up()
+{
+	// search through all observers, if no strategy tried to build them then remove
+	for (auto& exchange : this->exchanges)
+	{
+		auto& observers  = exchange.second->__get_asset_observers();
+		for (auto obv_itr = observers.begin(); obv_itr != observers.end(); )
+		{
+			auto& observer = *obv_itr;
+			if (!observer->get_touch())
+			{
+				auto asset = observer->get_asset_ptr();
+				asset->remove_observer(observer.get());
+				obv_itr = observers.erase(obv_itr);
+			}
+			else
+			{
+				++obv_itr;
+			}
+		}
+	}
 }
 
 
