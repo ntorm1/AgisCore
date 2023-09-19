@@ -178,6 +178,81 @@ void IncrementalCovariance::set_pointers(double* upper_triangular_, double* lowe
 }
 
 
+
+//============================================================================
+void MeanVisitor::build() {
+    auto col = this->asset->__get_column(this->col_name);
+    this->result.clear();
+    this->result.resize(col.size());
+    double sum = 0;
+    for (size_t i = 0; i < col.size(); i++) {
+        if (i >= r_count) {
+            sum -= col[i - r_count];
+        }
+        sum += col[i];
+
+        if (i >= r_count - 1) {
+            this->result[i] = sum / r_count;
+        }
+        else {
+            this->result[i] = std::numeric_limits<double>::quiet_NaN();
+        }
+    }
+}
+
+
+//============================================================================
+void VarVisitor::build() {
+    auto col = this->asset->__get_column(this->col_name);
+    this->result.clear();
+    this->result.resize(col.size());
+    double sum = 0;
+    double sumOfSquares = 0;
+
+    for (size_t i = 0; i < col.size(); i++) {
+        if (i >= r_count) {
+            sum -= col[i - r_count];
+            sumOfSquares -= col[i - r_count] * col[i - r_count];
+        }
+        sum += col[i];
+        sumOfSquares += col[i] * col[i];
+
+        if (i >= r_count - 1) { // Start pushing variance only after the window is filled
+            double mean = sum / r_count;
+            double variance = (sumOfSquares - 2 * sum * mean + r_count * mean * mean) / r_count;
+            this->result[i] = variance;
+        }
+        else {
+            // Push NaN during the warm-up period
+            this->result[i] = std::numeric_limits<double>::quiet_NaN();
+        }
+    }
+}
+
+
+
+//============================================================================
+void RollingZScoreVisitor::build() {
+    mean_visitor.build();
+    var_visitor.build();
+
+    const std::vector<double>& mean = mean_visitor.get_result_vec();
+    const std::vector<double>& variance = var_visitor.get_result_vec();
+    auto col = this->asset->__get_column(this->col_name);
+    this->result.clear();
+    this->result.resize(mean.size());
+
+    for (size_t i = 0; i < mean.size(); i++) {
+        if (!std::isnan(mean[i]) && !std::isnan(variance[i]) && variance[i] > 0) {
+            this->result[i] = (col[i] - mean[i]) / std::sqrt(variance[i]);
+        }
+        else {
+            // Push NaN for undefined Z-score values
+            this->result[i] = std::numeric_limits<double>::quiet_NaN();
+        }
+    }
+}
+
 //============================================================================
 AGIS_API AgisResult<AssetObserverPtr> create_inc_cov_observer(
     std::shared_ptr<Asset> a1,
@@ -206,11 +281,10 @@ AGIS_API AgisResult<AssetObserverPtr> create_roll_col_observer(
     try {
         switch (type_) {
         case AssetObserverType::COL_ROL_MEAN:
-            ptr = std::make_shared<RollingVisitor<MeanVisitor<double, long long>>>(
+            ptr = std::make_shared<MeanVisitor>(
                 asset_,
                 col_name_,
-                r_count_,
-                AssetObserverType::COL_ROL_MEAN
+                r_count_
             );
             break;
         default:

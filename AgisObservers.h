@@ -6,14 +6,6 @@
 #endif
 #include "pch.h"
 
-#ifdef USE_DATAFRAME
-#pragma warning(disable: 4996)
-#include <DataFrame/DataFrame.h>                   // Main DataFrame header
-#include <DataFrame/DataFrameFinancialVisitors.h>  // Financial algorithms
-#include <DataFrame/DataFrameStatsVisitors.h>      // Statistical algorithms
-using namespace hmdf;
-#endif
-
 class Asset;
 class AssetObserver;
 class IncrementalCovariance;
@@ -25,12 +17,16 @@ typedef std::shared_ptr<AssetObserver> AssetObserverPtr;
 //============================================================================
 enum class AGIS_API AssetObserverType {
 	COL_ROL_MEAN,
+	COL_ROL_VAR,
+	COL_ROL_ZSCORE,
 };
 
 
 //============================================================================
 static std::map<AssetObserverType, std::string> AssetObserverTypeMap = {
 	{ AssetObserverType::COL_ROL_MEAN, "COL_ROL_MEAN" },
+	{ AssetObserverType::COL_ROL_VAR, "COL_ROL_VAR" },
+	{ AssetObserverType::COL_ROL_ZSCORE, "COL_ROL_ZSCORE" },
 };
 
 
@@ -61,20 +57,16 @@ protected:
 };
 
 
-#ifdef USE_DATAFRAME
 //============================================================================
-template <typename Vistor>
 class DataFrameColObserver : public AssetObserver {
 public:
 	virtual ~DataFrameColObserver() {}
 
 	DataFrameColObserver(
 		Asset* asset_,
-		Vistor&& visitor_,
 		AssetObserverType type_
 	): 
 		AssetObserver(asset_),
-		visitor(std::forward<Vistor>(visitor_)),
 		observer_type(type_)
 	{}
 
@@ -109,9 +101,12 @@ public:
 		return this->result[this->index - 1];
 	}
 
+	inline auto const& get_result_vec() const noexcept {
+		return this->result;
+	}
+
 protected:
 	std::vector<double> result;
-	Vistor visitor;
 	AssetObserverType observer_type;
 
 private:
@@ -121,34 +116,23 @@ private:
 
 
 //============================================================================
-template <typename Visitor>
-class RollingVisitor
-: public DataFrameColObserver<SimpleRollAdopter<Visitor, double, long long>>
+class MeanVisitor : public DataFrameColObserver
 {
 public:
-	using RollType = SimpleRollAdopter<Visitor, double, long long>;
-	using BaseType = DataFrameColObserver<SimpleRollAdopter<Visitor, double, long long>>;
-
-	~RollingVisitor() = default;
-	RollingVisitor(
+	MeanVisitor() = default;
+	MeanVisitor(
 		Asset* asset_,
 		std::string col_name_,
-		size_t r_count_,
-		AssetObserverType type_
-	) :
-		BaseType(asset_, RollType(Visitor(), r_count_), type_)
+		size_t r_count_
+	) : 
+		r_count(r_count_),	
+		DataFrameColObserver(asset_, AssetObserverType::COL_ROL_MEAN)
 	{
 		this->col_name = col_name_;
-		this->r_count = r_count_;
-		this->set_warmup(r_count_);
+		this->set_warmup(r_count);
 	}
 
-	void build() override {
-		auto idx = this->asset->__get_dt_index(false);
-		auto col = this->asset->__get_column(this->col_name);
-		this->visitor(idx.begin(), idx.end(), col.begin(), col.end());
-		this->result = this->visitor.get_result();
-	}
+	void build() override;
 
 	std::string str_rep() const noexcept override {
 		return col_name + "_" + AssetObserverTypeMap.at(this->observer_type) + "_" + std::to_string(this->r_count);
@@ -158,7 +142,67 @@ private:
 	std::string col_name;
 	size_t r_count;
 };
-#endif
+
+
+//============================================================================
+class VarVisitor : public DataFrameColObserver
+{
+public:
+	VarVisitor() = default;
+	VarVisitor(
+		Asset* asset_,
+		std::string col_name_,
+		size_t r_count_
+	) :
+		r_count(r_count_),
+		DataFrameColObserver(asset_, AssetObserverType::COL_ROL_VAR)
+	{
+		this->col_name = col_name_;
+		this->set_warmup(r_count);
+	}
+
+	void build() override;
+
+	std::string str_rep() const noexcept override {
+		return col_name + "_" + AssetObserverTypeMap.at(this->observer_type) + "_" + std::to_string(this->r_count);
+	}
+
+private:
+	std::string col_name;
+	size_t r_count;
+};
+
+
+//============================================================================
+class RollingZScoreVisitor : public DataFrameColObserver {
+public:
+	RollingZScoreVisitor() = default;
+	RollingZScoreVisitor(
+		Asset* asset_,
+		std::string col_name_,
+		size_t r_count_
+	) :
+		r_count(r_count_),
+		DataFrameColObserver(asset_, AssetObserverType::COL_ROL_ZSCORE),
+		mean_visitor(asset_, col_name_, r_count_),
+		var_visitor(asset_, col_name_, r_count_)
+	{
+		this->col_name = col_name_;
+		this->set_warmup(r_count);
+	}
+
+	void build() override;
+
+	std::string str_rep() const noexcept override {
+		return col_name + "_" + AssetObserverTypeMap.at(this->observer_type) + "_" + std::to_string(this->r_count) + "_ZScore";
+	}
+
+private:
+	std::string col_name;
+	size_t r_count;
+	MeanVisitor mean_visitor;
+	VarVisitor var_visitor;
+};
 
 
 //============================================================================
