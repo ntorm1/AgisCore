@@ -8,12 +8,21 @@
 
 
 //============================================================================
-const std::function<double(double, double)> agis_init = [](double a, double b) { return b; };
-const std::function<double(double, double)> agis_identity = [](double a, double b) { return a; };
-const std::function<double(double, double)> agis_add = [](double a, double b) { return a + b; };
-const std::function<double(double, double)> agis_subtract = [](double a, double b) { return a - b; };
-const std::function<double(double, double)> agis_multiply = [](double a, double b) { return a * b; };
-const std::function<double(double, double)> agis_divide = [](double a, double b) { return a / b; };
+const AgisOperation agis_init = [](double a, double b) { return b; };
+const AgisOperation agis_identity = [](double a, double b) { return a; };
+const AgisOperation agis_add = [](double a, double b) { return a + b; };
+const AgisOperation agis_subtract = [](double a, double b) { return a - b; };
+const AgisOperation agis_multiply = [](double a, double b) { return a * b; };
+const AgisOperation agis_divide = [](double a, double b) { return a / b; };
+
+//============================================================================
+const AgisLogicalOperation agis_greater_than = [](double a, double b) { return a > b; };
+const AgisLogicalOperation agis_less_than = [](double a, double b) { return a < b; };
+const AgisLogicalOperation agis_greater_than_or_equal = [](double a, double b) { return a >= b; };
+const AgisLogicalOperation agis_less_than_or_equal = [](double a, double b) { return a <= b; };
+const AgisLogicalOperation agis_equal = [](double a, double b) { return a == b; };
+const AgisLogicalOperation agis_not_equal = [](double a, double b) { return a != b; };
+
 
 
 //============================================================================

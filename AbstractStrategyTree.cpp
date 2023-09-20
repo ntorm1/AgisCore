@@ -24,14 +24,36 @@ AgisResult<bool> AbstractAssetObserve::set_warmup(const Exchange* exchange)
 AGIS_API std::unique_ptr<AbstractAssetLambdaOpp> create_asset_lambda_opp(
 	std::unique_ptr<AbstractAssetLambdaNode>& left_node,
 	std::unique_ptr<AbstractAssetLambdaRead>& right_read,
-	std::string const& opperation
+	AgisOpperationType opperation
 ) {
-	if (!agis_function_map.contains(opperation)) throw std::runtime_error("invalid opperation");
-	AgisOperation enum_opperation = agis_function_map.at(opperation);
+	AgisOperation opp;
+	switch (opperation)
+	{
+	case AgisOpperationType::INIT:
+		opp = agis_init;
+		break;	
+	case AgisOpperationType::IDENTITY:
+		opp = agis_identity;
+		break;
+	case AgisOpperationType::ADD:
+		opp = agis_add;
+		break;
+	case AgisOpperationType::SUBTRACT:
+		opp = agis_subtract;
+		break;
+	case AgisOpperationType::MULTIPLY:
+		opp = agis_multiply;
+		break;
+	case AgisOpperationType::DIVIDE:
+		opp = agis_divide;
+		break;
+	default:
+		break;
+	}
 	return std::make_unique<AbstractAssetLambdaOpp>(
 		std::move(left_node),
 		std::move(right_read),
-		enum_opperation
+		opp
 	);
 }
 

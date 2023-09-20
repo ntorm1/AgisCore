@@ -54,8 +54,8 @@ public:
 enum class AssetLambdaType {
 	READ,
 	OPP,
-	FILTER,
-	OBSERVE
+	OBSERVE,
+	LOGICAL
 };
 
 
@@ -163,6 +163,42 @@ private:
 
 
 //============================================================================
+class AbstractAssetLambdaLogical : public AbstractAssetLambdaNode {
+public:
+	AbstractAssetLambdaLogical(
+		std::unique_ptr<AbstractAssetLambdaNode> left_node_,
+		AgisLogicalType logical_type_,
+		double right_val_
+	):
+		left_node(std::move(left_node_)),
+		logical_type(logical_type_),
+		right_val(right_val_),
+		AbstractAssetLambdaNode(AssetLambdaType::LOGICAL)
+	{
+		this->warmup = this->left_node->get_warmup();
+	}
+
+	//============================================================================
+	AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const override {
+		// execute left node to get value
+		auto res = left_node->execute();
+		if (res.is_exception() || res.is_nan()) return res;
+
+		// apply filter to value
+		bool res_bool = logical_compare(res.unwrap(), this->right_val);
+		if (!res_bool) res.set_value(AGIS_NAN);
+		return res;
+	}
+
+private:
+	AgisLogicalOperation logical_compare;
+	NonNullUniquePtr<AbstractAssetLambdaNode> left_node;
+	AgisLogicalType logical_type;
+	double right_val;
+};
+
+
+//============================================================================
 class AbstractAssetLambdaOpp : public AbstractAssetLambdaNode {
 public:
 	AbstractAssetLambdaOpp(
@@ -208,7 +244,7 @@ public:
 				if (res.is_exception()) return AgisResult<bool>(res.get_exception());
 				break;
 			}
-			case AssetLambdaType::FILTER: {
+			case AssetLambdaType::LOGICAL: {
 				break;
 			}
 			default: {
@@ -255,43 +291,6 @@ private:
 	std::unique_ptr<AbstractAssetLambdaNode> left_node = nullptr;
 	NonNullUniquePtr<AbstractAssetLambdaRead> right_read;
 	AgisOperation opperation;
-};
-
-
-//============================================================================
-class AbstractAssetLambdaFilter : public AbstractAssetLambdaNode {
-public:
-	//============================================================================
-	AbstractAssetLambdaFilter(
-		NonNullUniquePtr<AbstractAssetLambdaNode> left_node_,
-		AssetFilterRange const filter_range_
-	):
-		left_node(std::move(left_node_)),
-		AbstractAssetLambdaNode(AssetLambdaType::FILTER)
-	{
-		this->filter = filter_range_.get_filter();
-	}
-
-
-	//============================================================================
-	~AbstractAssetLambdaFilter() {}
-	
-
-	//============================================================================
-	AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const override {
-		// execute left node to get value
-		auto res = left_node->execute();
-		if (res.is_exception() || res.is_nan()) return res;
-
-		// apply filter to value
-		bool res_bool = filter(res.unwrap());
-		if (!res_bool) res.set_value(AGIS_NAN);
-		return res;
-	}
-
-private:
-	NonNullUniquePtr<AbstractAssetLambdaNode> left_node;
-	std::function<bool(double)> filter;
 };
 
 
@@ -574,13 +573,14 @@ AGIS_API std::unique_ptr<AbstractAssetLambdaRead> create_asset_lambda_read(std::
 AGIS_API std::unique_ptr<AbstractAssetLambdaOpp> create_asset_lambda_opp(
 	std::unique_ptr<AbstractAssetLambdaNode>& left_node,
 	std::unique_ptr<AbstractAssetLambdaRead>& right_read,
-	std::string const& opperation
+	AgisOpperationType opperation
 );
 
 
 //============================================================================
 AGIS_API std::unique_ptr<AbstractExchangeNode> create_exchange_node(
-	ExchangePtr const exchange);
+	ExchangePtr const exchange
+);
 
 //============================================================================
 AGIS_API std::unique_ptr<AbstractExchangeViewNode> create_exchange_view_node(

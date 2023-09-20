@@ -3,6 +3,7 @@
 #include "AbstractStrategyTree.h"
 #include "AgisLuaStrategy.h"
 #include "AgisObservers.h"
+#include "AgisFunctional.h"
 
 SOL_BASE_CLASSES(AgisLuaStrategy, AgisStrategy);
 SOL_DERIVED_CLASSES(AgisLuaStrategy, AgisLuaStrategy);
@@ -21,6 +22,16 @@ void init_lua_enums(sol::state& lua)
 			{"NLargest", ExchangeQueryType::NLargest},
 			{"NSmallest", ExchangeQueryType::NSmallest},
 			{"NExtreme", ExchangeQueryType::NExtreme}
+		}
+	);
+	lua.new_enum<AgisOpperationType>("AgisOpperationType",
+		{
+			{"INIT", AgisOpperationType::INIT},
+			{"IDENTITY", AgisOpperationType::IDENTITY},
+			{"ADD", AgisOpperationType::ADD},
+			{"SUBTRACT", AgisOpperationType::SUBTRACT},
+			{"MULTIPLY", AgisOpperationType::MULTIPLY},
+			{"DIVIDE", AgisOpperationType::DIVIDE}
 		}
 	);
 	lua.new_enum<ExchangeViewOpp>("ExchangeViewOpp",

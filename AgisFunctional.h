@@ -43,6 +43,12 @@ enum class AGIS_API AllocTypeTarget
 AGIS_API typedef std::function<double(double, double)> AgisOperation;
 
 /**
+ * @brief An Agis logical operation operates on two doubles and returns a bool. Used for opperating over elements
+ * and comparing them to a constant value
+*/
+AGIS_API typedef std::function<bool(double, double)> AgisLogicalOperation;
+
+/**
  * @brief return back the second element passed
 */
 AGIS_API extern const AgisOperation agis_init;
@@ -280,7 +286,8 @@ AGIS_API typedef std::function<ExchangeView(
 > ExchangeViewLambda;
 
 
-enum class AGIS_Function {
+//============================================================================
+enum class AgisOpperationType {
 	INIT,		// returns the element in the second position
 	IDENTITY,	// returns the element in the first position
 	ADD,		// addition
@@ -290,6 +297,15 @@ enum class AGIS_Function {
 };
 
 
+//============================================================================
+enum class AgisLogicalType {
+    GREATER_THAN,           // returns true if the element is greater C  
+    LESS_THAN,              // returns true if the element is less than C
+    GREATER_THAN_EQUAL,     // returns true if the element is greater than or equal to C
+    LESS_THAN_EQUAL,        // returns true if the element is less than or equal to C
+    EQUAL,                  // returns true if the element is equal to C
+    NOT_EQUAL               // returns true if the element is not equal to C    
+};
 
 AGIS_API typedef const std::pair<TimePoint, TimePoint> TradingWindow;
 
