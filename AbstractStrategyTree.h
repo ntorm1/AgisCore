@@ -32,6 +32,7 @@ public:
 template <typename T>
 class ExpressionNode : public ASTNode {
 public:
+	virtual ~ExpressionNode() {}
 	virtual T evaluate() const = 0;
 };
 
@@ -39,6 +40,7 @@ public:
 //============================================================================
 class StatementNode : public ASTNode {
 public:
+	virtual ~StatementNode() {}
 	virtual void execute() = 0;
 };
 
@@ -47,33 +49,65 @@ public:
 template <typename ExpressionReturnType>
 class ValueReturningStatementNode : public ASTNode {
 public:
+	virtual ~ValueReturningStatementNode() {}
 	virtual ExpressionReturnType execute() = 0;
 };
 
 
 enum class AssetLambdaType {
-	READ,
-	OPP,
-	OBSERVE,
-	LOGICAL
+	READ,		///< Asset lambda read opp reads data from an asset at specific column and relative index
+	OPP,		///< Asset lambda opp applies arithmatic opperation to two asset lambda nodes
+	OBSERVE,	///< Asset lambda observe opp reads data from an asset observer
+	LOGICAL		///< Asset lambda logical opp compares asset lambda nodes to return a boolean value
 };
 
 
 //============================================================================
 class AbstractAssetLambdaNode : public ValueReturningStatementNode<AgisResult<double>> {
 public:
-	virtual ~AbstractAssetLambdaNode() {}
+	/**
+	 * @brief AbstractAssetLambdaNode is a node in a chain of execution steps used to create signals
+	 * from an asset at the current moment in time.
+	 * @param asset_lambda_type_ the type of asset lambda node
+	*/
 	AbstractAssetLambdaNode(AssetLambdaType asset_lambda_type_) :
 		asset_lambda_type(asset_lambda_type_){};
+	virtual ~AbstractAssetLambdaNode() {}
 
+	/**
+	 * @brief prevent AbstractAssetLambdaNode from being executed directly
+	*/
 	AgisResult<double> execute() override { return AgisResult<double>(AGIS_EXCEP("not impl")); };
+	
+	/**
+	 * @brief pure virtual function that exexutes the asset lambda node on the given asset
+	*/
 	virtual AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const = 0;
+	
+	/**
+	 * @brief get the number of warmup periods required for the asset lambda node
+	*/
 	size_t get_warmup() const { return this->warmup; };
 
+	/**
+	 * @brief set the type of asset lambda node
+	*/
 	void set_type(AssetLambdaType type) { this->asset_lambda_type = type; }
+	
+	/**
+	 * @brief get the type of asset lambda node
+	*/
 	AssetLambdaType get_type() { return this->asset_lambda_type; }
 protected:
+	/**
+	 * @brief the minimum number of rows needed to execute the asset lambda node. Max value
+	 * of all child nodes warmup values.
+	*/
 	size_t warmup = 0;
+
+	/**
+	 * @brief the type of asset lambda node
+	*/
 	AssetLambdaType asset_lambda_type;
 };
 
@@ -165,28 +199,51 @@ private:
 //============================================================================
 class AbstractAssetLambdaLogical : public AbstractAssetLambdaNode {
 public:
+	using AgisLogicalRightVal = std::variant<double, std::unique_ptr<AbstractAssetLambdaNode>>;
 	AbstractAssetLambdaLogical(
 		std::unique_ptr<AbstractAssetLambdaNode> left_node_,
 		AgisLogicalType logical_type_,
-		double right_val_
+		AgisLogicalRightVal right_node_,
+		bool numeric_cast = false
 	):
 		left_node(std::move(left_node_)),
 		logical_type(logical_type_),
-		right_val(right_val_),
+		right_node(std::move(right_node_)),
 		AbstractAssetLambdaNode(AssetLambdaType::LOGICAL)
 	{
+		// set the warmup equal to the left node warmup and optionally the max of that and the right node
 		this->warmup = this->left_node->get_warmup();
+		if (std::holds_alternative<std::unique_ptr<AbstractAssetLambdaNode>>(this->right_node)) {
+			auto& right_val_node = std::get<std::unique_ptr<AbstractAssetLambdaNode>>(this->right_node);
+			this->warmup = std::max(this->warmup, right_val_node->get_warmup());
+		}
 	}
 
 	//============================================================================
 	AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const override {
 		// execute left node to get value
-		auto res = left_node->execute();
+		AgisResult<double> res = left_node->execute();
+		bool res_bool = false;
 		if (res.is_exception() || res.is_nan()) return res;
 
-		// apply filter to value
-		bool res_bool = logical_compare(res.unwrap(), this->right_val);
-		if (!res_bool) res.set_value(AGIS_NAN);
+		// pass the result of the left node to the logical opperation with the right node
+		// that is either a scaler double or another asset lambda node
+		if (std::holds_alternative<double>(this->right_node)) {
+			auto right_val_double = std::get<double>(this->right_node);
+			res_bool = this->logical_compare(res.unwrap(), right_val_double);
+			if (!res_bool && !this->numeric_cast) res.set_value(AGIS_NAN);
+		}
+		else {
+			auto& right_val_node = std::get<std::unique_ptr<AbstractAssetLambdaNode>>(this->right_node);
+			auto right_res = right_val_node->execute();
+			if (right_res.is_exception() || right_res.is_nan()) return right_res;
+			res_bool = this->logical_compare(res.unwrap(), right_res.unwrap());
+			if (!res_bool && !this->numeric_cast) res.set_value(AGIS_NAN);
+		}
+		
+		// if numeric cast, take the boolean result of the logical opperation and cast to double
+		// i.e. if the logical opperation is true, return 1.0, else return 0.0
+		if (this->numeric_cast)	res.set_value(static_cast<double>(res_bool));
 		return res;
 	}
 
@@ -194,7 +251,8 @@ private:
 	AgisLogicalOperation logical_compare;
 	NonNullUniquePtr<AbstractAssetLambdaNode> left_node;
 	AgisLogicalType logical_type;
-	double right_val;
+	AgisLogicalRightVal right_node;
+	bool numeric_cast = false;
 };
 
 
