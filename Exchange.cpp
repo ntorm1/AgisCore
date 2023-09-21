@@ -159,11 +159,12 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 			continue;
 		}
 		auto val = asset->get_asset_feature(col, row);
-		if (val.is_exception() && !panic)
-		{
-			continue;
+		if (val.is_exception()){
+			if(!panic) continue;
+			else throw val.get_exception();
 		}
 		auto v = val.unwrap();
+		if (std::isnan(v)) continue;
 		view.emplace_back( asset->get_asset_index(), v );
 		view.back().live = true;
 	}

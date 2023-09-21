@@ -182,6 +182,7 @@ AgisResult<double> ExchangeView::net_beta() const
 	return AgisResult<double>(net_beta);
 }
 
+
 //============================================================================
 AGIS_API void ExchangeView::clean()
 {

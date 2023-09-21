@@ -83,7 +83,7 @@ public:
 	 * @brief pure virtual function that exexutes the asset lambda node on the given asset
 	*/
 	virtual AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const = 0;
-	
+		
 	/**
 	 * @brief get the number of warmup periods required for the asset lambda node
 	*/
@@ -445,8 +445,14 @@ public:
 				continue;
 			}
 			auto val = this->asset_lambda_op->execute(asset);
+			// forward any exceptions
 			if (val.is_exception()) {
 				return AgisResult<bool>(val.get_exception());
+			}
+			// disable asset if nan
+			if (val.is_nan()) {
+				view[i].live = false;
+				continue;
 			}
 			auto v = val.unwrap();
 			view[i].allocation_amount = v;
