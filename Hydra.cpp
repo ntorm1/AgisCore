@@ -17,7 +17,6 @@ Hydra::Hydra(int logging_, bool init_lua_state):
     if (init_lua_state) {
         this->lua = new sol::state();
         init_lua_interface(this->lua);
-        AgisLuaStrategy::set_lua_ptr(this->lua);
     }
 #else
     if (init_lua_state) {
@@ -31,6 +30,9 @@ Hydra::Hydra(int logging_, bool init_lua_state):
 Hydra::~Hydra()
 {
     #ifdef USE_LUAJIT
+    // destruct strategies before lua state to prevent segfault. When strategies are destructed
+    // they rely on the lua state to be valid.
+    this->strategies.__clear();
     if (this->lua) {
         delete this->lua;
     }
@@ -140,11 +142,12 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
     }
 
 #ifdef USE_LUAJIT
-    if (strategy->get_strategy_type() == AgisStrategyType::LUAJIT && !this->lua) {
+    if (strategy->get_strategy_type() == AgisStrategyType::LUAJIT) {
         // init lua state if needed
-        this->lua = new sol::state();
+        if(!this->lua) this->lua = new sol::state();
         init_lua_interface(this->lua);
-        AgisLuaStrategy::set_lua_ptr(this->lua);
+        auto lua_strategy = dynamic_cast<AgisLuaStrategy*>(strategy.get());
+        lua_strategy->set_lua_ptr(this->lua);
     }
 #endif
 

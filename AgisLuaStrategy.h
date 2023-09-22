@@ -38,15 +38,17 @@ public:
 		bool lazy_load = false
 	);
 
+	AGIS_API ~AgisLuaStrategy();
+
 	void next() override;
 	void reset() override;
 	void build() override;
 	AGIS_API void to_json(json& j) const override;
 	
 	AGIS_API static std::string get_script_template(std::string const& strategy_id);
-	AGIS_API static void set_lua_ptr(sol::state * lua_ptr_) { lua_ptr = lua_ptr_; }
+	AGIS_API void set_lua_ptr(sol::state * lua_ptr_) { lua_ptr = lua_ptr_; }
 	
-	AGIS_API void load_script(fs::path script_path);
+	AGIS_API void load_script_txt(fs::path script_path);
 	AGIS_API void set_allocation_node(std::unique_ptr<AbstractStrategyAllocationNode>& allocation_node_) { this->allocation_node = std::move(allocation_node_); }
 	AGIS_API void __override_warmup(size_t warmup_) { this->warmup = warmup_; }
 protected:
@@ -55,8 +57,10 @@ protected:
 private:
 	ExchangePtr exchange;
 	std::unique_ptr<AbstractStrategyAllocationNode> allocation_node= nullptr;
-	AGIS_API static sol::state* lua_ptr;
+	sol::state* lua_ptr = nullptr;
+	sol::table lua_table;
 	std::optional<fs::path> script_path = std::nullopt;
+	std::string script;
 	bool loaded = false;
 };
 

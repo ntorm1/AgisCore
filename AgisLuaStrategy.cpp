@@ -1,4 +1,5 @@
 #include "pch.h"
+#ifdef USE_LUAJIT
 #include <fstream>
 #include "AbstractStrategyTree.h"
 #include "AgisLuaStrategy.h"
@@ -8,9 +9,6 @@
 SOL_BASE_CLASSES(AgisLuaStrategy, AgisStrategy);
 SOL_DERIVED_CLASSES(AgisLuaStrategy, AgisLuaStrategy);
 
-#ifdef USE_LUAJIT
-sol::state* AgisLuaStrategy::lua_ptr = nullptr;
-#endif
 
 
 //============================================================================
@@ -184,17 +182,11 @@ AgisLuaStrategy::AgisLuaStrategy(
 	PortfolioPtr const& portfolio_,
 	std::string const& strategy_id, 
 	double allocation,
-	std::string const& script
+	std::string const& script_
 ) : AgisStrategy(strategy_id, portfolio_, allocation)
 {
 	this->strategy_type = AgisStrategyType::LUAJIT;
-	try {
-		if(!lua_ptr) throw std::runtime_error("lua_ptr not set");
-		lua_ptr->script(script);
-	}
-	catch (sol::error& e) {
-		AGIS_THROW("invalid lua strategy script: " + this->get_strategy_id() + "\n" + e.what());
-	}
+	this->script = script_;
 }
 
 
@@ -212,20 +204,25 @@ AgisLuaStrategy::AgisLuaStrategy(
 	if (!fs::exists(script_path_)) {
 		AGIS_THROW("invalid lua strategy script path: " + script_path_.string());
 	}
-	if(!lazy_load) this->load_script(script_path_);
-	else this->script_path = script_path_;
+	this->load_script_txt(script_path_);
 }
 
 
 //============================================================================
-AGIS_API void AgisLuaStrategy::load_script(fs::path script_path_)
+AgisLuaStrategy::~AgisLuaStrategy()
+{
+	this->lua_ptr = nullptr;
+}
+
+
+//============================================================================
+AGIS_API void AgisLuaStrategy::load_script_txt(fs::path script_path_)
 {
 	// force garbage collection to remove any references to the old strategy logic
-	lua_ptr->collect_garbage();
 	auto& lua = *lua_ptr;
-	lua[this->get_strategy_id() + "_build"] = sol::lua_nil;
-	lua[this->get_strategy_id() + "_next"] = sol::lua_nil;
-	lua[this->get_strategy_id() + "_reset"] = sol::lua_nil;
+	lua[this->get_strategy_id()] = sol::lua_nil;
+	lua_ptr->collect_garbage();
+
 	// reset allocation node
 	this->allocation_node = nullptr;
 
@@ -238,30 +235,21 @@ AGIS_API void AgisLuaStrategy::load_script(fs::path script_path_)
 	}
 
 	// Read the contents of the file into a string
-	std::string script;
+	this->script = "";
 	std::string line;
 	while (std::getline(fileStream, line)) {
-		script += line + "\n"; // Add newline character if needed
+		this->script += line + "\n"; // Add newline character if needed
 	}
 
-	// Close the file
 	fileStream.close();
-	try {
-		lua_ptr->script(script);
-	}
-	catch (sol::error& e) {
-		AGIS_THROW("invalid lua strategy script: " + this->get_strategy_id() + "\n" + e.what());
-	}
 	this->script_path = script_path_;
-	this->loaded = true;
-	AGIS_TRY(this->build());
 }
 
 
 //============================================================================
 void AgisLuaStrategy::call_lua(const std::string& function_name) {
 	// Get the Lua function
-	sol::function lua_function = (*AgisLuaStrategy::lua_ptr)[this->get_strategy_id() + function_name];
+	sol::function lua_function = (*this->lua_ptr)[this->get_strategy_id() + function_name];
 
 	// Check if the Lua function is valid
 	if (!lua_function.valid() || lua_function == sol::lua_nil) {
@@ -304,11 +292,28 @@ void AgisLuaStrategy::reset() {
 
 //============================================================================
 void AgisLuaStrategy::build() {
-	if (!this->loaded && this->script_path.has_value()) this->load_script(this->script_path.value());
+	// create new lua table if it doesn't exist, use strategy id as key
+	this->lua_table =(*this->lua_ptr)[this->get_strategy_id()].get_or_create<sol::table>();
+
+	// load in the script if it hasn't been loaded yet
+	if (!this->loaded) {
+		try {
+			// Execute the Lua script
+			lua_ptr->script(this->script);
+		}
+		catch (sol::error& e) {
+			AGIS_THROW("invalid lua strategy script: " + this->get_strategy_id() + "\n" + e.what());
+		}
+	}
+	
+	// attempt to run the build method
 	AGIS_TRY(this->call_lua("_build");)
+
+	// if build method generated an allocation node, set it
 	if (this->allocation_node) {
 		this->warmup = this->allocation_node->get_warmup();
 	}
+	this->loaded = true;
 }
 
 AGIS_API void AgisLuaStrategy::to_json(json& j) const
@@ -340,3 +345,4 @@ end
 	return script;
 }
 
+#endif // USE_LUAJIT
