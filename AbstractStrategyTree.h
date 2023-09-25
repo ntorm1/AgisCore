@@ -437,7 +437,7 @@ public:
 	 * @brief remove all asset ids from the excahgne view that are not in the given vector
 	 * @param ids_keep vector of asset ids to keep
 	*/
-	AGIS_API void apply_id_filter(std::vector<size_t> const& index_keep);
+	AGIS_API void apply_asset_index_filter(std::vector<size_t> const& index_keep);
 
 
 	//============================================================================
