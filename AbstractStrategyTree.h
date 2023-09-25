@@ -393,8 +393,12 @@ public:
 		exchange_node(std::move(exchange_node_)),
 		asset_lambda_op(std::move(asset_lambda_op_))
 	{
-		// extract exchange from node
+		// extract exchange from node, copy asset pointers into the node
 		this->exchange = exchange_node->evaluate();
+		for (auto& asset : this->exchange->get_assets()) {
+			this->assets.push_back(asset);
+		}
+
 		// for all read opps get size_t col index and set lambda func
 		auto res = this->asset_lambda_op->build(this->exchange);
 		if (res.is_exception()) throw std::runtime_error(res.get_exception());
@@ -429,42 +433,20 @@ public:
 		return this->warmup;
 	}
 
+	/**
+	 * @brief remove all asset ids from the excahgne view that are not in the given vector
+	 * @param ids_keep vector of asset ids to keep
+	*/
+	AGIS_API void apply_id_filter(std::vector<size_t> const& index_keep);
+
 
 	//============================================================================
-	AgisResult<bool> execute() override {
-		auto& view = exchange_view.view;
-
-		size_t i = 0;
-		for (auto& asset : this->exchange->get_assets())
-		{
-			if ((!asset || !asset->__in_exchange_view) ||
-				(!asset->__is_streaming) ||
-				(asset->get_current_index() < this->warmup)) {
-				view[i].live = false;
-				i++;
-				continue;
-			}
-			auto val = this->asset_lambda_op->execute(asset);
-			// forward any exceptions
-			if (val.is_exception()) {
-				return AgisResult<bool>(val.get_exception());
-			}
-			// disable asset if nan
-			if (val.is_nan()) {
-				view[i].live = false;
-				continue;
-			}
-			auto v = val.unwrap();
-			view[i].allocation_amount = v;
-			view[i].live = true;
-			i++;
-		}
-		return AgisResult<bool>(true);
-	}
+	AGIS_API AgisResult<bool> execute() override;
 
 private:
 	ExchangeView exchange_view;
 	const Exchange* exchange;
+	std::vector<AssetPtr> assets;
 	NonNullUniquePtr<AbstractExchangeNode> exchange_node;
 	NonNullUniquePtr<AbstractAssetLambdaOpp> asset_lambda_op;
 	size_t warmup = 0;

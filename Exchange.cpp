@@ -136,6 +136,20 @@ std::vector<std::string> Exchange::get_asset_ids() const
 
 
 //============================================================================
+AGIS_API std::vector<size_t> Exchange::get_asset_indices() const
+{
+	std::vector<size_t> keys;
+	keys.reserve(this->assets.size());  // Reserve space in the vector for efficiency
+
+	// Iterate over the map and extract the keys
+	for (const auto& asset : this->assets) {
+		keys.push_back(asset->get_asset_index());
+	}
+	return keys;
+}
+
+
+//============================================================================
 AGIS_API ExchangeView Exchange::get_exchange_view(
 	std::string const& col,
 	int row,

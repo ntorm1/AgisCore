@@ -97,7 +97,8 @@ public:
 	/// </summary>
 	/// <returns>vector of asset ids</returns>
 	AGIS_API std::vector<std::string> get_asset_ids() const;
-	
+	AGIS_API std::vector<size_t> get_asset_indices() const;
+
 	/// <summary>
 	/// Does an asset with this id exist on the exchange
 	/// </summary>

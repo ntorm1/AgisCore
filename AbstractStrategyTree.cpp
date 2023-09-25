@@ -20,6 +20,55 @@ AgisResult<bool> AbstractAssetObserve::set_warmup(const Exchange* exchange)
 	return AgisResult<bool>(true);
 }
 
+
+//============================================================================
+AgisResult<bool> AbstractExchangeViewNode::execute() {
+	auto& view = exchange_view.view;
+
+	size_t i = 0;
+	for (auto& asset : this->assets)
+	{
+		if ((!asset || !asset->__in_exchange_view) ||
+			(!asset->__is_streaming) ||
+			(asset->get_current_index() < this->warmup)) {
+			view[i].live = false;
+			i++;
+			continue;
+		}
+		auto val = this->asset_lambda_op->execute(asset);
+		// forward any exceptions
+		if (val.is_exception()) {
+			return AgisResult<bool>(val.get_exception());
+		}
+		// disable asset if nan
+		if (val.is_nan()) {
+			view[i].live = false;
+			continue;
+		}
+		auto v = val.unwrap();
+		view[i].allocation_amount = v;
+		view[i].live = true;
+		i++;
+	}
+	return AgisResult<bool>(true);
+}
+
+
+//============================================================================
+void AbstractExchangeViewNode::apply_id_filter(std::vector<size_t> const& index_keep)
+{
+	for (auto asset_iter = this->assets.begin(); asset_iter != this->assets.end();)
+	{
+		auto& asset = *asset_iter;
+		size_t asset_index = asset->get_asset_index();
+		auto it = std::find(index_keep.begin(), index_keep.end(), asset_index);
+		if (it != index_keep.end()) {
+			++asset_iter;
+			continue;
+		};
+		asset_iter = this->assets.erase(asset_iter);
+	}
+}
 //============================================================================
 AGIS_API std::unique_ptr<AbstractAssetLambdaOpp> create_asset_lambda_opp(
 	std::unique_ptr<AbstractAssetLambdaNode>& left_node,

@@ -19,9 +19,28 @@
 
 namespace fs = std::filesystem;
 
+//============================================================================
 void init_lua_interface(sol::state* lua);
 
 
+//============================================================================
+/**
+ * Convert a Lua sequence into a C++ vector
+ * Throw exception on errors or wrong types
+ */
+template <typename T>
+std::vector<T> convert_sequence(sol::table t)
+{
+	std::size_t sz = t.size();
+	std::vector<T> res(sz);
+	for (int i = 1; i <= sz; i++) {
+		res[i - 1] = t[i];
+	}
+	return res;
+}
+
+
+//============================================================================
 class AgisLuaStrategy : public AgisStrategy {
 public:
 	AGIS_API AgisLuaStrategy(

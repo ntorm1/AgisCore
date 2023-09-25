@@ -204,7 +204,7 @@ AgisLuaStrategy::AgisLuaStrategy(
 	if (!fs::exists(script_path_)) {
 		AGIS_THROW("invalid lua strategy script path: " + script_path_.string());
 	}
-	this->load_script_txt(script_path_);
+	if(this->lua_ptr) this->load_script_txt(script_path_);
 }
 
 
