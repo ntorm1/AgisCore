@@ -18,6 +18,9 @@ AgisStrategy::AgisStrategy(
 	portfolio(portfolio_),
 	tracers(this)
 {
+	this->tracers.starting_cash.store(
+		portfolio_allocation_ * portfolio_->get_cash()
+	);
 	this->strategy_id = id;
 	this->strategy_index = strategy_counter++;
 	this->router = nullptr;
@@ -25,7 +28,7 @@ AgisStrategy::AgisStrategy(
 	this->portfolio_allocation = portfolio_allocation_;
 	this->tracers.nlv = portfolio_allocation * portfolio->get_cash();
 	this->tracers.cash = portfolio_allocation * portfolio->get_cash();
-	this->tracers.starting_cash = this->tracers.cash;
+	this->tracers.starting_cash = this->tracers.cash.load();
 	this->tracers.set(Tracer::CASH);
 	this->tracers.set(Tracer::NLV);
 }
@@ -241,7 +244,7 @@ AGIS_API void AgisStrategy::strategy_allocate(
 			}
 			case AllocType::PCT: {
 				auto market_price = this->exchange_map->__get_market_price(asset_index, true);
-				size *=  (this->tracers.nlv / market_price);
+				size *=  (this->tracers.nlv.load() / market_price);
 				break;
 			}
 		}

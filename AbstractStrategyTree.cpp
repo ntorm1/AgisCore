@@ -55,7 +55,7 @@ AgisResult<bool> AbstractExchangeViewNode::execute() {
 
 
 //============================================================================
-void AbstractExchangeViewNode::apply_id_filter(std::vector<size_t> const& index_keep)
+void AbstractExchangeViewNode::apply_asset_index_filter(std::vector<size_t> const& index_keep)
 {
 	// remove asset pointers in the node's asset list if index not in index_keep
 	for (auto asset_iter = this->assets.begin(); asset_iter != this->assets.end();)
@@ -69,7 +69,7 @@ void AbstractExchangeViewNode::apply_id_filter(std::vector<size_t> const& index_
 		};
 		asset_iter = this->assets.erase(asset_iter);
 	}
-	// pop lements from the view if index not in index_keep
+	// pop elements from the view if index not in index_keep
 	auto& view = this->exchange_view.view;
 	for (auto& allocation : view)
 	{
@@ -83,7 +83,7 @@ void AbstractExchangeViewNode::apply_id_filter(std::vector<size_t> const& index_
 
 
 //============================================================================
-AGIS_API std::unique_ptr<AbstractAssetLambdaOpp> create_asset_lambda_opp(
+std::unique_ptr<AbstractAssetLambdaOpp> create_asset_lambda_opp(
 	std::unique_ptr<AbstractAssetLambdaNode>& left_node,
 	std::unique_ptr<AbstractAssetLambdaRead>& right_read,
 	AgisOpperationType opperation
@@ -121,14 +121,14 @@ AGIS_API std::unique_ptr<AbstractAssetLambdaOpp> create_asset_lambda_opp(
 
 
 //============================================================================
-AGIS_API std::unique_ptr<AbstractExchangeNode> create_exchange_node(
+std::unique_ptr<AbstractExchangeNode> create_exchange_node(
 	ExchangePtr const exchange) {
 	return std::make_unique<AbstractExchangeNode>(exchange);
 }
 
 
 //============================================================================
-AGIS_API std::unique_ptr<AbstractExchangeViewNode> create_exchange_view_node(
+std::unique_ptr<AbstractExchangeViewNode> create_exchange_view_node(
 	std::unique_ptr<AbstractExchangeNode>& exchange_node,
 	std::unique_ptr<AbstractAssetLambdaOpp>& asset_lambda_op
 ) {

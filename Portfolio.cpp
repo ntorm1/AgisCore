@@ -251,9 +251,7 @@ void PortfolioMap::__build(size_t size)
     for (auto& portfolio_pair : this->portfolios)
     {
         auto& portfolio = portfolio_pair.second;
-        portfolio->nlv_history.reserve(size);
-        portfolio->cash_history.reserve(size);
-        if (portfolio->is_beta_tracing) portfolio->beta_history.reserve(size);
+        portfolio->tracers.build<Portfolio>(portfolio.get(), size);
     }
 }
 
@@ -387,7 +385,7 @@ json Portfolio::to_json() const
     }
 
     auto j = json{
-        {"starting_cash", this->starting_cash},
+        {"starting_cash", this->tracers.starting_cash.load()},
     };
     j["strategies"] = strategies;
     return j;
@@ -445,14 +443,11 @@ AGIS_API json PortfolioMap::to_json() const
 
 //============================================================================
 Portfolio::Portfolio(AgisRouter& router_, std::string const & portfolio_id_, double cash_) :
-    router(router_)
+    router(router_),
+    tracers(this, cash_)
 {
     this->portfolio_id = portfolio_id_;
     this->portfolio_index = portfolio_counter++;
-
-    this->cash = cash_;
-    this->starting_cash = cash_;
-    this->nlv = cash_;
 }
 
 
@@ -491,18 +486,24 @@ void Portfolio::__on_phantom_order(OrderPtr const& order)
 //============================================================================
 void Portfolio::__on_order_fill(OrderPtr const& order)
 {
+    // aquire write lock on position mutex
+    auto asset_index = order->get_asset_index();
     LOCK_GUARD
+    // constructs it inside the map if doesn't exist
+    std::mutex& position_mutex = this->position_mutexes[asset_index];
+    position_mutex.lock();
+    UNLOCK_GUARD
 
     // check if is benchmark order
     if (order->phantom_order)
     {
         this->__on_phantom_order(order);
-        UNLOCK_GUARD
+        position_mutex.unlock();
         return;
     }
 
     // process new incoming order
-    auto asset_index = order->get_asset_index();
+   
     if (!this->position_exists(asset_index))
     {
         this->open_position(order);
@@ -536,12 +537,12 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
         amount += frictions.value().calculate_frictions(order);
 	}
 
-    this->cash -= amount;
+    this->tracers.cash.fetch_add(-amount);
 
     // adjust the strategy's cash
     auto strategy = this->strategies.at(order->get_strategy_index());
     strategy->tracers.cash_add_assign(-amount);
-    UNLOCK_GUARD
+    position_mutex.unlock();
 }
 
 
@@ -549,7 +550,7 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
 AgisResult<bool> Portfolio::__evaluate(bool on_close, bool is_reprice)
 {
     LOCK_GUARD
-    this->nlv = this->cash;
+    this->tracers.nlv.store(this->tracers.cash.load());
     this->unrealized_pl = 0;
     ThreadSafeVector<OrderPtr> orders;
 
@@ -570,7 +571,7 @@ AgisResult<bool> Portfolio::__evaluate(bool on_close, bool is_reprice)
         auto& position = it->second;
 
         position->__evaluate(orders, on_close, is_reprice);
-        this->nlv += position->nlv;
+        this->tracers.nlv.fetch_add(position->nlv);
         this->unrealized_pl += position->unrealized_pl;
 
         if (is_reprice) continue;
@@ -602,9 +603,7 @@ AgisResult<bool> Portfolio::__evaluate(bool on_close, bool is_reprice)
     }
 
     // store portfolio stats at the current level
-    this->nlv_history.push_back(this->nlv);
-    this->cash_history.push_back(this->cash);
-    if (this->is_beta_tracing) this->beta_history.push_back(this->net_beta);
+    this->tracers.evaluate();
 
     // log strategy levels
     for (const auto& strat : this->strategies)
@@ -714,13 +713,8 @@ void Portfolio::__reset()
 
     this->position_history.clear();
     this->trade_history.clear();
-    this->cash_history.clear();
-    this->nlv_history.clear();
-    this->beta_history.clear();
-
-    this->cash = this->starting_cash;
-    this->nlv = this->cash;
-    this->net_beta = 0.0f;    UNLOCK_GUARD
+    this->tracers.reset_history();
+    UNLOCK_GUARD
 }
 
 

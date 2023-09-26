@@ -1,6 +1,27 @@
 #include "pch.h"
+#include <type_traits>
+
 #include "AgisStrategyTracers.h"
 #include "AgisStrategy.h"
+
+
+//============================================================================
+AgisStrategyTracers::AgisStrategyTracers(AgisStrategy* strategy_)
+{
+	this->strategy = strategy_;
+};
+
+
+//============================================================================
+AgisStrategyTracers::AgisStrategyTracers(Portfolio* portfolio, double cash)
+{
+	this->strategy = nullptr;
+	this->starting_cash.store(cash);
+	this->cash.store(cash);
+	this->nlv.store(cash);
+	this->set(Tracer::CASH);
+	this->set(Tracer::NLV);
+};
 
 
 //============================================================================
@@ -9,46 +30,22 @@ std::optional<double> AgisStrategyTracers::get(Tracer tracer) const
 	switch (tracer)
 	{
 	case Tracer::BETA:
-		if (this->has(Tracer::BETA)) return this->net_beta;
+		if (this->has(Tracer::BETA)) return this->net_beta.load();
 		return std::nullopt;
 	case Tracer::VOLATILITY:
-		if (this->has(Tracer::VOLATILITY)) return this->portfolio_volatility;
+		if (this->has(Tracer::VOLATILITY)) return this->portfolio_volatility.load();
 		return std::nullopt;
 	case Tracer::LEVERAGE:
-		if (this->has(Tracer::LEVERAGE)) return this->net_leverage_ratio;
+		if (this->has(Tracer::LEVERAGE)) return this->net_leverage_ratio.load();
 		return std::nullopt;
 	case Tracer::CASH:
-		return this->cash;
+		return this->cash.load();
 		break;
 	case Tracer::NLV:
-		return this->nlv;
+		return this->nlv.load();
 		break;
 	}
 	return std::nullopt;
-}
-
-
-//============================================================================
-void AgisStrategyTracers::build(AgisStrategy* strategy, size_t n)
-{
-	if (this->has(Tracer::BETA)) this->beta_history.reserve(n);
-
-	if (this->has(Tracer::LEVERAGE)) this->net_leverage_ratio_history.reserve(n);
-
-	if (this->has(Tracer::VOLATILITY)) {
-		this->portfolio_volatility_history.reserve(n);
-
-		// init eigen vector of portfolio weights
-		auto asset_count = strategy->exchange_map->get_asset_count();
-		this->portfolio_weights.resize(asset_count);
-		this->portfolio_weights.setZero();
-	}
-
-	this->cash = strategy->portfolio_allocation * strategy->portfolio->get_cash();
-	this->nlv = this->cash;
-
-	if (this->has(Tracer::NLV)) this->nlv_history.reserve(n);
-	if (this->has(Tracer::CASH)) this->cash_history.reserve(n);
 }
 
 
@@ -61,8 +58,8 @@ void AgisStrategyTracers::reset_history()
 	this->net_leverage_ratio_history.clear();
 	this->portfolio_volatility_history.clear();
 
-	this->cash = this->starting_cash;
-	this->nlv = this->cash;
+	this->cash.store(this->starting_cash);
+	this->nlv.store(this->cash.load());
 	this->net_beta = 0.0f;
 	this->net_leverage_ratio = 0.0f;
 }
@@ -121,17 +118,17 @@ AgisResult<bool> AgisStrategyTracers::evaluate()
 {
 	// Note: at this point all trades have been evaluated and the cash balance has been updated
 	// so we only have to observer the values or use them to calculate other values.
-	if (this->has(Tracer::NLV)) this->nlv_history.push_back(this->nlv);
-	if (this->has(Tracer::CASH)) this->cash_history.push_back(this->cash);
+	if (this->has(Tracer::NLV)) this->nlv_history.push_back(this->nlv.load());
+	if (this->has(Tracer::CASH)) this->cash_history.push_back(this->cash.load());
 
 	if (this->has(Tracer::BETA)) {
-		this->beta_history.push_back(this->net_beta);
+		this->beta_history.push_back(this->net_beta.load());
 	}
 
 	if (this->has(Tracer::LEVERAGE)) {
 		// right now net_leverage_ratio has the sum of athe absolute values of the positions
 		// to get the leverage ratio we need to divide the nlv
-		this->net_leverage_ratio_history.push_back(this->net_leverage_ratio / this->nlv);
+		this->net_leverage_ratio_history.push_back(this->net_leverage_ratio.load() / this->nlv.load());
 	}
 
 	if (this->has(Tracer::VOLATILITY)) {
@@ -148,7 +145,7 @@ AgisResult<bool> AgisStrategyTracers::evaluate()
 //============================================================================
 void AgisStrategyTracers::zero_out_tracers()
 {
-	this->nlv = this->cash;
+	this->nlv.store(this->cash.load());
 	if (this->has(Tracer::BETA)) this->net_beta = 0.0f;
 	if (this->has(Tracer::LEVERAGE)) this->net_leverage_ratio = 0.0f;
 	if (this->strategy->limits.max_leverage.has_value()) this->strategy->limits.phantom_cash = 0.0f;

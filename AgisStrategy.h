@@ -193,8 +193,8 @@ public:
 	AGIS_API virtual AgisResult<bool> set_beta_scale_positions(bool val, bool check = true) {apply_beta_scale = val; return AgisResult<bool>(true);}
 	AGIS_API virtual AgisResult<bool> set_beta_hedge_positions(bool val, bool check = true) {apply_beta_hedge = val; return AgisResult<bool>(true);}
 
-	double get_nlv() const noexcept { return this->tracers.nlv; }
-	double get_cash() const noexcept { return this->tracers.cash; }
+	double get_nlv() const noexcept { return this->tracers.nlv.load(); }
+	double get_cash() const noexcept { return this->tracers.cash.load(); }
 	double get_allocation() const noexcept { return this->portfolio_allocation; }
 	size_t get_step_frequency() const noexcept  { return this->step_frequency.value_or(1); }
 

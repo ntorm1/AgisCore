@@ -9,10 +9,12 @@
 #include "pch.h"
 #include <functional>
 #include <limits>
+#include <unordered_map>
 
 #include <ankerl/unordered_dense.h>
 #include "AgisPointers.h"
 #include "AgisRouter.h"
+#include "AgisStrategyTracers.h"
 #include "AgisAnalysis.h"
 #include "Exchange.h"
 #include "Order.h"
@@ -157,6 +159,7 @@ private:
 class Portfolio
 {
     friend class PortfolioMap;
+    friend class AgisStrategyTracers;
 public:
     AGIS_API Portfolio(AgisRouter& router, std::string const& portfolio_id, double cash);
 
@@ -167,10 +170,8 @@ public:
     size_t __get_index()const { return this->portfolio_index; }
 
     /// <summary>
-    /// Evaluate the portfolio using the current exchange map and assets
+    /// Evaluate the portfolio using the current asset prices
     /// </summary>
-    /// <param name="router">Reference to the order router</param>
-    /// <param name="exchanges">Const ref to a Hydra's exchange map instance</param>
     /// <param name="on_close">Are we on close</param>
     /// <param name="is_reprice">Is this a reprice, i.e. just evaluate the portfolio at current prices</param>
     AgisResult<bool> __evaluate(bool on_close, bool is_reprice = false);
@@ -216,28 +217,29 @@ public:
     /// <returns></returns>
     AGIS_API void register_strategy(MAgisStrategyRef strategy);
 
-    double inline get_cash() const { return this->cash; }
-    double inline get_nlv() const { return this->nlv; }
+    double inline get_cash() const { return this->tracers.cash.load(); }
+    double inline get_nlv() const { return this->tracers.nlv.load(); }
     double inline get_unrealized_pl() const { return this->unrealized_pl; }
     Frequency inline get_frequency() const { return this->frequency; }
 
     AGIS_API inline std::vector<SharedPositionPtr> const& get_position_history() { return this->position_history; }
     AGIS_API inline std::vector<SharedTradePtr> const& get_trade_history() { return this->trade_history; }
-    AGIS_API inline std::vector<double> const& get_nlv_history_vec() { return this->nlv_history; }
+    AGIS_API inline std::vector<double> const& get_nlv_history_vec() { return this->tracers.nlv_history; }
 
-    AGIS_API inline std::vector<double> get_beta_history() const { return beta_history; }
-    AGIS_API inline std::vector<double> get_nlv_history() const { return nlv_history; }
-    AGIS_API inline std::vector<double> get_cash_history() const { return cash_history; }
+    AGIS_API inline std::vector<double> get_beta_history() const { return this->tracers.beta_history; }
+    AGIS_API inline std::vector<double> get_nlv_history() const { return this->tracers.nlv_history; }
+    AGIS_API inline std::vector<double> get_cash_history() const { return this->tracers.cash_history; }
 
     json to_json() const;
     void restore(json const& strategies);
     void __reset();
+    inline void __set_exchange_map(ExchangeMap const* exchange_map_) { this->exchange_map = exchange_map_; }
     void __remove_strategy(size_t index);
     inline bool __strategy_exists(size_t index) { return this->strategies.contains(index); }
     static void __reset_counter() { Portfolio::portfolio_counter = 0; }
     void __remember_order(SharedOrderPtr order);
     void __on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids);
-    bool __is_beta_trace() const { return this->is_beta_tracing; }
+    bool __is_beta_trace() const { return this->tracers.has(Tracer::BETA); }
 
 
 protected:
@@ -275,15 +277,12 @@ protected:
     /// </summary>
     std::mutex _mutex;
 
-    std::vector<double> beta_history;
-    std::vector<double> nlv_history;
-    std::vector<double> cash_history;
-    bool is_beta_tracing = false;
+    /**
+     * @brief Pointer to the main exchange map object
+    */
+    ExchangeMap const* exchange_map = nullptr;
 
-    double net_beta = 0;
-    double nlv = 0;
-    double cash = 0;
-    double starting_cash = 0;
+    AgisStrategyTracers tracers;
 
 private:
     void open_position(OrderPtr const& order);
@@ -335,10 +334,16 @@ private:
 
     double unrealized_pl = 0;
 
-    /// <summary>
-    /// Map between asset index and a position
-    /// </summary>
+    /**
+     * @brief Map between asset index and a position
+    */
     ankerl::unordered_dense::map<size_t, PositionPtr> positions;
+
+    /**
+     * @brief Map between asset index and a mutex lock. Used to prevent positions from 
+     * beind modified from different threads.
+    */
+    std::unordered_map<size_t, std::mutex> position_mutexes;
 
     std::optional<Frictions> frictions;
     std::vector<SharedPositionPtr> position_history;

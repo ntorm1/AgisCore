@@ -118,6 +118,7 @@ AGIS_API PortfolioPtr const Hydra::new_portfolio(std::string id, double cash)
     }
     this->is_built = false;
     auto portfolio = std::make_unique<Portfolio>(this->router, id, cash);
+    portfolio->__set_exchange_map(&this->exchanges);
     this->portfolios.__register_portfolio(std::move(portfolio));
 
     return this->get_portfolio(id);

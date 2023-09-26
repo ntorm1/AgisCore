@@ -61,7 +61,7 @@ void AgisRouter::process_beta_hedge(OrderPtr& order)
     // adjut the trades beta hedge partition 
     auto asset_index = child_order->get_asset_index();
     if (!order->parent_trade->partition_exists(asset_index)) {
-        auto partition = std::make_shared<TradePartition>(
+        auto partition = std::make_unique<TradePartition>(
             order->parent_trade,
             child_order->parent_trade,
             child_order->get_units()
