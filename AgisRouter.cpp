@@ -4,25 +4,28 @@
 #ifdef USE_TBB
 #include <tbb/concurrent_queue.h>
 #include <tbb/parallel_for_each.h>
+#include <tbb/parallel_for.h>
+#include <tbb/task_group.h>
+constexpr size_t num_threads = 1;
 #endif
 
 #include "AgisRouter.h"
 #include "Portfolio.h"
 
 
-
 //============================================================================
 struct AgisRouterPrivate
 {
 #ifdef USE_TBB
+    
     tbb::concurrent_queue<OrderPtr> channel;
+
+    AgisRouterPrivate() {}
+
 #else
     ThreadSafeVector<OrderPtr> channel;
 #endif
 };
-
-
-
 
 
 //============================================================================
@@ -123,21 +126,18 @@ void AgisRouter::cheat_order(OrderPtr& order)
 //============================================================================
 void AgisRouter::__process() {
 #ifdef USE_TBB
-    //if (this->p->channel.unsafe_size() == 0) { return; }
-    //std::for_each(
-    //    this->p->channel.unsafe_begin(),
-    //    this->p->channel.unsafe_end(),
-    //    [this](OrderPtr& order) {
-    //        processOrder(std::move(order));
-    //    }
-    //);
-    //this->p->channel.clear();
-    while (true) {
-        OrderPtr order = nullptr;
-        auto res = this->p->channel.try_pop(order);
-        if(!res || !order) break;
-        processOrder(std::move(order));
-    }
+
+    tbb::parallel_for(
+        tbb::blocked_range<size_t>(0, num_threads),
+        [this](const tbb::blocked_range<size_t>& r) {
+            while (true) {
+                OrderPtr order = nullptr;
+                auto res = this->p->channel.try_pop(order);
+                if (!res || !order) break;
+                this->processOrder(std::move(order));
+            }
+        }
+    );
 
 #else
     if (this->p->channel.size() == 0) { return; }

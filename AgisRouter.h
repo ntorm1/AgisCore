@@ -10,7 +10,7 @@ class PortfolioMap;
 struct AgisRouterPrivate;
 
 class AgisRouter {
-private:
+protected:
     /// <summary>
     /// Private implementationg for the order channel
     /// </summary>

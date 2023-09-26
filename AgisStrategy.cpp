@@ -29,8 +29,6 @@ AgisStrategy::AgisStrategy(
 	this->tracers.nlv = portfolio_allocation * portfolio->get_cash();
 	this->tracers.cash = portfolio_allocation * portfolio->get_cash();
 	this->tracers.starting_cash = this->tracers.cash.load();
-	this->tracers.set(Tracer::CASH);
-	this->tracers.set(Tracer::NLV);
 }
 
 

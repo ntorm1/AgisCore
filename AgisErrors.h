@@ -66,7 +66,7 @@ public:
 
     inline T unwrap(bool panic = true)
     {
-        if (!this->is_value_exception)
+        if (!this->is_value_exception) [[likely]]
         {
             return std::move(std::get<T>(this->value));
         }
@@ -93,7 +93,7 @@ public:
 
     inline T unwrap_or(T val)
     {
-        if (!this->is_value_exception) 
+        if (!this->is_value_exception) [[likely]]
         {
             return std::get<T>(this->value);
         }

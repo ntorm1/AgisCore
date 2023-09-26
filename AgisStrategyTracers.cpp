@@ -8,7 +8,10 @@
 //============================================================================
 AgisStrategyTracers::AgisStrategyTracers(AgisStrategy* strategy_)
 {
+	// note: cash and nlv set in strategy constructor
 	this->strategy = strategy_;
+	this->set(Tracer::CASH);
+	this->set(Tracer::NLV);
 };
 
 
