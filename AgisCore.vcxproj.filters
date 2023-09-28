@@ -15,144 +15,153 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="framework.h">
+    <ClInclude Include="include\framework.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Exchange.h">
+    <ClInclude Include="include\Exchange.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Hydra.h">
+    <ClInclude Include="include\Hydra.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgisErrors.h">
+    <ClInclude Include="include\AgisErrors.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Asset.h">
+    <ClInclude Include="include\Asset.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Utils.h">
+    <ClInclude Include="include\Utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="pch.h">
+    <ClInclude Include="include\pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="utils_array.h">
+    <ClInclude Include="include\utils_array.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Order.h">
+    <ClInclude Include="include\Order.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="utils_gmp.h">
+    <ClInclude Include="include\utils_gmp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgisPointers.h">
+    <ClInclude Include="include\AgisPointers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgisRouter.h">
+    <ClInclude Include="include\AgisRouter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Portfolio.h">
+    <ClInclude Include="include\Portfolio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgisStrategy.h">
+    <ClInclude Include="include\AgisStrategy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Trade.h">
+    <ClInclude Include="include\Trade.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgisStrategyRegistry.h">
+    <ClInclude Include="include\AgisStrategyRegistry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgisRisk.h">
+    <ClInclude Include="include\AgisRisk.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ExchangeView.h">
+    <ClInclude Include="include\ExchangeView.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgisAnalysis.h">
+    <ClInclude Include="include\AgisAnalysis.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgisOverloads.h">
+    <ClInclude Include="include\AgisOverloads.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgisFunctional.h">
+    <ClInclude Include="include\AgisFunctional.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AbstractAgisStrategy.h">
+    <ClInclude Include="include\AbstractAgisStrategy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgisStrategyTracers.h">
+    <ClInclude Include="include\AgisStrategyTracers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AbstractStrategyTree.h">
+    <ClInclude Include="include\AbstractStrategyTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgisLuaStrategy.h">
+    <ClInclude Include="include\AgisLuaStrategy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgisObservers.h">
+    <ClInclude Include="include\AgisObservers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dllmain.cpp">
+    <ClCompile Include="src\dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="pch.cpp">
+    <ClCompile Include="src\pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Exchange.cpp">
+    <ClCompile Include="src\Exchange.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Hydra.cpp">
+    <ClCompile Include="src\Hydra.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Asset.cpp">
+    <ClCompile Include="src\Asset.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Utils.cpp">
+    <ClCompile Include="src\Utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Order.cpp">
+    <ClCompile Include="src\Order.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Portfolio.cpp">
+    <ClCompile Include="src\Portfolio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AgisStrategy.cpp">
+    <ClCompile Include="src\AgisStrategy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Trade.cpp">
+    <ClCompile Include="src\Trade.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AgisRouter.cpp">
+    <ClCompile Include="src\AgisRouter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AgisRisk.cpp">
+    <ClCompile Include="src\AgisRisk.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ExchangeView.cpp">
+    <ClCompile Include="src\ExchangeView.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AgisAnalysis.cpp">
+    <ClCompile Include="src\AgisAnalysis.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AgisFunctional.cpp">
+    <ClCompile Include="src\AgisFunctional.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AbstractAgisStrategy.cpp">
+    <ClCompile Include="src\AbstractAgisStrategy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AgisStrategyTracers.cpp">
+    <ClCompile Include="src\AgisStrategyTracers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AgisLuaStrategy.cpp">
+    <ClCompile Include="src\AgisLuaStrategy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AbstractStrategyTree.cpp">
+    <ClCompile Include="src\AbstractStrategyTree.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AgisObservers.cpp">
+    <ClCompile Include="src\AgisObservers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\broker\Broker.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\broker\Broker.Base.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\broker\Broker.Dummy.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

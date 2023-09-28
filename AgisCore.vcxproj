@@ -75,11 +75,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(oneTBBLibDir)\vc_mt;$(LibraryPath);;C:\Users\natha\luajit\src</LibraryPath>
-    <IncludePath>$(oneTBBdpstdDir);$(IncludePath);$(SolutionDir)AgisCore\external\include;$(SolutionDir)AgisCore\external\sol2\include;C:\Users\natha\luajit\src</IncludePath>
+    <IncludePath>$(oneTBBdpstdDir);$(IncludePath);$(SolutionDir)AgisCore\external\include;$(SolutionDir)AgisCore\external\sol2\include;C:\Users\natha\luajit\src;$(SolutionDir)AgisCore\include;</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(oneTBBdpstdDir);$(IncludePath);$(SolutionDir)AgisCore\external\include;$(SolutionDir)AgisCore\external\sol2\include;C:\Users\natha\luajit\src</IncludePath>
+    <IncludePath>$(oneTBBdpstdDir);$(IncludePath);$(SolutionDir)AgisCore\external\include;$(SolutionDir)AgisCore\external\sol2\include;C:\Users\natha\luajit\src;$(SolutionDir)AgisCore\include;</IncludePath>
     <LibraryPath>$(oneTBBLibDir)\vc_mt;$(LibraryPath);;C:\Users\natha\luajit\src</LibraryPath>
+    <AllProjectBMIsArePublic>true</AllProjectBMIsArePublic>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <VcpkgConfiguration>Debug</VcpkgConfiguration>
@@ -130,6 +131,8 @@
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4146</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AdditionalModuleDependencies>
+      </AdditionalModuleDependencies>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -147,10 +150,11 @@
       <PreprocessorDefinitions>NDEBUG;AGISCORE_EXPORTS;_WINDOWS;_USRDLL;USE_TBB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>include\pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <AdditionalIncludeDirectories>$(SolutionDir)AgisCore\include;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -163,59 +167,62 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="AbstractAgisStrategy.h" />
-    <ClInclude Include="AbstractStrategyTree.h" />
-    <ClInclude Include="AgisAnalysis.h" />
-    <ClInclude Include="AgisErrors.h" />
-    <ClInclude Include="AgisFunctional.h" />
-    <ClInclude Include="AgisLuaStrategy.h" />
-    <ClInclude Include="AgisObservers.h" />
-    <ClInclude Include="AgisOverloads.h" />
-    <ClInclude Include="AgisPointers.h" />
-    <ClInclude Include="AgisRisk.h" />
-    <ClInclude Include="AgisRouter.h" />
-    <ClInclude Include="AgisStrategy.h" />
-    <ClInclude Include="AgisStrategyRegistry.h" />
-    <ClInclude Include="AgisStrategyTracers.h" />
-    <ClInclude Include="Asset.h" />
-    <ClInclude Include="Exchange.h" />
-    <ClInclude Include="ExchangeView.h" />
-    <ClInclude Include="framework.h" />
-    <ClInclude Include="Portfolio.h" />
-    <ClInclude Include="Trade.h" />
-    <ClInclude Include="utils_gmp.h" />
-    <ClInclude Include="Hydra.h" />
-    <ClInclude Include="Order.h" />
-    <ClInclude Include="pch.h" />
-    <ClInclude Include="Utils.h" />
-    <ClInclude Include="utils_array.h" />
+    <ClInclude Include="include\AbstractAgisStrategy.h" />
+    <ClInclude Include="include\AbstractStrategyTree.h" />
+    <ClInclude Include="include\AgisAnalysis.h" />
+    <ClInclude Include="include\AgisErrors.h" />
+    <ClInclude Include="include\AgisFunctional.h" />
+    <ClInclude Include="include\AgisLuaStrategy.h" />
+    <ClInclude Include="include\AgisObservers.h" />
+    <ClInclude Include="include\AgisOverloads.h" />
+    <ClInclude Include="include\AgisPointers.h" />
+    <ClInclude Include="include\AgisRisk.h" />
+    <ClInclude Include="include\AgisRouter.h" />
+    <ClInclude Include="include\AgisStrategy.h" />
+    <ClInclude Include="include\AgisStrategyRegistry.h" />
+    <ClInclude Include="include\AgisStrategyTracers.h" />
+    <ClInclude Include="include\Asset.h" />
+    <ClInclude Include="include\Exchange.h" />
+    <ClInclude Include="include\ExchangeView.h" />
+    <ClInclude Include="include\framework.h" />
+    <ClInclude Include="include\Portfolio.h" />
+    <ClInclude Include="include\Trade.h" />
+    <ClInclude Include="include\utils_gmp.h" />
+    <ClInclude Include="include\Hydra.h" />
+    <ClInclude Include="include\Order.h" />
+    <ClInclude Include="include\pch.h" />
+    <ClInclude Include="include\Utils.h" />
+    <ClInclude Include="include\utils_array.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AbstractAgisStrategy.cpp" />
-    <ClCompile Include="AbstractStrategyTree.cpp" />
-    <ClCompile Include="AgisAnalysis.cpp" />
-    <ClCompile Include="AgisFunctional.cpp" />
-    <ClCompile Include="AgisLuaStrategy.cpp" />
-    <ClCompile Include="AgisObservers.cpp" />
-    <ClCompile Include="AgisRisk.cpp" />
-    <ClCompile Include="AgisRouter.cpp" />
-    <ClCompile Include="AgisStrategy.cpp" />
-    <ClCompile Include="AgisStrategyTracers.cpp" />
-    <ClCompile Include="Asset.cpp" />
-    <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="Exchange.cpp" />
-    <ClCompile Include="ExchangeView.cpp" />
-    <ClCompile Include="Hydra.cpp" />
-    <ClCompile Include="Order.cpp" />
-    <ClCompile Include="pch.cpp">
+    <ClCompile Include="modules\broker\Broker.Base.ixx" />
+    <ClCompile Include="modules\broker\Broker.Dummy.ixx" />
+    <ClCompile Include="modules\broker\Broker.ixx" />
+    <ClCompile Include="src\AbstractAgisStrategy.cpp" />
+    <ClCompile Include="src\AbstractStrategyTree.cpp" />
+    <ClCompile Include="src\AgisAnalysis.cpp" />
+    <ClCompile Include="src\AgisFunctional.cpp" />
+    <ClCompile Include="src\AgisLuaStrategy.cpp" />
+    <ClCompile Include="src\AgisObservers.cpp" />
+    <ClCompile Include="src\AgisRisk.cpp" />
+    <ClCompile Include="src\AgisRouter.cpp" />
+    <ClCompile Include="src\AgisStrategy.cpp" />
+    <ClCompile Include="src\AgisStrategyTracers.cpp" />
+    <ClCompile Include="src\Asset.cpp" />
+    <ClCompile Include="src\dllmain.cpp" />
+    <ClCompile Include="src\Exchange.cpp" />
+    <ClCompile Include="src\ExchangeView.cpp" />
+    <ClCompile Include="src\Hydra.cpp" />
+    <ClCompile Include="src\Order.cpp" />
+    <ClCompile Include="src\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Portfolio.cpp" />
-    <ClCompile Include="Trade.cpp" />
-    <ClCompile Include="Utils.cpp" />
+    <ClCompile Include="src\Portfolio.cpp" />
+    <ClCompile Include="src\Trade.cpp" />
+    <ClCompile Include="src\Utils.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
