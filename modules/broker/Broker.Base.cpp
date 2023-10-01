@@ -6,7 +6,7 @@ module Broker:Base;
 namespace Agis
 {
 
-size_t Broker::broker_id_counter(0);
+size_t Broker::broker_id_counter(1);
 
 
 //============================================================================
@@ -37,5 +37,26 @@ BrokerMap::get_broker(std::string broker_id) const noexcept
 	}
 }
 
+
+//============================================================================
+std::optional<std::reference_wrapper<OrderPtr>> Broker::__validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept
+{
+	return new_order;
+}
+
+
+//============================================================================
+std::optional<std::reference_wrapper<OrderPtr>> BrokerMap::__validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept
+{
+	auto broker_index = new_order.get()->get_broker_index();
+	if (broker_index == 0) return new_order; // default broker id is 0
+	auto it = this->_broker_map.find(broker_index);
+	if(it != this->_broker_map.end()){
+		return it->second->__validate_order(new_order);
+	}
+	else {
+		return std::nullopt;
+	}
+}
 
 } // namespace Agis

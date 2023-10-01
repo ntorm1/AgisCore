@@ -1,11 +1,18 @@
+module;
+#include "Order.h"
+
 export module Broker:Base;
 
 import <ankerl/unordered_dense.h>;
 import <memory>;
 
+export import <cstdint>;
 export import <expected>;
 export import <functional>;
 export import <AgisException.h>;
+
+
+typedef std::unique_ptr<Order> OrderPtr;
 
 export namespace Agis 
 {
@@ -14,13 +21,20 @@ export namespace Agis
 class Broker
 {
 public:
-	Broker(std::string broker_id) {
+	Broker() = delete;
+	Broker(
+		std::string broker_id,
+		double cash
+	) {
+		_cash = cash;
 		_broker_id = broker_id;
 		_broker_index = broker_id_counter++;
 	};
 	virtual ~Broker() = default;
 
-	[[nodiscard]] std::string get_id() const noexcept { return _broker_id; };
+	std::optional<std::reference_wrapper<OrderPtr>> __validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept;
+
+	[[nodiscard]] std::string const& get_id() const noexcept { return _broker_id; };
 	[[nodiscard]] size_t get_index() const noexcept { return _broker_index; };
 
 private:
@@ -29,6 +43,9 @@ private:
 	std::string _broker_id;
 	size_t _broker_index;
 
+	double _cash;			///< Cash held in the broker's account
+	double _interest_rate;	///< Interest rate on cash held in the broker's account
+	double _margin_rate;	///< Margin rate charged on margin debt
 };
 
 
@@ -40,6 +57,7 @@ public:
 	BrokerMap() = default;
 	~BrokerMap() = default;
 
+	std::optional<std::reference_wrapper<OrderPtr>> __validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept;
 	std::expected<bool, AgisException> register_broker(BrokerPtr new_broker) noexcept;
 	std::expected<std::reference_wrapper<const Broker>, AgisException> get_broker(std::string broker_id) const noexcept;
 

@@ -18,11 +18,12 @@ struct HydraPrivate
 
 //============================================================================
 Hydra::Hydra(int logging_, bool init_lua_state):
+    p(new HydraPrivate()),
     router(
-        this->exchanges,
+        &this->exchanges,
+        &this->p->brokers,
         &this->portfolios)
 {
-    this->p = new HydraPrivate();
     this->logging = logging_;
 #ifdef USE_LUAJIT
     if (init_lua_state) {

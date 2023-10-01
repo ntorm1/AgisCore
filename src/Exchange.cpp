@@ -1255,11 +1255,14 @@ void ExchangeMap::__process_orders(AgisRouter& router, bool on_close)
 
 
 //============================================================================
-void ExchangeMap::__place_order(std::unique_ptr<Order> order)
+std::optional<bool> ExchangeMap::__place_order(std::unique_ptr<Order> order) noexcept
 {
+	if(order->get_asset_index() >= this->assets.size()) return std::nullopt;
 	auto& asset = this->assets[order->get_asset_index()];
-	auto& exchange = this->exchanges.at(asset->get_exchange_id());
-	exchange->__place_order(std::move(order));
+	auto it = this->exchanges.find(asset->get_exchange_id());
+	if (it == this->exchanges.end()) return std::nullopt;
+	it->second->__place_order(std::move(order));
+	return true;
 ;}
 
 

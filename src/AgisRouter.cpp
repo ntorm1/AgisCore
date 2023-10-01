@@ -13,6 +13,10 @@ constexpr size_t num_threads = 1;
 #include "Portfolio.h"
 
 
+import Broker;
+
+using namespace Agis;
+
 //============================================================================
 struct AgisRouterPrivate
 {
@@ -30,14 +34,17 @@ struct AgisRouterPrivate
 
 //============================================================================
 AgisRouter::AgisRouter(
-    ExchangeMap& exchanges_,
+    ExchangeMap* exchanges_,
+    BrokerMap* brokers_,
     PortfolioMap* portfolios_,
-    bool is_logging_orders_) :
+    bool is_logging_orders_
+) :
     exchanges(exchanges_),
+    brokers(brokers_),
     portfolios(portfolios_),
     p(new AgisRouterPrivate)
 {
-    this->is_logging_orders = is_logging_orders_;
+    this->log_orders = is_logging_orders_;
 }
 
 
@@ -82,6 +89,10 @@ void AgisRouter::process_beta_hedge(OrderPtr& order)
 //============================================================================
 void AgisRouter::processOrder(OrderPtr order) {
     if (!order) { return; }
+
+    // get reference wrapper to the order
+    std::reference_wrapper<OrderPtr> order_ref = order;
+
     switch (order->get_order_state())
     {
     case OrderState::REJECTED:
@@ -89,7 +100,8 @@ void AgisRouter::processOrder(OrderPtr order) {
         break;
     case OrderState::PENDING:
         // order has been placed by a strategy and is routed to the correct exchange
-        this->exchanges.__place_order(std::move(order));
+        this->brokers->__validate_order(order_ref)
+            .and_then([this](std::reference_wrapper<OrderPtr> order_ref){return this->exchanges->__place_order(std::move(order_ref.get())); });
         return;
     case OrderState::FILLED: {
         // order has been filled by the exchange and is routed to the portfolio
@@ -110,14 +122,14 @@ void AgisRouter::processOrder(OrderPtr order) {
         break;
     }
 
-    if (!is_logging_orders) return;
+    if (!log_orders) return;
     this->remeber_order(std::move(order));
 }
 
 //============================================================================
 void AgisRouter::cheat_order(OrderPtr& order)
 {
-    this->exchanges.__process_order(true, order);
+    this->exchanges->__process_order(true, order);
     if (order->get_order_state() != OrderState::FILLED) return;
     this->portfolios->__on_order_fill(order);
 }

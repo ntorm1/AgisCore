@@ -40,6 +40,7 @@ private:
     size_t asset_index;             /// unique index of the asset
     size_t strategy_index;          /// unique id of the strategy that placed the order
     size_t portfolio_index;         /// unique id of the portflio the order was placed to
+    size_t broker_index; 		    /// unique id of the broker the order was placed to
 
     /// <summary>
     /// An option trade exit to be given to the trade created by this order
@@ -69,24 +70,26 @@ public:
         size_t strategy_index_,
         size_t portfolio_index_,
         std::optional<TradeExitPtr> exit = std::nullopt,
-        bool phantom = false
+        bool phantom = false,
+        size_t broker_index_ = 0
     );
 
-    [[nodiscard]] std::optional<double> get_limit() const { return this->limit; }
-    [[nodiscard]] bool has_beta_hedge_order() const { return this->beta_hedge_order.has_value(); }
-    [[nodiscard]] TradeExitPtr get_exit() const { return this->exit.value(); }
-    [[nodiscard]] OrderPtr const& get_child_order_ref() const { return this->beta_hedge_order.value(); }
-    [[nodiscard]] OrderPtr take_beta_hedge_order() { return std::move(this->beta_hedge_order.value()); this->beta_hedge_order = std::nullopt; }
-    [[nodiscard]] OrderPtr const & get_beta_hedge_order_ref() { return this->beta_hedge_order.value(); }
+    [[nodiscard]] inline std::optional<double> get_limit() const noexcept{ return this->limit; }
+    [[nodiscard]] inline bool has_beta_hedge_order() const noexcept { return this->beta_hedge_order.has_value(); }
+    [[nodiscard]] inline TradeExitPtr get_exit() const noexcept { return this->exit.value(); }
+    [[nodiscard]] inline OrderPtr const& get_child_order_ref() const noexcept { return this->beta_hedge_order.value(); }
+    [[nodiscard]] inline OrderPtr take_beta_hedge_order() noexcept { return std::move(this->beta_hedge_order.value()); this->beta_hedge_order = std::nullopt; }
+    [[nodiscard]] inline OrderPtr const & get_beta_hedge_order_ref() noexcept { return this->beta_hedge_order.value(); }
 
-    [[nodiscard]] size_t get_order_id() const { return this->order_id; }
-    [[nodiscard]] size_t get_asset_index() const { return this->asset_index; }
-    [[nodiscard]] size_t get_strategy_index() const { return this->strategy_index; }
-    [[nodiscard]] size_t get_portfolio_index() const { return this->portfolio_index; }
-    [[nodiscard]] OrderType get_order_type() const { return this->order_type; }
-    [[nodiscard]] OrderState get_order_state() const { return this->order_state; }
-    [[nodiscard]] std::optional<TradeExitPtr> move_exit() { return std::move(this->exit); }
-    [[nodiscard]] bool has_exit() const { return this->exit.has_value(); }
+    [[nodiscard]] inline size_t get_order_id() const noexcept { return this->order_id; }
+    [[nodiscard]] inline size_t get_asset_index() const noexcept { return this->asset_index; }
+    [[nodiscard]] inline size_t get_strategy_index() const noexcept { return this->strategy_index; }
+    [[nodiscard]] inline size_t get_broker_index() const noexcept { return this->broker_index; }
+    [[nodiscard]] inline size_t get_portfolio_index() const noexcept { return this->portfolio_index; }
+    [[nodiscard]] inline OrderType get_order_type() const noexcept { return this->order_type; }
+    [[nodiscard]] inline OrderState get_order_state() const noexcept { return this->order_state; }
+    [[nodiscard]] inline std::optional<TradeExitPtr> move_exit() noexcept { return std::move(this->exit); }
+    [[nodiscard]] bool has_exit() const noexcept { return this->exit.has_value(); }
 
     void insert_beta_hedge_order(OrderPtr child_order_) { this->beta_hedge_order = std::move(child_order_); }
     void set_limit(double limit_) { this->limit = limit_; }

@@ -16,14 +16,16 @@ Order::Order(OrderType order_type_,
     size_t strategy_index_,
     size_t portfolio_index_,
     std::optional<TradeExitPtr> exit_,
-    bool phantom_order_
+    bool phantom_order_,
+    size_t broker_index_
     )
 {   
     this->order_type = order_type_;
     this->asset_index = asset_index_;
-    this->units = units_;
+    this->broker_index = broker_index_;
     this->strategy_index = strategy_index_;
     this->portfolio_index = portfolio_index_;
+    this->units = units_;
     this->phantom_order = phantom_order_;
 
     this->exit = std::move(exit_);

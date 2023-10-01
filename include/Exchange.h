@@ -492,7 +492,7 @@ public:
 	 * @brief place an incoming order on the exchange order queue to be evaluated at the next step
 	 * @param order unique pointer to the order to place on the exchange
 	*/
-	void __place_order(std::unique_ptr<Order> order);
+	std::optional<bool> __place_order(std::unique_ptr<Order> order) noexcept;
 
 	/**
 	 * @brief process all open orders on the exchange and send rejects and fills back to the router

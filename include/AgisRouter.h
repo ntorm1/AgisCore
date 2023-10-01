@@ -4,9 +4,13 @@
 #include <atomic>
 
 #include "Order.h"
-#include "Exchange.h"
+
+namespace Agis {
+    class BrokerMap;
+};
 
 class PortfolioMap;
+class ExchangeMap;
 struct AgisRouterPrivate;
 
 class AgisRouter {
@@ -19,12 +23,17 @@ protected:
     /// <summary>
     /// Wether or not to log orders
     /// </summary>
-    bool is_logging_orders = true;
+    bool log_orders = true;
     
     /// <summary>
     /// Reference to an exsiting exchange map that handles new orders
     /// </summary>
-    ExchangeMap& exchanges;
+    ExchangeMap* exchanges;
+
+    /**
+     * @brief Pointer to an exsiting broker map that handles new orders
+    */
+    Agis::BrokerMap* brokers;
 
     /// <summary>
     /// Reference to an exsiting portfolio map that handles filled orders
@@ -50,7 +59,8 @@ protected:
 
 public:
     AgisRouter(
-        ExchangeMap& exchanges_,
+        ExchangeMap* exchanges_,
+        Agis::BrokerMap* brokers_,
         PortfolioMap* portfolios_,
         bool is_logging_orders = true
     );

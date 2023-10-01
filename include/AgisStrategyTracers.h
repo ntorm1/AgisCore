@@ -16,7 +16,7 @@ using namespace Eigen;
 class AgisStrategy;
 class Portfolio;
 
-enum Tracer : uint16_t {
+enum Tracer : size_t {
     NLV = 0,
     CASH = 1,
     LEVERAGE = 2,
