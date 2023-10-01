@@ -4,6 +4,7 @@
 #include "AgisStrategy.h"
 #include "Hydra.h"
 
+using namespace rapidjson;
 
 std::atomic<size_t> Trade::trade_counter(0);
 
@@ -140,26 +141,38 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
 
 
 //============================================================================
-AgisResult<json> Trade::serialize(json& _json, HydraPtr hydra) const
+std::expected<rapidjson::Document, AgisException> Trade::serialize(HydraPtr hydra) const
 {
-    if (_json.size()) { _json.clear(); }
+    Document trade(kObjectType);
 
-    _json["Trade Open Time"] = this->trade_open_time;
-    _json["Trade Close Time"] = this->trade_close_time;
-    _json["Bars Held"] = this->bars_held;
-    _json["Units"] = this->units;
-    _json["Average Price"] = this->average_price;
-    _json["Close Price"] = this->close_price;
-    _json["Unrealized PL"] = this->unrealized_pl;
-    _json["Realized PL"] = this->realized_pl;
-    _json["Trade Identifier"] = this->trade_id;
-    _json["NLV"] = this->nlv;
-    _json["Last Price"] = this->last_price;
-    AGIS_ASSIGN_OR_RETURN(_json["Asset Identifier"], hydra->asset_index_to_id(this->asset_index), std::string, json);
-    AGIS_ASSIGN_OR_RETURN(_json["Strategy Identifier"], hydra->strategy_index_to_id(this->strategy_index), std::string, json);
-    AGIS_ASSIGN_OR_RETURN(_json["Portfolio Identifier"], hydra->portfolio_index_to_id(this->portfolio_index), std::string, json);
+    trade.AddMember("Trade Open Time", trade_open_time, trade.GetAllocator());
+    trade.AddMember("Trade Close Time", trade_close_time, trade.GetAllocator());
 
-    return AgisResult<json>(_json);
+    trade.AddMember("Bars Held", bars_held, trade.GetAllocator());
+    trade.AddMember("Units", units, trade.GetAllocator());
+    trade.AddMember("Average Price", average_price, trade.GetAllocator());
+    trade.AddMember("Close Price", close_price, trade.GetAllocator());
+    trade.AddMember("Unrealized PL", unrealized_pl, trade.GetAllocator());
+    trade.AddMember("Realized PL", realized_pl, trade.GetAllocator());
+    trade.AddMember("Trade Identifier", trade_id, trade.GetAllocator());
+    trade.AddMember("NLV", nlv, trade.GetAllocator());
+    trade.AddMember("Last Price", last_price, trade.GetAllocator());
+
+    Value asset_id, strategy_id, portfolio_id;
+    try {
+        asset_id.SetString(hydra->asset_index_to_id(asset_index).unwrap().c_str(), trade.GetAllocator());
+        strategy_id.SetString(hydra->strategy_index_to_id(strategy_index).unwrap().c_str(), trade.GetAllocator());
+        portfolio_id.SetString(hydra->portfolio_index_to_id(portfolio_index).unwrap().c_str(), trade.GetAllocator());
+    }
+    catch (AgisException& e) {
+        return std::unexpected<AgisException> {e.what()};
+	}
+
+    trade.AddMember("Asset Identifier", asset_id, trade.GetAllocator());
+    trade.AddMember("Strategy Identifier", strategy_id, trade.GetAllocator());
+    trade.AddMember("Portfolio Identifier", portfolio_id, trade.GetAllocator());
+
+    return trade;
 }
 
 

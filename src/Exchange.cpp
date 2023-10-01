@@ -9,6 +9,9 @@
 #include "AgisRouter.h"
 #include "AgisObservers.h"
 #include "AgisRisk.h"
+#include "AgisFunctional.h"
+
+using namespace rapidjson;
 
 std::atomic<size_t> Exchange::exchange_counter(0);
 std::vector<std::string> exchange_view_opps = {
@@ -45,15 +48,14 @@ Exchange::~Exchange()
 
 
 //============================================================================
-void ExchangeMap::restore(json const& j)
+void ExchangeMap::restore(rapidjson::Document const& j)
 {
-	json exchanges = j["exchanges"];
-	std::vector<std::pair<std::string, json>> exchangeItems;
+	rapidjson::Value const& exchanges = j["exchanges"];
+	std::vector<std::pair<std::string, Value const&>> exchangeItems;
 
 	// Store the exchange items in a vector for parallel processing
-	for (const auto& exchange : exchanges.items())
-	{
-		exchangeItems.emplace_back(exchange.key(), exchange.value());
+	for (auto it = exchanges.MemberBegin(); it != exchanges.MemberEnd(); ++it) {
+		exchangeItems.emplace_back(it->name.GetString(), it->value);
 	}
 
 	this->asset_counter = 0;
@@ -61,21 +63,21 @@ void ExchangeMap::restore(json const& j)
 	std::for_each(std::execution::par, exchangeItems.begin(), exchangeItems.end(), [&](const auto& exchange) {
 		auto const& exchange_id_ = exchange.first;
 		auto const& exchange_json = exchange.second;
-		auto const& source_dir_ = exchange_json["source_dir"];
-		auto const& dt_format_ = exchange_json["dt_format"];
-		auto freq_ = string_to_freq(exchange_json["freq"]);
+		auto const& source_dir_ = exchange_json["source_dir"].GetString();
+		auto const& dt_format_ = exchange_json["dt_format"].GetString();
+		auto freq_ = StringToFrequency(exchange_json["freq"].GetString());
 		this->new_exchange(exchange_id_, source_dir_, freq_, dt_format_);
 
 		// set market asset if needed
 		MarketAsset market_asset = MarketAsset(
-			exchange_json["market_asset"], exchange_json["market_warmup"]
+			exchange_json["market_asset"].GetString(), exchange_json["market_warmup"].GetInt()
 		);
 
 		this->restore_exchange(exchange_id_, std::nullopt, market_asset);
 
 		// set volatility lookback
 		auto exchange_ptr = this->get_exchange(exchange_id_);
-		size_t volatility_lookback = exchange_json.value("volatility_lookback", 0);
+		size_t volatility_lookback = exchange_json["volatility_lookback"].GetUint64();
 		exchange_ptr->__set_volatility_lookback(volatility_lookback);
 	});
 
@@ -88,34 +90,39 @@ void ExchangeMap::restore(json const& j)
 		this->market_assets[market_asset->get_frequency()] = market_asset;
 	}
 
-	// init covariance matrix if needed
-	if (j.contains("covariance_lookback")) {
-		this->init_covariance_matrix(j["covariance_lookback"], j["covariance_step"]);
+	// Check if 'covariance_lookback' and 'covariance_step' fields exist
+	if (j.HasMember("covariance_lookback") && j.HasMember("covariance_step")) {
+		// Extract the values and call the corresponding function
+		int covariance_lookback = j["covariance_lookback"].GetInt();
+		int covariance_step = j["covariance_step"].GetInt();
+
+		// Call the function with the extracted values
+		this->init_covariance_matrix(covariance_lookback, covariance_step);
 	}
 
 }
 
 
 //============================================================================
-json Exchange::to_json() const
+rapidjson::Document Exchange::to_json() const
 {
-	auto j = json{
-		{"exchange_id", this->exchange_id},
-		{"source_dir", this->source_dir},
-		{"freq", this->freq},
-		{"dt_format", this->dt_format},
-		{"volatility_lookback", this->volatility_lookback}
-	};
-	if (this->market_asset.has_value())
-	{
-		j["market_asset"] = this->market_asset.value().asset->get_asset_id();
-		j["market_warmup"] = this->market_asset.value().beta_lookback.value();
+	rapidjson::Document j(rapidjson::kObjectType);
+	j.AddMember("exchange_id", rapidjson::StringRef(exchange_id.c_str()), j.GetAllocator());
+	j.AddMember("source_dir", rapidjson::StringRef(source_dir.c_str()), j.GetAllocator());
+	j.AddMember("freq", rapidjson::StringRef(FrequencyToString(this->freq)), j.GetAllocator());
+	j.AddMember("dt_format", rapidjson::StringRef(dt_format.c_str()), j.GetAllocator());
+	j.AddMember("volatility_lookback", volatility_lookback, j.GetAllocator());
+
+	if (market_asset.has_value()) {
+		rapidjson::Value market_asset_id(market_asset.value().asset->get_asset_id().c_str(), j.GetAllocator());
+		j.AddMember("market_asset", market_asset_id.Move(), j.GetAllocator());
+		j.AddMember("market_warmup", market_asset.value().beta_lookback.value(), j.GetAllocator());
 	}
-	else
-	{
-		j["market_asset"] = "";
-		j["market_warmup"] = 0;
+	else {
+		j.AddMember("market_asset", "", j.GetAllocator());
+		j.AddMember("market_warmup", 0, j.GetAllocator());
 	}
+
 	return j;
 }
 
@@ -300,7 +307,7 @@ AgisResult<bool> ExchangeMap::set_market_asset(
 	// validate that the a market asset has not already been set for this frequency
 	auto asset = this->get_asset(asset_id).unwrap();
 	auto freq = asset->get_frequency();
-	if(this->market_assets.contains(freq)) return AgisResult<bool>(AGIS_EXCEP("market asset already set for frequency: " + freq_to_string(freq)));
+	if(this->market_assets.contains(freq)) return AgisResult<bool>(AGIS_EXCEP("market asset already set for frequency: " + FrequencyToString(freq)));
 	
 	// set the market asset to the exchange
 	auto res = this->exchanges[exchange_id]->__set_market_asset(asset_id, disable_asset, beta_lookback);
@@ -857,10 +864,11 @@ ExchangeMap::~ExchangeMap()
 
 
 //============================================================================
-json ExchangeMap::to_json() const {
-	json j;
-	for (const auto& pair : this->exchanges) {
-		j[pair.first] = pair.second->to_json();
+rapidjson::Document ExchangeMap::to_json() const {
+	rapidjson::Document j(rapidjson::kObjectType);
+	for (const auto& pair : exchanges) {
+		rapidjson::Value key(pair.first.c_str(), j.GetAllocator());
+		j.AddMember(key.Move(), pair.second->to_json(), j.GetAllocator());
 	}
 	return j;
 }

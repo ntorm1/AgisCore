@@ -5,6 +5,8 @@
 #define AGIS_API __declspec(dllimport)
 #endif
 #include "pch.h"
+#include <span>
+#include <unordered_map>
 
 class Asset;
 class AssetObserver;
@@ -23,7 +25,7 @@ enum class AGIS_API AssetObserverType {
 
 
 //============================================================================
-static std::map<AssetObserverType, std::string> AssetObserverTypeMap = {
+static std::unordered_map<AssetObserverType, std::string> AssetObserverTypeMap = {
 	{ AssetObserverType::COL_ROL_MEAN, "COL_ROL_MEAN" },
 	{ AssetObserverType::COL_ROL_VAR, "COL_ROL_VAR" },
 	{ AssetObserverType::COL_ROL_ZSCORE, "COL_ROL_ZSCORE" },

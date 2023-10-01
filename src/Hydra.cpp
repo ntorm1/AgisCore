@@ -6,12 +6,23 @@
 #include "Exchange.h"
 #include "AgisObservers.h"
 
+import Broker;
+
+using namespace rapidjson;
+using namespace Agis;
+
+struct HydraPrivate
+{
+    BrokerMap brokers;
+};
+
 //============================================================================
 Hydra::Hydra(int logging_, bool init_lua_state):
     router(
         this->exchanges,
         &this->portfolios)
 {
+    this->p = new HydraPrivate();
     this->logging = logging_;
 #ifdef USE_LUAJIT
     if (init_lua_state) {
@@ -37,6 +48,7 @@ Hydra::~Hydra()
         delete this->lua;
     }
 	#endif
+    delete this->p;
 }
 
 
@@ -266,7 +278,8 @@ AGIS_API bool Hydra::strategy_exists(std::string const& strategy_id) const
 }
 
 
-AGIS_API AgisResult<bool> Hydra::restore_exchanges(json const& j)
+//============================================================================
+AGIS_API AgisResult<bool> Hydra::restore_exchanges(rapidjson::Document const& j)
 {
     try{
         this->exchanges.restore(j);
@@ -354,45 +367,55 @@ AgisResult<bool> Hydra::__cleanup()
 
 
 //============================================================================
-void Hydra::save_state(json& j)
+void Hydra::save_state(Document& j)
 {
-    // save exchanges
-    j["exchanges"] = this->exchanges.to_json();
-    auto cov_matrix = this->exchanges.get_covariance_matrix();
-    if (!cov_matrix.is_exception()) {
-        j["covariance_lookback"] = cov_matrix.unwrap()->get_lookback();
-        j["covariance_step"] = cov_matrix.unwrap()->get_step_size();
+    // Save exchanges
+    j.AddMember("exchanges", exchanges.to_json(), j.GetAllocator());
+
+    // Save covariance matrix
+    auto cov_matrix_res = exchanges.get_covariance_matrix();
+    if (!cov_matrix_res.is_exception()) {
+        auto cov_matrix = cov_matrix_res.unwrap();
+        if (cov_matrix->get_lookback() != 0) {
+            j.AddMember("covariance_lookback", cov_matrix->get_lookback(), j.GetAllocator());
+            j.AddMember("covariance_step", cov_matrix->get_step_size(), j.GetAllocator());
+        }
     }
 
-    // save portfolios
-    j["portfolios"] = this->portfolios.to_json();
+    // Save portfolios
+    auto portfolio_json = portfolios.to_json();
+    if (!portfolio_json.has_value()) {
+        throw portfolio_json.error();
+    }
+    j.AddMember("portfolios", portfolio_json.value(), j.GetAllocator());
 }
 
 
+//============================================================================
 AgisResult<AgisStrategyPtr> strategy_from_json(
     PortfolioPtr const & portfolio,
-    json const& strategy_json)
+    const Value& strategy_json)
 {
-    AgisStrategyType strategy_type = strategy_json["strategy_type"];
-    std::string strategy_id = strategy_json.at("strategy_id");
-    std::string trading_window = strategy_json.at("trading_window");
+    AgisStrategyType strategy_type = StringToAgisStrategyType(strategy_json["strategy_type"].GetString());
+    std::string strategy_id = strategy_json["strategy_id"].GetString();
+    std::string trading_window = strategy_json["trading_window"].GetString();
 
-    bool beta_scale = strategy_json.value("beta_scale", false);
-    bool beta_hedge = strategy_json.value("beta_hedge", false);
-    bool beta_trace = strategy_json.value("beta_trace", false);
-    bool net_leverage_trace = strategy_json.value("net_leverage_trace", false);
-    bool vol_trace = strategy_json.value("vol_trace", false);
+    bool beta_scale = strategy_json["beta_scale"].GetBool();
+    bool beta_hedge = strategy_json["beta_hedge"].GetBool();
+    bool beta_trace = strategy_json["beta_trace"].GetBool();
+    bool net_leverage_trace = strategy_json["net_leverage_trace"].GetBool();
+    bool vol_trace = strategy_json["vol_trace"].GetBool();
 
-    bool is_live = strategy_json.at("is_live");
-    double allocation = strategy_json.at("allocation");
+    bool is_live = strategy_json["is_live"].GetBool();
+    double allocation = strategy_json["allocation"].GetDouble();
 
     std::optional<double> max_leverage = std::nullopt;
     std::optional<size_t> step_frequency = std::nullopt;
-    if (strategy_json.contains("max_leverage")) {
-        max_leverage = strategy_json.at("max_leverage");
+    if (strategy_json.HasMember("max_leverage")) {
+        max_leverage = strategy_json["max_leverage"].GetDouble();
     }
-    if (strategy_json.contains("step_frequency")) {
-        step_frequency = strategy_json.at("step_frequency");
+    if (strategy_json.HasMember("step_frequency")) {
+        step_frequency = strategy_json["step_frequency"].GetUint64();
     }
 
     AgisStrategyPtr strategy = nullptr;
@@ -413,10 +436,10 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
         );
     }
     else if (strategy_type == AgisStrategyType::LUAJIT) {
-        if (!strategy_json.contains("lua_script_path")) {
+        if (!strategy_json.HasMember("lua_script_path")) {
             return AgisResult<AgisStrategyPtr>(AGIS_EXCEP("LUAJIT strategy missing script path"));
         }
-        std::string script_path = strategy_json.at("lua_script_path");
+        std::string script_path = strategy_json["lua_script_path"].GetString();
         try {
             strategy = std::make_unique<AgisLuaStrategy>(
                 portfolio,
@@ -452,26 +475,28 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
 
 
 //============================================================================
-AgisResult<bool> Hydra::restore_portfolios(json const& j)
+AgisResult<bool> Hydra::restore_portfolios(Document const& j)
 {
     this->portfolios.restore(this->router, j);
 
+    const Value& portfolios = j["portfolios"];
+    for (Value::ConstMemberIterator portfolio_json = portfolios.MemberBegin(); portfolio_json != portfolios.MemberEnd(); ++portfolio_json) {
+        std::string portfolio_id = portfolio_json->name.GetString();
+        const Value& portfolio_value = portfolio_json->value;
+        const Value& strategies = portfolio_value["strategies"];
 
-    // build the abstract strategies stored in the json
-    json portfolios = j["portfolios"];
-    for (const auto& portfolio_json : portfolios.items())
-    {
-        std::string portfolio_id = portfolio_json.key();
-        json& j = portfolio_json.value();
-        json& strategies = j["strategies"];
         auto& portfolio = this->get_portfolio(portfolio_id);
-        for (const auto& strategy_json : strategies)
-        {
-            AgisStrategyType strategy_type = strategy_json["strategy_type"];
-            if (strategy_type == AgisStrategyType::CPP) continue;
 
-            auto strategy = strategy_from_json(portfolio, strategy_json);
-            if(strategy.is_exception()) return AgisResult<bool>(strategy.get_exception());
+        for (Value::ConstValueIterator strategy_json = strategies.Begin(); strategy_json != strategies.End(); ++strategy_json) {
+            const AgisStrategyType strategy_type = StringToAgisStrategyType(strategy_json->FindMember("strategy_type")->value.GetString());
+            if (strategy_type == AgisStrategyType::CPP) {
+                continue;
+            }
+
+            auto strategy = strategy_from_json(portfolio, *strategy_json);
+            if (strategy.is_exception()) {
+                return AgisResult<bool>(strategy.get_exception());
+            }
             this->register_strategy(std::move(strategy.unwrap()));
         }
     }
@@ -503,7 +528,6 @@ AgisResult<bool> Hydra::set_market_asset(
 
 
 template struct AGIS_API AgisResult<bool>;
-template struct AGIS_API AgisResult<json>;
 template struct AGIS_API AgisResult<std::string>;
 template struct AGIS_API AgisResult<size_t>;
 template struct AGIS_API AgisResult<TradeExitPtr>;

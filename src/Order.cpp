@@ -4,6 +4,8 @@
 #include "Hydra.h"
 #include <mutex>
 
+using namespace rapidjson;
+
 std::atomic<size_t> Order::order_counter(0);
 
 
@@ -30,25 +32,41 @@ Order::Order(OrderType order_type_,
 
 
 //============================================================================
-AgisResult<json> Order::serialize(json& order, HydraPtr hydra) const
+std::expected<rapidjson::Document, AgisException> Order::serialize(HydraPtr hydra) const
 {
-    if (order.size()) { order.clear(); }
+    Document order(kObjectType);
     
-    order["Order ID"] = this->order_id;
-    order["Order Type"] = this->order_type;
-    order["Order State"] = this->order_state;
-    order["Units"] = this->units;
-	order["Average Price"] = this->avg_price;
-    order["Limit"] = this->limit.value_or(0.0f);
-    order["Order Create Time"] = this->order_create_time;   
-    order["Order Fill Time"] = this->order_fill_time;
-    order["Order Cancel Time"] = this->order_cancel_time;
-     
-    AGIS_ASSIGN_OR_RETURN(order["Asset Identifier"], hydra->asset_index_to_id(this->asset_index), std::string, json);
-    AGIS_ASSIGN_OR_RETURN(order["Strategy Identifier"], hydra->strategy_index_to_id(this->strategy_index), std::string, json);
-    AGIS_ASSIGN_OR_RETURN(order["Portfolio Identifier"], hydra->portfolio_index_to_id(this->portfolio_index), std::string, json);
+    order.AddMember("Order ID", order_id, order.GetAllocator());
+    order.AddMember("Order Type", Value(OrderTypeToString(order_type), order.GetAllocator()).Move(), order.GetAllocator());
+    order.AddMember("Order State", Value(OrderStateToString(order_state), order.GetAllocator()).Move(), order.GetAllocator());
+    order.AddMember("Units", units, order.GetAllocator());
+    order.AddMember("Average Price", avg_price, order.GetAllocator());
+    if (limit.has_value()) {
+        order.AddMember("Limit", limit.value(), order.GetAllocator());
+    }
+    else {
+        order.AddMember("Limit", 0.0f, order.GetAllocator());
+    }
 
-    return AgisResult<json>(order);
+    order.AddMember("Order Create Time", order_create_time, order.GetAllocator());
+    order.AddMember("Order Fill Time", order_fill_time, order.GetAllocator());
+    order.AddMember("Order Cancel Time", order_cancel_time, order.GetAllocator());
+
+    Value asset_id, strategy_id, portfolio_id;
+    try {
+        asset_id.SetString(hydra->asset_index_to_id(asset_index).unwrap().c_str(), order.GetAllocator());
+        strategy_id.SetString(hydra->strategy_index_to_id(strategy_index).unwrap().c_str(), order.GetAllocator());
+        portfolio_id.SetString(hydra->portfolio_index_to_id(portfolio_index).unwrap().c_str(), order.GetAllocator());
+    }
+    catch (AgisException& e) {
+        return std::unexpected<AgisException> {e.what()};
+    }
+
+    order.AddMember("Asset Identifier", asset_id, order.GetAllocator());
+    order.AddMember("Strategy Identifier", strategy_id, order.GetAllocator());
+    order.AddMember("Portfolio Identifier", portfolio_id, order.GetAllocator());
+
+    return order;
 }
 
 

@@ -8,6 +8,7 @@
 #include <utility>
 #include <filesystem>
 
+#include "AgisEnums.h"
 #include "AgisFunctional.h"
 #include "AgisRouter.h"
 #include "AgisRisk.h"
@@ -22,24 +23,6 @@ namespace fs = std::filesystem;
 class AgisStrategy;
 
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
-
-
-enum class AGIS_API AgisStrategyType {
-	CPP,			// a c++ based strategy directly inheriting from AgisStrategy
-	FLOW,			// a flow strategy used by the Nexus Node Editor to create Abstract strategies
-	PY,				// a python strategy tramploine off PyAgisStrategy from AgisCorePy
-	BENCHMARK,		// a benchmark strategy that does not interfer with portfolio values
-	LUAJIT, 		// a lua jit strategy
-};
-
-
-NLOHMANN_JSON_SERIALIZE_ENUM(AgisStrategyType, {
-	{AgisStrategyType::CPP, "CPP"},
-	{AgisStrategyType::FLOW, "FLOW"},
-	{AgisStrategyType::PY, "PY"},
-	{AgisStrategyType::BENCHMARK, "BENCHMARK"},
-	{AgisStrategyType::LUAJIT, "LUAJIT"}
-	})
 
 
 AGIS_API typedef std::function<double(
@@ -112,7 +95,7 @@ public:
 	/// Base serialization of the AgisStrategy class
 	/// </summary>
 	/// <param name="j"></param>
-	AGIS_API virtual void to_json(json& j) const;
+	AGIS_API virtual std::expected<rapidjson::Document, AgisException> to_json() const;
 
 	/// <summary>
 	/// Restore a strategy from a give filepath 

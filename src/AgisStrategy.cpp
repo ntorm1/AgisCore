@@ -7,6 +7,8 @@
 #include "AgisErrors.h"
 #include "AgisStrategy.h"
 
+using namespace rapidjson;
+
 std::atomic<size_t> AgisStrategy::strategy_counter(0);
 
 //============================================================================
@@ -87,25 +89,31 @@ void AgisStrategy::__on_trade_closed(size_t asset_index)
 
 
 //============================================================================
-void AgisStrategy::to_json(json& j) const
+std::expected<rapidjson::Document, AgisException> AgisStrategy::to_json() const
 {
-	j["is_live"] = this->is_live;
-	j["strategy_id"] = this->strategy_id;
-	j["strategy_type"] = this->strategy_type;
-	j["allocation"] = this->portfolio_allocation;
-	j["trading_window"] = trading_window_to_key_str(this->trading_window);
-	j["beta_scale"] = this->apply_beta_scale;
-	j["beta_hedge"] = this->apply_beta_hedge;
-	j["beta_trace"] = this->tracers.has(Tracer::BETA);
-	j["net_leverage_trace"] = this->tracers.has(Tracer::LEVERAGE);
-	j["vol_trace"] = this->tracers.has(Tracer::VOLATILITY);
+	Document j(kObjectType);
+	j.AddMember("is_live", this->is_live, j.GetAllocator());
+	j.AddMember("strategy_id", rapidjson::StringRef(this->strategy_id.c_str()), j.GetAllocator());
+	j.AddMember(
+		"strategy_type",
+		rapidjson::StringRef(AgisStrategyTypeToString(this->strategy_type)),
+		j.GetAllocator()
+	);
+	j.AddMember("allocation", this->portfolio_allocation, j.GetAllocator());
+	j.AddMember("trading_window", rapidjson::StringRef(trading_window_to_key_str(this->trading_window).c_str()), j.GetAllocator());
+	j.AddMember("beta_scale", this->apply_beta_scale, j.GetAllocator());
+	j.AddMember("beta_hedge", this->apply_beta_hedge, j.GetAllocator());
+	j.AddMember("beta_trace", this->tracers.has(Tracer::BETA), j.GetAllocator());
+	j.AddMember("net_leverage_trace", this->tracers.has(Tracer::LEVERAGE), j.GetAllocator());
+	j.AddMember("vol_trace", this->tracers.has(Tracer::VOLATILITY), j.GetAllocator());
 
 	if (this->limits.max_leverage.has_value()) {
-		j["max_leverage"] = this->limits.max_leverage.value();
+		j.AddMember("max_leverage", this->limits.max_leverage.value(), j.GetAllocator());
 	}
 	if (this->step_frequency.has_value()) {
-		j["step_frequency"] = this->step_frequency.value();
+		j.AddMember("step_frequency", this->step_frequency.value(), j.GetAllocator());
 	}
+	return j;
 }
 
 

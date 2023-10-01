@@ -1,5 +1,3 @@
-#include "pch.h"
-
 // primary module interface unit
 export module Broker;
 

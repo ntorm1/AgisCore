@@ -2,7 +2,16 @@
 #ifdef AGISCORE_EXPORTS
 #define AGIS_API __declspec(dllexport)
 #else
+
 #define AGIS_API __declspec(dllimport)
+
+#define _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING
+#define _SILENCE_CXX23_DENORM_DEPRECATION_WARNING
+
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
+
 #endif
 
 #include "pch.h"
@@ -17,32 +26,36 @@
 #include "AbstractAgisStrategy.h"
 
 #include "Exchange.h"
-#include "Portfolio.h"
 
-import Broker;
+struct HydraPrivate;
 
 class Hydra
 {
 private:
-	/// <summary>
-	/// Container holding all exchange objects that are currently registered
-	/// </summary>
+	/**
+	 * @brief Container holding all exchange objects that are currently registered
+	*/
 	ExchangeMap exchanges;
 	
-	/// <summary>
-	/// Container holding all portfolios that are currently registered
-	/// </summary>
+	/**
+	 * @brief Container holding all portfolios that are currently registered
+	*/
 	PortfolioMap portfolios;
 
-	/// <summary>
-	/// Container holding all strategies that are currently registered
-	/// </summary>
+	/**
+	 * @brief Container holding all strategies that are currently registered
+	*/
 	AgisStrategyMap strategies;
 	
-	/// <summary>
-	/// An AgisRouter to route orders
-	/// </summary>
+	/**
+	 * @brief An AgisRouter to route orders
+	*/
 	AgisRouter router;
+
+	/**
+	 * @brief Hydra private implementation
+	*/
+	HydraPrivate* p;
 
 	/// <summary>
 	/// Current index of the backtest
@@ -65,14 +78,14 @@ public:
 	/// </summary>
 	/// <param name="j">Json object describin a Hydra instance</param>
 	/// <returns></returns>
-	AGIS_API AgisResult<bool> restore_portfolios(json const& j);
+	AGIS_API AgisResult<bool> restore_portfolios(rapidjson::Document const& j);
 
 	/// <summary>
 	/// Restore the underlying data of the hydra instance
 	/// </summary>
 	/// <param name="j"></param>
 	/// <returns></returns>
-	AGIS_API AgisResult<bool> restore_exchanges(json const& j);
+	AGIS_API AgisResult<bool> restore_exchanges(rapidjson::Document const& j);
 
 	/// <summary>
 	/// Remove everything from the instance
@@ -103,7 +116,7 @@ public:
 	/// </summary>
 	/// <param name="j"></param>
 	/// <returns></returns>
-	AGIS_API void save_state(json& j);
+	AGIS_API void save_state(rapidjson::Document& j);
 
 	/// <summary>
 	/// Step Hydra instance one step forward in time

@@ -202,7 +202,7 @@ std::unordered_map<std::string, TradeExitType> trade_exit_type_map = {
 //============================================================================
 std::string alloc_to_str(AllocType alloc_type)
 {
-	static const std::map<AllocType, std::string> typeStrings = {
+	static const std::unordered_map<AllocType, std::string> typeStrings = {
 		{AllocType::UNITS, "UNITS"},
 		{AllocType::DOLLARS, "DOLLARS"},
 		{AllocType::PCT, "PCT"}
@@ -216,7 +216,7 @@ std::string alloc_to_str(AllocType alloc_type)
 
 //============================================================================
 AgisResult<ExchangeViewOpp> str_to_ev_opp(const std::string& ev_opp_type) {
-	static const std::map<std::string, ExchangeViewOpp> ev_opp_type_map = {
+	static const std::unordered_map<std::string, ExchangeViewOpp> ev_opp_type_map = {
 		{"UNIFORM", ExchangeViewOpp::UNIFORM},
 		{"LINEAR_DECREASE", ExchangeViewOpp::LINEAR_DECREASE},
 		{"LINEAR_INCREASE", ExchangeViewOpp::LINEAR_INCREASE},
@@ -232,4 +232,112 @@ AgisResult<ExchangeViewOpp> str_to_ev_opp(const std::string& ev_opp_type) {
 
 	// Handle the case when the input string is not found in the map
 	return AgisResult<ExchangeViewOpp>(AGIS_EXCEP("Invalid ExchangeViewOpp value: " + ev_opp_type));
+}
+
+
+//============================================================================
+AGIS_API const char* FrequencyToString(Frequency value) {
+	switch (value) {
+	case Frequency::Tick: return "Tick";
+	case Frequency::Min1: return "Min1";
+	case Frequency::Min5: return "Min5";
+	case Frequency::Min15: return "Min15";
+	case Frequency::Min30: return "Min30";
+	case Frequency::Hour1: return "Hour1";
+	case Frequency::Hour4: return "Hour4";
+	case Frequency::Day1: return "Day1";
+	default: return nullptr; // Handle unknown values if needed
+	}
+}
+
+
+//============================================================================0
+AGIS_API const char* OrderStateToString(OrderState value) {
+	switch (value) {
+	case OrderState::PENDING: return "PENDING";
+	case OrderState::OPEN: return "OPEN";
+	case OrderState::FILLED: return "FILLED";
+	case OrderState::CANCELED: return "CANCELED";
+	case OrderState::REJECTED: return "REJECTED";
+	case OrderState::CHEAT: return "CHEAT";
+	default: return nullptr; // Handle unknown values if needed
+	}
+}
+
+
+//============================================================================
+AGIS_API const char* OrderTypeToString(OrderType value) {
+	switch (value) {
+	case OrderType::MARKET_ORDER: return "MARKET_ORDER";
+	case OrderType::LIMIT_ORDER: return "LIMIT_ORDER";
+	case OrderType::STOP_LOSS_ORDER: return "STOP_LOSS_ORDER";
+	case OrderType::TAKE_PROFIT_ORDER: return "TAKE_PROFIT_ORDER";
+	default: return nullptr; // Handle unknown values if needed
+	}
+}
+
+
+//============================================================================
+AGIS_API const char* AgisStrategyTypeToString(AgisStrategyType value) {
+	switch (value) {
+	case AgisStrategyType::CPP: return "CPP";
+	case AgisStrategyType::FLOW: return "FLOW";
+	case AgisStrategyType::PY: return "PY";
+	case AgisStrategyType::BENCHMARK: return "BENCHMARK";
+	case AgisStrategyType::LUAJIT: return "LUAJIT";
+	default: return nullptr; // Handle unknown values if needed
+	}
+}
+
+//============================================================================
+AGIS_API AgisStrategyType StringToAgisStrategyType(const std::string& typeStr) {
+	if (typeStr == "CPP") {
+		return AgisStrategyType::CPP;
+	}
+	else if (typeStr == "FLOW") {
+		return AgisStrategyType::FLOW;
+	}
+	else if (typeStr == "PY") {
+		return AgisStrategyType::PY;
+	}
+	else if (typeStr == "BENCHMARK") {
+		return AgisStrategyType::BENCHMARK;
+	}
+	else if (typeStr == "LUAJIT") {
+		return AgisStrategyType::LUAJIT;
+	}
+	else {
+		throw std::invalid_argument("Unknown AgisStrategyType string: " + typeStr);
+	}
+}
+
+Frequency StringToFrequency(const std::string& valueStr) {
+	if (valueStr == "Tick") {
+		return Frequency::Tick;
+	}
+	else if (valueStr == "Min1") {
+		return Frequency::Min1;
+	}
+	else if (valueStr == "Min5") {
+		return Frequency::Min5;
+	}
+	else if (valueStr == "Min15") {
+		return Frequency::Min15;
+	}
+	else if (valueStr == "Min30") {
+		return Frequency::Min30;
+	}
+	else if (valueStr == "Hour1") {
+		return Frequency::Hour1;
+	}
+	else if (valueStr == "Hour4") {
+		return Frequency::Hour4;
+	}
+	else if (valueStr == "Day1") {
+		return Frequency::Day1;
+	}
+	else {
+		// Handle unknown values if needed
+		throw std::invalid_argument("Unknown frequency string: " + valueStr);
+	}
 }

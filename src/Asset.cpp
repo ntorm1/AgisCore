@@ -791,41 +791,6 @@ double Asset::__get(std::string col, size_t row) const
     return *(this->data + row + col_offset);
 }
 
-
-std::unordered_map<Frequency, std::string > frequency_str_map = {
-    {Frequency::Tick, "Tick"},
-    {Frequency::Min1, "Min1"},
-    {Frequency::Min5, "Min5"},
-    {Frequency::Min15, "Min15"},
-    {Frequency::Min30, "Min30"},
-    {Frequency::Hour1, "Hour1"},
-    {Frequency::Hour4, "Hour4"},
-    {Frequency::Day1, "Day1"},
-};
-
-
-//============================================================================
-Frequency string_to_freq(const std::string& str)
-{
-    for (auto& freq_enum : frequency_str_map)
-    {
-        if (freq_enum.second == str)
-        {
-			return freq_enum.first;
-		}
-    }
-    throw std::invalid_argument("Invalid frequency string: " + str);
-}
-
-//============================================================================
-std::string freq_to_string(Frequency freq)
-{
-    if(!frequency_str_map.count(freq))
-        throw std::invalid_argument("Invalid frequency");
-    return frequency_str_map[freq];
-}
-
-
 template class AGIS_API StridedPointer<long long>;
 template class AGIS_API StridedPointer<double>;
 template class AGIS_API AgisMatrix<double>;

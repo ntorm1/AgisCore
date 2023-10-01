@@ -230,8 +230,8 @@ public:
     AGIS_API inline std::vector<double> get_nlv_history() const { return this->tracers.nlv_history; }
     AGIS_API inline std::vector<double> get_cash_history() const { return this->tracers.cash_history; }
 
-    json to_json() const;
-    void restore(json const& strategies);
+    std::expected<rapidjson::Document, AgisException> to_json() const;
+    void restore(rapidjson::Document const& strategies);
     void __reset();
     inline void __set_exchange_map(ExchangeMap const* exchange_map_) { this->exchange_map = exchange_map_; }
     void __remove_strategy(size_t index);
@@ -378,8 +378,8 @@ public:
 
     AGIS_API PortfolioRef get_portfolio(std::string const& id) const;
     AGIS_API std::vector<std::string> get_portfolio_ids() const;
-    AGIS_API json to_json() const;
-    AGIS_API void restore(AgisRouter& router, json const& j);
+    AGIS_API std::expected<rapidjson::Document, AgisException> to_json() const;
+    AGIS_API void restore(AgisRouter& router, rapidjson::Document const& j);
 
 private:
     ankerl::unordered_dense::map<size_t, PortfolioPtr> portfolios;

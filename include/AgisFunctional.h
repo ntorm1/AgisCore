@@ -93,6 +93,13 @@ AGIS_API std::string opp_to_str(const AgisOperation& func);
 */
 AGIS_API std::string alloc_to_str(AllocType alloc_type);
 
+AGIS_API Frequency StringToFrequency(const std::string& valueStr);
+AGIS_API const char* FrequencyToString(Frequency value);
+AGIS_API const char* OrderStateToString(OrderState value);
+AGIS_API const char* OrderTypeToString(OrderType value);
+AGIS_API const char* AgisStrategyTypeToString(AgisStrategyType value);
+AGIS_API AgisStrategyType StringToAgisStrategyType(const std::string& typeStr);
+
 /**
  * @brief takes a string like "UNIFORM" and returns the enum in a result
 */

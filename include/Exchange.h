@@ -13,8 +13,6 @@
 #include "AgisRisk.h"
 #include "ExchangeView.h"
 
-using json = nlohmann::json;
-
 class Exchange;
 class ExchangeMap;
 struct ExchangeView;
@@ -90,7 +88,7 @@ public:
 	/// Serialize the exchange to json format so it can be saved
 	/// </summary>
 	/// <returns>json object containing exchange's info</returns>
-	AGIS_API json to_json() const;
+	AGIS_API rapidjson::Document to_json() const;
 
 	/// <summary>
 	/// Get a vector of ids for all assets listed on the exchange
@@ -260,8 +258,8 @@ public:
 	/// restore the exchange map from a serialized state in a json file
 	/// </summary>
 	/// <param name="j">reference to json object containing information on how to restore the map</param>
-	AGIS_API void restore(json const& j);
-	AGIS_API json to_json() const;
+	AGIS_API void restore(rapidjson::Document const& j);
+	AGIS_API rapidjson::Document to_json() const;
 
 	/// <summary>
 	/// Create a new exchange in the exchange map. Allows for grouping of similair assets

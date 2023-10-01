@@ -125,14 +125,16 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;AGISCORE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4146</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AdditionalModuleDependencies>
       </AdditionalModuleDependencies>
+      <EnableModules>true</EnableModules>
+      <BuildStlModules>true</BuildStlModules>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -170,7 +172,9 @@
     <ClInclude Include="include\AbstractAgisStrategy.h" />
     <ClInclude Include="include\AbstractStrategyTree.h" />
     <ClInclude Include="include\AgisAnalysis.h" />
+    <ClInclude Include="include\AgisEnums.h" />
     <ClInclude Include="include\AgisErrors.h" />
+    <ClInclude Include="include\AgisException.h" />
     <ClInclude Include="include\AgisFunctional.h" />
     <ClInclude Include="include\AgisLuaStrategy.h" />
     <ClInclude Include="include\AgisObservers.h" />

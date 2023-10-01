@@ -47,8 +47,6 @@ public:
 
 	AGIS_API void restore(fs::path path) override;
 
-	AGIS_API void to_json(json& j);
-
 	/**
 	 * @brief output code to a file that can be used to build a concrete strategy from the abstract strategy
 	 * @param strat_folder the destiniation of the output source code.

@@ -91,7 +91,7 @@ struct AGIS_API Trade {
         bool is_reprice = false
     );
     OrderPtr generate_trade_inverse();
-    AgisResult<json> serialize(json& _json, HydraPtr hydra) const;
+    std::expected<rapidjson::Document, AgisException> serialize(HydraPtr hydra) const;
 
     void take_partition(std::shared_ptr<TradePartition> partition) { this->child_partitions.push_back(std::move(partition)); };
     [[nodiscard]] std::shared_ptr<TradePartition> get_child_partition(size_t asset_index);

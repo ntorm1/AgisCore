@@ -5,6 +5,8 @@
 #include "Portfolio.h"
 #include "AgisStrategy.h"
 
+using namespace rapidjson;
+
 std::atomic<size_t> Position::position_counter(0);
 std::atomic<size_t> Portfolio::portfolio_counter(0);
 
@@ -369,58 +371,67 @@ PortfolioPtr const PortfolioMap::__get_portfolio(std::string const& id) const
 
 
 //============================================================================
-json Portfolio::to_json() const
+std::expected<rapidjson::Document, AgisException> Portfolio::to_json() const
 {
-    json strategies;
-    for (const auto& strategy : this->strategies)
-    {
-        json strat_json;
-        strategy.second->to_json(strat_json);
-        strategies.push_back(strat_json);
-    }
-    if (this->benchmark_strategy) {
-        json strat_json;
-        this->benchmark_strategy->to_json(strat_json);
-        strategies.push_back(strat_json);
+    Document j(kObjectType);
+    j.AddMember("starting_cash", this->tracers.starting_cash.load(), j.GetAllocator());
+
+    Value strategyArray(kArrayType);
+    for (const auto& strategyPair : strategies) {
+        const auto& strategy = strategyPair.second;
+        auto strategy_json = strategy->to_json(); // Serialize the Strategy to RapidJSON
+        
+        if (!strategy_json.has_value()) {
+            return std::unexpected<AgisException>{strategy_json.error()};
+        }
+        
+        strategyArray.PushBack(strategy_json.value(), j.GetAllocator());
     }
 
-    auto j = json{
-        {"starting_cash", this->tracers.starting_cash.load()},
-    };
-    j["strategies"] = strategies;
+    if (benchmark_strategy) {
+        auto strategy_json = benchmark_strategy->to_json(); // Serialize the BenchmarkStrategy to RapidJSON
+        if (!strategy_json.has_value()) {
+            return std::unexpected<AgisException>{strategy_json.error()};
+        }
+        strategyArray.PushBack(strategy_json.value(), j.GetAllocator());
+    }
+
+    j.AddMember("strategies", strategyArray, j.GetAllocator());
+
     return j;
 }
 
 
 //============================================================================
-void PortfolioMap::restore(AgisRouter& router, json const& j)
-{
+void PortfolioMap::restore(AgisRouter& router, const Document& j) {
     Portfolio::__reset_counter();
-    json portfolios = j["portfolios"];
 
-    // Store the exchange items in a vector for processing
-    for (const auto& portfolio : portfolios.items())
-    {
-        std::string portfolio_id = portfolio.key();
-        json& j = portfolio.value();
-        double starting_cash = j["starting_cash"];
-        
-        // build new portfolio from the parsed settings
-        auto portfolio = std::make_unique<Portfolio>(router, portfolio_id, starting_cash);
-        this->__register_portfolio(std::move(portfolio));
+    const Value& portfolioArray = j["portfolios"];
+    if (portfolioArray.IsArray()) {
+        for (SizeType i = 0; i < portfolioArray.Size(); i++) {
+            const Value& portfolioJson = portfolioArray[i];
+
+            // Extract portfolio_id and starting_cash from the JSON
+            const std::string& portfolio_id = portfolioJson["portfolio_id"].GetString();
+            double starting_cash = portfolioJson["starting_cash"].GetDouble();
+
+            // Create a new Portfolio object and add it to the map
+            auto portfolio = std::make_shared<Portfolio>(router, portfolio_id, starting_cash);
+            this->__register_portfolio(std::move(portfolio));
+        }
     }
 }
 
 
 //============================================================================
-AGIS_API PortfolioRef PortfolioMap::get_portfolio(std::string const& id) const
+PortfolioRef PortfolioMap::get_portfolio(std::string const& id) const
 {
     auto index = this->portfolio_map.at(id);
     auto p = std::cref(this->portfolios.at(index));
     return p;
 }
 
-AGIS_API std::vector<std::string> PortfolioMap::get_portfolio_ids() const
+std::vector<std::string> PortfolioMap::get_portfolio_ids() const
 {
     std::vector<std::string> v;
     for (auto p : this->portfolio_map)
@@ -431,11 +442,21 @@ AGIS_API std::vector<std::string> PortfolioMap::get_portfolio_ids() const
 }
 
 //============================================================================
-AGIS_API json PortfolioMap::to_json() const
+std::expected<rapidjson::Document, AgisException> PortfolioMap::to_json() const
 {
-    json j;
-    for (const auto& pair : this->portfolios) {
-        j[pair.second->__get_portfolio_id()] = pair.second->to_json();
+    Document j(kObjectType);
+    for (const auto& pair : portfolios) {
+        const std::shared_ptr<Portfolio>& portfolio = pair.second;
+
+        Document portfolioJson(kObjectType);
+        auto portfolio_json = portfolio->to_json();
+
+        if (!portfolio_json.has_value()) {
+            return portfolio_json;
+        }
+
+        Value portfolio_id_value(portfolio->__get_portfolio_id().c_str(), j.GetAllocator());
+        j.AddMember(portfolio_id_value, portfolio_json.value(), j.GetAllocator());
     }
     return j;
 }

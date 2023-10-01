@@ -316,12 +316,23 @@ void AgisLuaStrategy::build() {
 	this->loaded = true;
 }
 
-AGIS_API void AgisLuaStrategy::to_json(json& j) const
+
+//============================================================================
+std::expected<rapidjson::Document, AgisException> AgisLuaStrategy::to_json() const
 {
-	if (script_path.has_value()) {
-		j["lua_script_path"] = this->script_path.value().string();
+
+	auto j = AgisStrategy::to_json();
+	if (j.has_value() && script_path.has_value()) {
+		rapidjson::Document& doc = j.value();
+		rapidjson::Value script_value;
+		script_value.SetString(this->script_path.value().string().c_str(), doc.GetAllocator());
+		doc.AddMember(
+			"lua_script_path",
+			script_value,
+			doc.GetAllocator()
+		);
 	}
-	AgisStrategy::to_json(j);
+	return j;
 }
 
 

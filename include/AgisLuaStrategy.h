@@ -62,7 +62,7 @@ public:
 	void next() override;
 	void reset() override;
 	void build() override;
-	AGIS_API void to_json(json& j) const override;
+	AGIS_API std::expected<rapidjson::Document, AgisException> to_json() const override;
 	
 	AGIS_API static std::string get_script_template(std::string const& strategy_id);
 	AGIS_API void set_lua_ptr(sol::state * lua_ptr_) { lua_ptr = lua_ptr_; }

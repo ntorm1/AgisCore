@@ -7,6 +7,7 @@
 #include "pch.h"
 
 #include <string>
+#include <span>
 #include <filesystem>
 #include "AgisErrors.h"
 
@@ -26,38 +27,10 @@
 #endif // !USER_ANKERL
 
 #include "Utils.h"
+#include "AgisEnums.h"
 #include "AgisPointers.h"
 
 class AssetObserver;
-
-/// <summary>
-/// Enum for the data frequency of an asset. 
-/// </summary>
-enum class AGIS_API Frequency {
-    Tick,    // Tick data
-    Min1,    // 1 minute data
-    Min5,    // 5 minute data
-    Min15,   // 15 minute data
-    Min30,   // 30 minute data
-    Hour1,   // 1 hour data
-    Hour4,   // 4 hour data
-    Day1,    // 1 day data
-};
-
-/// <summary>
-/// Serialization mapping for an asset's frequency
-/// </summary>
-NLOHMANN_JSON_SERIALIZE_ENUM(Frequency, {
-    {Frequency::Tick, "Tick"},
-    {Frequency::Min1, "Min1"},
-    {Frequency::Min5, "Min5"},
-    {Frequency::Min15, "Min15"},
-    {Frequency::Min30, "Min30"},
-    {Frequency::Hour1, "Hour1"},
-    {Frequency::Hour4, "Hour4"},
-    {Frequency::Day1, "Day1"},
-    })
-
 class Asset;
 
 AGIS_API typedef std::shared_ptr<Asset> AssetPtr;
@@ -387,7 +360,3 @@ struct MarketAsset
     AssetPtr                asset;
     std::optional<size_t>   beta_lookback;
 };
-
-// Function to convert a string to Frequency enum
-AGIS_API Frequency string_to_freq(const std::string& str);
-AGIS_API std::string freq_to_string(Frequency freq);

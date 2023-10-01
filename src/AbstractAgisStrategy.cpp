@@ -141,13 +141,6 @@ void AbstractAgisStrategy::restore(fs::path path)
 
 
 //============================================================================
-void AbstractAgisStrategy::to_json(json& j)
-{
-	AgisStrategy::to_json(j);
-}
-
-
-//============================================================================
 std::string trading_window_to_str(std::optional<TradingWindow> window_op) {
 	if (!window_op.has_value()) { return ""; }
 	std::ostringstream codeStream;

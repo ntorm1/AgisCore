@@ -8,6 +8,8 @@
 #define NOMINMAX 
 #pragma warning(disable:4146)
 #pragma warning(disable:4251)
+#define _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING
+#define _SILENCE_CXX23_DENORM_DEPRECATION_WARNING
 
 #define ARROW_API_H
 #define H5_HAVE_H5CPP
@@ -24,16 +26,15 @@
 #include <mutex>
 #include <atomic>
 #include <variant>
+#include <expected>
 #include <ankerl/unordered_dense.h>
 #include "utils_gmp.h"
 #include "AgisPointers.h"
 #include "AgisErrors.h"
-#include "json.hpp"
 
-typedef unsigned int uint;
-
-
-using json = nlohmann::json;
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
 
 
 constexpr auto DEFAULT_STRAT_ID = 0;

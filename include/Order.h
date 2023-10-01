@@ -7,6 +7,7 @@
 #include "pch.h"
 #include <string>   
 #include <atomic>
+#include "AgisEnums.h"
 #include "Trade.h"
 #include "Utils.h"
 
@@ -18,92 +19,6 @@ typedef const Hydra* HydraPtr;
 AGIS_API typedef std::unique_ptr<Order> OrderPtr;
 AGIS_API typedef std::shared_ptr<Order> SharedOrderPtr;
 AGIS_API typedef std::reference_wrapper<const OrderPtr> OrderRef;
-
-
-/// <summary>
-/// An enumeration representing different order types
-/// </summary>
-enum class AGIS_API OrderType
-{
-    MARKET_ORDER,                  /**< market order*/
-    LIMIT_ORDER,                   /**< limit order */
-    STOP_LOSS_ORDER,               /**< stop loss order */
-    TAKE_PROFIT_ORDER              /**< take profit order */
-};
-
-
-/// <summary>
-/// Serialization mapping for an order's type
-/// </summary>
-NLOHMANN_JSON_SERIALIZE_ENUM(OrderType, {
-    {OrderType::MARKET_ORDER, "MARKET_ORDER"},
-    {OrderType::LIMIT_ORDER, "LIMIT_ORDER"},
-    {OrderType::STOP_LOSS_ORDER, "STOP_LOSS_ORDER"},
-    {OrderType::TAKE_PROFIT_ORDER, "TAKE_PROFIT_ORDER"},
-    })
-
-
-/// <summary>
-/// brief An enumeration representing the current start of an order
-/// </summary>
-enum class AGIS_API OrderState
-{
-    PENDING,  /// order has been created but yet to be sent
-    OPEN,     /// order is open on the exchange
-    FILLED,   /// order has been filled by the exchange
-    CANCELED, /// order has been canceled by a strategy
-    REJECTED, /// order was rejected by the checker 
-    CHEAT,    /// allows orders we know will fill to be filled and processed in single router call
-};
-
-
-/// <summary>
-/// Serialization mapping for an order's state
-/// </summary>
-NLOHMANN_JSON_SERIALIZE_ENUM(OrderState, {
-    {OrderState::PENDING, "PENDING"},
-    {OrderState::OPEN, "OPEN"},
-    {OrderState::FILLED, "FILLED"},
-    {OrderState::CANCELED, "CANCELED"},
-    {OrderState::REJECTED, "REJECTED"},
-    {OrderState::CHEAT, "CHEAT"},
-    })
-
-
-/// <summary>
-/// brief An enumeration representning the execution type of the order. An order can either
-/// be sent by the broker as soon as it recieves it, or it can wait till the end of the open / close period.
-/// </summary>
-enum class AGIS_API OrderExecutionType
-{
-    EAGER, /// order will be placed as soon as the broker gets it
-    LAZY   /// order will be placed in broker send orders sweep
-};
-
-
-/// <summary>
-/// An enumeration representing the type of order target used for portfolio target functions.
-/// Allows portfolio to easily place orders expressed in various units, not just number of shares or amount of the underlying.
-/// </summary>
-enum class AGIS_API OrderTargetType
-{
-    UNITS,              /// order target size is in units, i.e. 100 shares
-    DOLLARS,            /// order target size is in dollars, i.e. $1000 at $100 a share => 10 shares
-    PCT,                /// order target size is in pct of total nlv of the source portfolio
-    BETA_DOLLARS,       /// order target size is in beta dollars 
-    PCT_BETA_DOLLARS    /// order target size is in pct of total nlv of the source potfolio normalized by beta
-};
-
-
-/// <summary>
-/// An enumeration representing the type of parent used for order's that require an order parent.
-/// Orders like take - profit or stop - loss require a parent, either an open order or an open trade.
-/// </summary>
-enum class AGIS_API OrderParentType
-{
-    TRADE, /// parent of the order is a smart pointer to a trade
-    ORDER  /// parent of the order is a smart pointer to another open order
-};
 
 
 class AGIS_API Order
@@ -194,5 +109,5 @@ public:
     void fill(double market_price, long long fill_time);
     void cancel(long long cancel_time);
     void reject(long long reject_time);
-    AgisResult<json> serialize(json& order, HydraPtr hydra) const;
+    std::expected<rapidjson::Document, AgisException> serialize(HydraPtr hydra) const;
 };

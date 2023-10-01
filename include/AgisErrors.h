@@ -7,9 +7,9 @@
 
 //#define AGIS_SLOW
 
-#include <exception>
-#include <string>
 #include <variant>
+
+#include "AgisException.h"
 
 enum class AGIS_API NexusStatusCode {
     Ok,
@@ -21,19 +21,6 @@ enum class AGIS_API NexusStatusCode {
     InvalidTz
 };
 
-
-class AgisException : public std::exception {
-private:
-    std::string message;
-
-public:
-    AgisException(const std::string& msg) : message(msg) {}
-
-    // Override the what() method to provide a custom error message
-    const char* what() const noexcept override {
-        return message.c_str();
-    }
-};
 
 template <typename T>
 struct AGIS_API AgisResult {
