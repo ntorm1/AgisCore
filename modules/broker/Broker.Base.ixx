@@ -6,7 +6,6 @@ export module Broker:Base;
 import <ankerl/unordered_dense.h>;
 import <memory>;
 
-export import <cstdint>;
 export import <expected>;
 export import <functional>;
 export import <AgisException.h>;
