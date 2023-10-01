@@ -199,6 +199,7 @@
     <ClInclude Include="include\utils_array.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="modules\broker\Broker.Base.cpp" />
     <ClCompile Include="modules\broker\Broker.Base.ixx" />
     <ClCompile Include="modules\broker\Broker.Dummy.ixx" />
     <ClCompile Include="modules\broker\Broker.ixx" />

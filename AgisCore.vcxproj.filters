@@ -170,5 +170,8 @@
     <ClCompile Include="modules\broker\Broker.Dummy.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="modules\broker\Broker.Base.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
