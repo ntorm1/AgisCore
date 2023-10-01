@@ -78,15 +78,12 @@ BrokerMap::get_broker(std::string broker_id) noexcept
 
 
 //============================================================================
-void Broker::__validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept
+void
+Broker::__validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept
 {
 	// test if order's underlying asset is tradeable in this broker instance
 	auto asset_index = new_order.get()->get_asset_index();
-	if (asset_index >= this->tradeable_assets.size()) {
-		new_order.get()->reject(0);
-		return;
-	}
-	if (!this->tradeable_assets.at(asset_index)) {
+	if (asset_index >= this->tradeable_assets.size() || !this->tradeable_assets.at(asset_index)) {
 		new_order.get()->reject(0);
 		return;
 	}
@@ -94,7 +91,8 @@ void Broker::__validate_order(std::reference_wrapper<OrderPtr> new_order) noexce
 
 
 //============================================================================
-void BrokerMap::__validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept
+void
+BrokerMap::__validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept
 {
 	auto broker_index = new_order.get()->get_broker_index();
 	auto it = this->_broker_map.find(broker_index);
@@ -108,7 +106,8 @@ void BrokerMap::__validate_order(std::reference_wrapper<OrderPtr> new_order) noe
 
 
 //============================================================================
-void Broker::add_tradeable_assets(size_t asset_index) noexcept
+void
+Broker::add_tradeable_assets(size_t asset_index) noexcept
 {
 	// Resize the tradeable_assets vector if needed
 	if (asset_index >= tradeable_assets.size()) {
@@ -121,7 +120,8 @@ void Broker::add_tradeable_assets(size_t asset_index) noexcept
 
 
 //============================================================================
-void Broker::add_tradeable_assets(std::vector<size_t> asset_indices) noexcept
+void
+Broker::add_tradeable_assets(std::vector<size_t> asset_indices) noexcept
 {
 	size_t new_size = 0;
 	for (auto asset_index : asset_indices) {
