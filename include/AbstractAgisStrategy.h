@@ -16,9 +16,10 @@ public:
 
 	AbstractAgisStrategy(
 		PortfolioPtr const& portfolio_,
+		BrokerPtr broker_,
 		std::string const& strategy_id,
 		double allocation
-	) : AgisStrategy(strategy_id, portfolio_, allocation) {
+	) : AgisStrategy(strategy_id, portfolio_, broker_, allocation) {
 		this->strategy_type = AgisStrategyType::FLOW;
 	}
 

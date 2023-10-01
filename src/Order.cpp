@@ -15,9 +15,9 @@ Order::Order(OrderType order_type_,
     double units_,
     size_t strategy_index_,
     size_t portfolio_index_,
+    size_t broker_index_,
     std::optional<TradeExitPtr> exit_,
-    bool phantom_order_,
-    size_t broker_index_
+    bool phantom_order_
     )
 {   
     this->order_type = order_type_;
@@ -80,7 +80,8 @@ OrderPtr Order::generate_inverse_order()
         this->asset_index,
         -1 * this->units,
         this->strategy_index,
-        this->portfolio_index
+        this->portfolio_index,
+        this->broker_index
     );
     order->__asset = this->__asset;
     return std::move(order);

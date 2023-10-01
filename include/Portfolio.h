@@ -90,6 +90,7 @@ struct Position
     AssetPtr __asset;
     size_t position_id;
     size_t asset_index;
+    size_t broker_index;
     size_t portfolio_id;
 
     double close_price = 0;

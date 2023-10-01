@@ -20,7 +20,15 @@
 
 namespace fs = std::filesystem;
 
+namespace Agis {
+	class BrokerMap;
+	class Broker;
+	typedef std::shared_ptr<Broker> BrokerPtr;
+};
+using namespace Agis;
+
 class AgisStrategy;
+
 
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;
 
@@ -51,6 +59,7 @@ public:
 	AGIS_API AgisStrategy(
 		std::string id,
 		PortfolioPtr const portfolio_,
+		BrokerPtr broker_,
 		double portfolio_allocation_
 	);
 
@@ -104,10 +113,11 @@ public:
 	/// <returns></returns>
 	AGIS_API inline virtual void restore(fs::path path) {};
 
-	/// <summary>
-	/// Subscribe to an exchange, next() will be called when that exchange steps
-	/// </summary>
-	/// <param name="exchange_id">Unique id of the exchange</param>
+	/**
+	 * @brief Subscribe to an exchange, next() will be called when that exchange steps
+	 * @param exchange_id unique id of the exchange to subscribe to
+	 * @return wether or not the subscription was successful
+	*/
 	AGIS_API [[nodiscard]] AgisResult<bool> exchange_subscribe(std::string const& exchange_id);
 
 	/// <summary>
@@ -188,6 +198,7 @@ public:
 
 	size_t get_strategy_index() const { return this->strategy_index; }
 	size_t get_portfolio_index() const { return this->portfolio->__get_index(); }
+	size_t get_broker_index() const;
 	std::string const& get_strategy_id() const { return this->strategy_id; }
 	std::string get_portfolio_id() const { return this->portfolio->__get_portfolio_id(); }
 	Frequency get_frequency() const { return this->frequency; }
@@ -276,12 +287,12 @@ public:
 
 	bool __is_disabled() const {return this->is_disabled;}
 
-	/// <summary>
-	/// Build the strategy, called once registered to a hydra instance
-	/// </summary>
-	/// <param name="router_"></param>
-	/// <param name="portfolo_map"></param>
-	void __build(AgisRouter* router_);
+	/**
+	 * @brief Build the strategy, called once registered to a hydra instance
+	 * @param router_ 
+	 * @param broker_map 
+	*/
+	void __build(AgisRouter* router_, Agis::BrokerMap* broker_map);
 
 	bool __is_exchange_subscribed() const { return this->exchange_subsrciption != ""; }
 	bool __is_beta_scaling() const { return this->apply_beta_scale; }
@@ -389,10 +400,8 @@ protected:
 
 	AgisStrategyTracers tracers;
 
-	/// <summary>
-	/// Pointer to the main exchange map object
-	/// </summary>
 	ExchangeMap const* exchange_map = nullptr;
+	Agis::BrokerMap* broker_map = nullptr;
 
 	/**
 	 * @brief Optional target leverage of the strategy
@@ -434,27 +443,13 @@ private:
 	double realized_pl = 0;
 	double portfolio_allocation = 0;
 
-	/**
-	 * @brief wether or not to validate each incoming order
-	*/
-	bool is_order_validating = true;
+	bool is_order_validating = true;	///< wether or not to validate each incoming order
+	bool is_live = true;				///< wether or not the strategy is currently live
+	bool is_disabled = false;			///< is the strategy currently disabled due to violation of risk parameters 
 
-	/**
-	 * @brief is the strategy currently live
-	*/
-	bool is_live = true; 
-
-	/**
-	 * @brief is the strategy currently disabled due to violation of risk parameters
-	*/
-	bool is_disabled = false;
-
-	/**
-	 * @brief unique id of the exchange the strategy is subscribed to
-	*/
 	std::string exchange_subsrciption = "";
-
 	ExchangePtr exchange = nullptr;
+	BrokerPtr broker = nullptr;
 
 	/**
 	* @brief Pointer to the exchange's step boolean telling us wether or not the subscribed 
@@ -588,8 +583,9 @@ class BenchMarkStrategy : public AgisStrategy {
 public:
 	BenchMarkStrategy(
 		PortfolioPtr const& portfolio_,
+		BrokerPtr broker_,
 		std::string const& strategy_id_
-	) : AgisStrategy(strategy_id_, portfolio_, 1.0) {
+	) : AgisStrategy(strategy_id_, portfolio_, broker_, 1.0) {
 		this->strategy_type = AgisStrategyType::BENCHMARK;
 	}
 

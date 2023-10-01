@@ -19,6 +19,7 @@ Position::Position(
     __asset(filled_order_->__asset)
 {
     //populate common position values
+    this->broker_index = filled_order_->get_broker_index();
     this->asset_index = filled_order_->get_asset_index();
     this->portfolio_id = filled_order_->get_portfolio_index();
     this->units = filled_order_->get_units();
@@ -207,7 +208,8 @@ OrderPtr Position::generate_position_inverse()
         this->asset_index,
         -1 * this->units,
         DEFAULT_STRAT_ID,
-        this->portfolio_id
+        this->portfolio_id,
+        this->broker_index
     );
 }
 

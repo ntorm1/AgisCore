@@ -7,6 +7,9 @@
 #include "AgisErrors.h"
 #include "AgisStrategy.h"
 
+import Broker;
+
+using namespace Agis;
 using namespace rapidjson;
 
 std::atomic<size_t> AgisStrategy::strategy_counter(0);
@@ -15,11 +18,14 @@ std::atomic<size_t> AgisStrategy::strategy_counter(0);
 AgisStrategy::AgisStrategy(
 	std::string id,
 	PortfolioPtr const portfolio_,
+	BrokerPtr broker_,
 	double portfolio_allocation_
 ) :
 	portfolio(portfolio_),
+	broker(broker),
 	tracers(this)
 {
+	this->broker->strategy_subscribe(this->strategy_index);
 	this->tracers.starting_cash.store(
 		portfolio_allocation_ * portfolio_->get_cash()
 	);
@@ -47,10 +53,13 @@ void AgisStrategy::__reset()
 
 //============================================================================
 void AgisStrategy::__build(
-	AgisRouter* router_
+	AgisRouter* router_,
+	BrokerMap* broker_map
 )
 {
 	this->router = router_;
+	this->broker_map = broker_map;
+
 	// init required tracing and limit values
 	auto n = exchange_map->__get_dt_index().size();
 	this->tracers.build(this, n);
@@ -94,6 +103,8 @@ std::expected<rapidjson::Document, AgisException> AgisStrategy::to_json() const
 	Document j(kObjectType);
 	j.AddMember("is_live", this->is_live, j.GetAllocator());
 	j.AddMember("strategy_id", rapidjson::StringRef(this->strategy_id.c_str()), j.GetAllocator());
+	std::string const& broker_id = this->broker->get_id();
+	j.AddMember("broker_id", rapidjson::StringRef(broker_id.c_str()), j.GetAllocator());
 	j.AddMember(
 		"strategy_type",
 		rapidjson::StringRef(AgisStrategyTypeToString(this->strategy_type)),
@@ -215,7 +226,7 @@ std::optional<SharedTradePtr> AgisStrategy::get_trade(std::string const& asset_i
 //============================================================================
 AGIS_API ExchangePtr const AgisStrategy::get_exchange() const
 {
-	return this->exchange_map->get_exchange(this->exchange_subsrciption);
+	return this->exchange;
 }
 
 
@@ -397,6 +408,7 @@ OrderPtr AgisStrategy::create_market_order(
 		units_,
 		this->strategy_index,
 		this->get_portfolio_index(),
+		this->get_broker_index(),
 		exit,
 		this->strategy_type == AgisStrategyType::BENCHMARK
 	);
@@ -414,6 +426,7 @@ void AgisStrategy::place_market_order(
 		units_,
 		this->strategy_index,
 		this->get_portfolio_index(),
+		this->get_broker_index(),
 		exit,
 		this->strategy_type == AgisStrategyType::BENCHMARK
 	));
@@ -429,6 +442,7 @@ void AGIS_API AgisStrategy::place_limit_order(size_t asset_index_, double units_
 		units_,
 		this->strategy_index,
 		this->get_portfolio_index(),
+		this->get_broker_index(),
 		std::move(exit)
 	);
 	order->phantom_order = this->strategy_type == AgisStrategyType::BENCHMARK;
@@ -823,6 +837,13 @@ std::optional<double> AgisStrategy::get_net_leverage_ratio() const
 		return std::nullopt;
 	}
 	return this->tracers.net_leverage_ratio / this->tracers.nlv;
+}
+
+
+//============================================================================
+size_t AgisStrategy::get_broker_index() const
+{
+	return this->broker->get_index();
 }
 
 

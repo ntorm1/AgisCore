@@ -1,15 +1,28 @@
 module;
+
+#pragma once
+#ifdef AGISCORE_EXPORTS
+#define AGIS_API __declspec(dllexport)
+#else
+#define AGIS_API __declspec(dllimport)
+#endif
 #include "Order.h"
+#include "AgisException.h"
+
 
 export module Broker:Base;
 
 import <ankerl/unordered_dense.h>;
 import <memory>;
+import <mutex>;
+import <atomic>;
+import <unordered_map>;
 
-export import <expected>;
-export import <functional>;
-export import <AgisException.h>;
+import <expected>;
+import <functional>;
 
+
+class AgisStrategy;
 
 typedef std::unique_ptr<Order> OrderPtr;
 
@@ -19,46 +32,51 @@ export namespace Agis
 
 class Broker
 {
+	friend class AgisStrategy;
 public:
 	Broker() = delete;
 	Broker(
-		std::string broker_id,
-		double cash
+		std::string broker_id
 	) {
-		_cash = cash;
 		_broker_id = broker_id;
 		_broker_index = broker_id_counter++;
 	};
 	virtual ~Broker() = default;
+
 
 	std::optional<std::reference_wrapper<OrderPtr>> __validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept;
 
 	[[nodiscard]] std::string const& get_id() const noexcept { return _broker_id; };
 	[[nodiscard]] size_t get_index() const noexcept { return _broker_index; };
 
+protected:
+	std::expected<bool, AgisException> strategy_subscribe(size_t strategy_id) noexcept;
+	std::expected<bool, AgisException> deposit_cash(size_t strategy_id, double amount) noexcept;
+
 private:
-	static size_t broker_id_counter;
+	AGIS_API static std::atomic<uint64_t> broker_id_counter;
 
 	std::string _broker_id;
 	size_t _broker_index;
 
-	double _cash;			///< Cash held in the broker's account
+	std::unordered_map<size_t, std::mutex> strategy_locks;	///< Locks for each strategy
+	ankerl::unordered_dense::map<size_t, double> deposits; ///< Cash deposits in the broker's account
+	
 	double _interest_rate;	///< Interest rate on cash held in the broker's account
 	double _margin_rate;	///< Margin rate charged on margin debt
 };
 
+using BrokerPtr = std::shared_ptr<Broker>;
 
 class BrokerMap
 {
 public:
-	using BrokerPtr = std::unique_ptr<Broker>;
-
 	BrokerMap() = default;
 	~BrokerMap() = default;
 
 	std::optional<std::reference_wrapper<OrderPtr>> __validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept;
-	std::expected<bool, AgisException> register_broker(BrokerPtr new_broker) noexcept;
-	std::expected<std::reference_wrapper<const Broker>, AgisException> get_broker(std::string broker_id) const noexcept;
+	AGIS_API std::expected<bool, AgisException> register_broker(BrokerPtr new_broker) noexcept;
+	AGIS_API std::expected<BrokerPtr, AgisException> get_broker(std::string broker_id) noexcept;
 
 private:
 	ankerl::unordered_dense::map<std::string, size_t> _broker_id_map;

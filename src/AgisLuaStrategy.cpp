@@ -180,10 +180,11 @@ void init_lua_interface(sol::state* lua_ptr) {
 //============================================================================
 AgisLuaStrategy::AgisLuaStrategy(
 	PortfolioPtr const& portfolio_,
+	BrokerPtr broker_,
 	std::string const& strategy_id, 
 	double allocation,
 	std::string const& script_
-) : AgisStrategy(strategy_id, portfolio_, allocation)
+) : AgisStrategy(strategy_id, portfolio_, broker_, allocation)
 {
 	this->strategy_type = AgisStrategyType::LUAJIT;
 	this->script = script_;
@@ -193,12 +194,13 @@ AgisLuaStrategy::AgisLuaStrategy(
 //============================================================================
 AgisLuaStrategy::AgisLuaStrategy(
 	PortfolioPtr const& portfolio_,
+	BrokerPtr broker_,
 	std::string const& strategy_id,
 	double allocation,
 	fs::path const& script_path_,
 	bool lazy_load
 )
-	: AgisStrategy(strategy_id, portfolio_, allocation)
+	: AgisStrategy(strategy_id, portfolio_, broker_, allocation)
 {
 	this->strategy_type = AgisStrategyType::LUAJIT;
 	if (!fs::exists(script_path_)) {

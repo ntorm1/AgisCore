@@ -45,12 +45,14 @@ class AgisLuaStrategy : public AgisStrategy {
 public:
 	AGIS_API AgisLuaStrategy(
 		PortfolioPtr const& portfolio_,
+		BrokerPtr broker_,
 		std::string const& strategy_id,
 		double allocation,
 		std::string const& script
 	);
 	AGIS_API AgisLuaStrategy(
 		PortfolioPtr const& portfolio_,
+		BrokerPtr broker_,
 		std::string const& strategy_id,
 		double allocation,
 		fs::path const& script_path,

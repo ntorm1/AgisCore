@@ -89,6 +89,7 @@ protected:
 
     std::atomic<double> nlv = 0;
     std::atomic<double> cash = 0;
+    std::atomic<double> deposits = 0;
     std::atomic<double> starting_cash = 0;
 
     VectorXd portfolio_weights;

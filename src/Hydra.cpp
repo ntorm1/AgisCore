@@ -1,6 +1,8 @@
 #pragma once
 #include "pch.h" 
 
+
+
 #include "Utils.h"
 #include "Hydra.h"
 #include "Exchange.h"
@@ -123,7 +125,7 @@ AgisResult<bool> Hydra::new_exchange(
 
 
 //============================================================================
-AGIS_API PortfolioPtr const Hydra::new_portfolio(std::string id, double cash)
+PortfolioPtr const Hydra::new_portfolio(std::string id, double cash)
 {
     if (this->portfolios.__portfolio_exists(id))
     {
@@ -139,7 +141,21 @@ AGIS_API PortfolioPtr const Hydra::new_portfolio(std::string id, double cash)
 
 
 //============================================================================
-AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
+std::expected<bool, AgisException> Hydra::register_broker(BrokerPtr broker)
+{
+    auto broker_opt = this->p->brokers.get_broker(broker->get_id());
+    if (broker_opt.has_value()) {
+        return std::unexpected<AgisException>("Broker with id " + broker->get_id() + " already exists");
+    }
+    else {
+		this->p->brokers.register_broker(std::move(broker));
+		return true;
+	}
+}
+
+
+//============================================================================
+void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
 {
     // Only benchmark strategies can have spaces in their names
     auto strategy_id = strategy->get_strategy_id();
@@ -179,6 +195,13 @@ AGIS_API void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
 AGIS_API PortfolioPtr const Hydra::get_portfolio(std::string const& portfolio_id) const
 {
     return this->portfolios.__get_portfolio(portfolio_id);
+}
+
+
+//============================================================================
+AGIS_API std::expected<BrokerPtr, AgisException> Hydra::get_broker(std::string const& broker_id)
+{
+    return this->p->brokers.get_broker(broker_id);
 }
 
 
@@ -313,7 +336,7 @@ AGIS_API AgisResult<bool> Hydra::build()
     auto& strats = this->strategies.__get_strategies_mut();
     for (auto& strat : strats)
     {
-        strat.second->__build(&this->router);
+        strat.second->__build(&this->router, &this->p->brokers);
         auto strat_ref = std::ref(strat.second);
         this->portfolios.__register_strategy(strat_ref);
     }
@@ -395,6 +418,7 @@ void Hydra::save_state(Document& j)
 //============================================================================
 AgisResult<AgisStrategyPtr> strategy_from_json(
     PortfolioPtr const & portfolio,
+    BrokerPtr broker,
     const Value& strategy_json)
 {
     AgisStrategyType strategy_type = StringToAgisStrategyType(strategy_json["strategy_type"].GetString());
@@ -425,6 +449,7 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
     {
         strategy = std::make_unique<AbstractAgisStrategy>(
             portfolio,
+            broker,
             strategy_id,
             allocation
         );
@@ -433,6 +458,7 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
     {
         strategy = std::make_unique<BenchMarkStrategy>(
             portfolio,
+            broker,
             strategy_id
         );
     }
@@ -444,6 +470,7 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
         try {
             strategy = std::make_unique<AgisLuaStrategy>(
                 portfolio,
+                broker,
                 strategy_id,
                 allocation,
                 fs::path(script_path),
@@ -493,8 +520,12 @@ AgisResult<bool> Hydra::restore_portfolios(Document const& j)
             if (strategy_type == AgisStrategyType::CPP) {
                 continue;
             }
-
-            auto strategy = strategy_from_json(portfolio, *strategy_json);
+            std::expected<BrokerPtr, AgisException> broker_opt = this->p->brokers.get_broker(portfolio_value["broker_id"].GetString());
+            if (!broker_opt.has_value()){
+                return AgisResult<bool>(broker_opt.error());
+            }
+            
+            auto strategy = strategy_from_json(portfolio, broker_opt.value(), *strategy_json);
             if (strategy.is_exception()) {
                 return AgisResult<bool>(strategy.get_exception());
             }

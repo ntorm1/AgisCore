@@ -205,6 +205,7 @@ OrderPtr Trade::generate_trade_inverse() {
         this->asset_index,
         -1 * this->units,
         this->strategy_index,
-        this->portfolio_index
+        this->portfolio_index,
+        this->strategy->get_broker_index()
     );
 }

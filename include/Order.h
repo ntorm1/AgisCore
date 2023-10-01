@@ -69,9 +69,9 @@ public:
         double units_,
         size_t strategy_index_,
         size_t portfolio_index_,
+        size_t broker_index_,
         std::optional<TradeExitPtr> exit = std::nullopt,
-        bool phantom = false,
-        size_t broker_index_ = 0
+        bool phantom = false
     );
 
     [[nodiscard]] inline std::optional<double> get_limit() const noexcept{ return this->limit; }

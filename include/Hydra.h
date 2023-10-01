@@ -5,9 +5,6 @@
 
 #define AGIS_API __declspec(dllimport)
 
-#define _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING
-#define _SILENCE_CXX23_DENORM_DEPRECATION_WARNING
-
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
@@ -158,13 +155,19 @@ public:
 	/// <returns></returns>
 	AGIS_API PortfolioPtr const new_portfolio(std::string id, double cash);
 
-	/// <summary>
-	/// Register new strategy to hydra instance
-	/// </summary>
-	/// <param name="strategy">Unique pointer to a AgisStrategy</param>
-	/// <param name="portfolio_id">portfolio id of the strategy</param>
-	/// <returns></returns>
+	/**
+	 * @brief Register new strategy to hydra instance
+	 * @param strategy unique pointer to the strategy to register
+	 * @return 
+	*/
 	AGIS_API void register_strategy(AgisStrategyPtr strategy);
+
+	/**
+	 * @brief Register a broker to the hydra instance
+	 * @param broker broker to register
+	 * @return result of the operation
+	*/
+	AGIS_API std::expected<bool, AgisException> register_broker(BrokerPtr broker);
 
 	/// <summary>
 	/// Get a const ref to the exchange map containing all registered exchanges
@@ -190,6 +193,13 @@ public:
 	/// <param name="portfolio_id">unique id of the portfolio to get</param>
 	/// <returns></returns>
 	AGIS_API PortfolioPtr const get_portfolio(std::string const& portfolio_id) const;
+
+	/**
+	 * @brief Get a broker registered to the hydra instance
+	 * @param broker_id unique id of the broker to get
+	 * @return result of the operation
+	*/
+	AGIS_API std::expected<BrokerPtr, AgisException> get_broker(std::string const& broker_id);
 
 	/// <summary>
 	/// Get pointer to const AgisStrategy registered to the hydra instance
