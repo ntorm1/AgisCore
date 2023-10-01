@@ -12,8 +12,6 @@ import <functional>;
 namespace Agis
 {
 
-std::atomic<uint64_t> Broker::broker_id_counter(0ULL);
-
 
 //============================================================================
 std::expected<bool, AgisException>
@@ -57,6 +55,7 @@ BrokerMap::register_broker(BrokerPtr new_broker) noexcept
 		return std::unexpected<AgisException>("Broker with id " + new_broker->get_id() + " already exists");
 	}
 	else {
+		new_broker->set_broker_index(this->_broker_map.size());
 		this->_broker_id_map.insert({new_broker->get_id(), new_broker->get_index()});
 		this->_broker_map.emplace(new_broker->get_index(), std::move(new_broker));
 		return true;
@@ -79,23 +78,64 @@ BrokerMap::get_broker(std::string broker_id) noexcept
 
 
 //============================================================================
-std::optional<std::reference_wrapper<OrderPtr>> Broker::__validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept
+void Broker::__validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept
 {
-	return new_order;
+	// test if order's underlying asset is tradeable in this broker instance
+	auto asset_index = new_order.get()->get_asset_index();
+	if (asset_index >= this->tradeable_assets.size()) {
+		new_order.get()->reject(0);
+		return;
+	}
+	if (!this->tradeable_assets.at(asset_index)) {
+		new_order.get()->reject(0);
+		return;
+	}
 }
 
 
 //============================================================================
-std::optional<std::reference_wrapper<OrderPtr>> BrokerMap::__validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept
+void BrokerMap::__validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept
 {
 	auto broker_index = new_order.get()->get_broker_index();
-	if (broker_index == 0) return new_order; // default broker id is 0
 	auto it = this->_broker_map.find(broker_index);
 	if(it != this->_broker_map.end()){
-		return it->second->__validate_order(new_order);
+		it->second->__validate_order(new_order);
 	}
 	else {
-		return std::nullopt;
+		new_order.get()->reject(0);
+	}
+}
+
+
+//============================================================================
+void Broker::add_tradeable_assets(size_t asset_index) noexcept
+{
+	// Resize the tradeable_assets vector if needed
+	if (asset_index >= tradeable_assets.size()) {
+		tradeable_assets.resize(asset_index + 1, false);
+	}
+
+	// Set the specified asset index to true
+	tradeable_assets.at(asset_index) = true;
+}
+
+
+//============================================================================
+void Broker::add_tradeable_assets(std::vector<size_t> asset_indices) noexcept
+{
+	size_t new_size = 0;
+	for (auto asset_index : asset_indices) {
+		new_size = std::max(new_size, asset_index + 1);
+	}
+
+	// Resize the tradeable_assets vector if needed
+	if (new_size > tradeable_assets.size()) {
+		tradeable_assets.resize(new_size, false);
+	}
+
+	// Set the specified asset indices to true
+	for (auto asset_index : asset_indices) {
+		tradeable_assets.at(asset_index) = true;
 	}
 }
 

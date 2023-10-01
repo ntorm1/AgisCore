@@ -100,8 +100,9 @@ void AgisRouter::processOrder(OrderPtr order) {
         break;
     case OrderState::PENDING:
         // order has been placed by a strategy and is routed to the correct exchange
-        this->brokers->__validate_order(order_ref)
-            .and_then([this](std::reference_wrapper<OrderPtr> order_ref){return this->exchanges->__place_order(std::move(order_ref.get())); });
+        this->brokers->__validate_order(order_ref);
+        if(order->get_order_state() == OrderState::REJECTED) break;
+        this->exchanges->__place_order(std::move(order_ref.get()));
         return;
     case OrderState::FILLED: {
         // order has been filled by the exchange and is routed to the portfolio
