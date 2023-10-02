@@ -15,7 +15,7 @@ module;
 
 module Broker:Base;
 
-import <mutex>;
+import <shared_mutex>;
 import <expected>;
 import <functional>;
 
@@ -32,7 +32,12 @@ Broker::load_tradeable_assets(std::string json_string) noexcept
 {
 	// load rapidjson document from string
 	Document d;
-	d.Parse(json_string.c_str());
+	try {
+		d.Parse(json_string.c_str());
+	}
+	catch (std::exception& e) {
+		return std::unexpected<AgisException>(e.what());
+	}
 
 	// verify the document is an array
 	if (!d.IsArray()) {
@@ -40,58 +45,94 @@ Broker::load_tradeable_assets(std::string json_string) noexcept
 	}
 
 	// iterate over the array
-	for (auto it = d.MemberBegin(); it != d.MemberEnd(); ++it)
+	for (SizeType i = 0; i < d.Size(); ++i) 
 	{
+		const rapidjson::Value& it = d[i];
+		if (!it.IsObject()) {
+			return std::unexpected<AgisException>("found element in array is not a json object");
+		}
+
 		// test if key "asset_type" exists
-		if (!it->value.HasMember("asset_type")) {
+		if (!it.HasMember("asset_type")) {
 			return std::unexpected<AgisException>("Found element that does not contain key \"asset_type\"");
 		}
 		// get the asset_id as a string or return an error
-		if (!it->value.HasMember("asset_id")) {
+		if (!it.HasMember("asset_id")) {
 			return std::unexpected<AgisException>("Found element that does not contain key \"asset_id\"");
 		}
 
 		// get the asset type as string and convert to enum
-		std::string asset_type = it->value["asset_type"].GetString();
+		std::string asset_type = it["asset_type"].GetString();
 		auto asset_type_enum_opt = AssetTypeFromString(asset_type);
 		if (!asset_type_enum_opt.has_value()) {
 			return std::unexpected<AgisException>(asset_type_enum_opt.error());
 		}
 
 		// get the asset id as string, make sure it exists
-		std::string asset_id = it->value["asset_id"].GetString();
+		std::string asset_id = it["asset_id"].GetString();
 		auto asset = this->_exchange_map->get_asset(asset_id);
 		if (asset.is_exception()) {
 			return std::unexpected<AgisException>(asset.get_exception());
 		}
 		
 		// not allowed to overwrite existing tradeable asset
-		if (this->tradeable_assets.contains(asset.unwrap()->get_asset_index())) {
+		auto asset_index = asset.unwrap()->get_asset_index();
+		if (this->tradeable_assets.contains(asset_index)) {
 			return std::unexpected<AgisException>("Asset with id " + asset_id + " already exists");
 		}
 
 		// create tradeable asset
 		TradeableAsset tradeable_asset;
 		tradeable_asset.asset = asset.unwrap().get();
-		tradeable_asset.is_margin_pct = it->value.HasMember("is_margin_pct") ? it->value["is_margin_pct"].GetBool() : true;
-		tradeable_asset.unit_multiplier = it->value.HasMember("unit_multiplier") ? it->value["unit_multiplier"].GetUint() : 1;
-		tradeable_asset.intraday_initial_margin = it->value.HasMember("intraday_initial_margin") ? it->value["intraday_initial_margin"].GetDouble() : 1;
-		tradeable_asset.intraday_maintenance_margin = it->value.HasMember("intraday_maintenance_margin") ? it->value["intraday_maintenance_margin"].GetDouble() : 1;
-		tradeable_asset.overnight_initial_margin = it->value.HasMember("overnight_initial_margin") ? it->value["overnight_initial_margin"].GetDouble() : 1;
-		tradeable_asset.overnight_maintenance_margin = it->value.HasMember("overnight_maintenance_margin") ? it->value["overnight_maintenance_margin"].GetDouble() : 1;
-		tradeable_asset.short_overnight_initial_margin = it->value.HasMember("short_overnight_initial_margin") ? it->value["short_overnight_initial_margin"].GetDouble() : 1;
-		tradeable_asset.short_overnight_maintenance_margin = it->value.HasMember("short_overnight_maintenance_margin") ? it->value["short_overnight_maintenance_margin"].GetDouble() : 1;
-		this->tradeable_assets.insert({ tradeable_asset.asset->get_asset_index(), std::move(tradeable_asset)});
+		tradeable_asset.unit_multiplier = it.HasMember("unit_multiplier") ? it["unit_multiplier"].GetUint() : 1;
+		tradeable_asset.intraday_initial_margin = it.HasMember("intraday_initial_margin") ? it["intraday_initial_margin"].GetDouble() : 1;
+		tradeable_asset.intraday_maintenance_margin = it.HasMember("intraday_maintenance_margin") ? it["intraday_maintenance_margin"].GetDouble() : 1;
+		tradeable_asset.overnight_initial_margin = it.HasMember("overnight_initial_margin") ? it["overnight_initial_margin"].GetDouble() : 1;
+		tradeable_asset.overnight_maintenance_margin = it.HasMember("overnight_maintenance_margin") ? it["overnight_maintenance_margin"].GetDouble() : 1;
+		tradeable_asset.short_overnight_initial_margin = it.HasMember("short_overnight_initial_margin") ? it["short_overnight_initial_margin"].GetDouble() : 1;
+		tradeable_asset.short_overnight_maintenance_margin = it.HasMember("short_overnight_maintenance_margin") ? it["short_overnight_maintenance_margin"].GetDouble() : 1;
+		this->tradeable_assets.insert({ asset_index, std::move(tradeable_asset)});
 	}
 
 	return true;
 }
 
+
+//============================================================================
+std::expected<double, AgisException>
+Broker::get_margin_requirement(size_t asset_index, MarginType margin_type) noexcept
+{
+	std::shared_lock<std::shared_mutex> lock(_broker_mutex);
+
+	auto it = this->tradeable_assets.find(asset_index);
+	if (it == this->tradeable_assets.end()) {
+		return std::unexpected<AgisException>("Asset with index " + std::to_string(asset_index) + " does not exist");
+	}
+	switch (margin_type)
+	{
+		case MarginType::INTRADAY_INITIAL:
+			return it->second.intraday_initial_margin;
+		case MarginType::INTRADAY_MAINTENANCE:
+			return it->second.intraday_maintenance_margin;
+		case MarginType::OVERNIGHT_INITIAL:
+			return it->second.overnight_initial_margin;
+		case MarginType::OVERNIGHT_MAINTENANCE:
+			return it->second.overnight_maintenance_margin;
+		case MarginType::SHORT_OVERNIGHT_INITIAL:
+			return it->second.short_overnight_initial_margin;
+		case MarginType::SHORT_OVERNIGHT_MAINTENANCE:
+			return it->second.short_overnight_maintenance_margin;
+		default:
+				return std::unexpected<AgisException>("Invalid margin type");
+	}
+}
+
+
 //============================================================================
 std::expected<bool, AgisException>
 Broker::load_tradeable_assets(fs::path p) noexcept
 {
-	std::lock_guard<std::mutex> broker_lock(this->_broker_mutex);
+	std::unique_lock<std::shared_mutex> lock(_broker_mutex);
 
 	// verify path exists
 	if (!fs::exists(p)) {
@@ -113,7 +154,7 @@ Broker::load_tradeable_assets(fs::path p) noexcept
 std::expected<bool, AgisException>
 Broker::strategy_subscribe(AgisStrategy* strategy) noexcept
 {
-	std::lock_guard<std::mutex> broker_lock(this->_broker_mutex);
+	std::unique_lock<std::shared_mutex> broker_lock(_broker_mutex);
 	auto index = strategy->get_strategy_index();
 	std::mutex& position_mutex = this->strategy_locks[index];
 	std::lock_guard<std::mutex> lock(position_mutex);
@@ -171,6 +212,8 @@ BrokerMap::get_broker(std::string broker_id) noexcept
 void 
 Broker::__on_order_fill(std::reference_wrapper<OrderPtr> new_order) noexcept
 {
+	std::shared_lock<std::shared_mutex> lock(_broker_mutex);
+
 	// set the order's broker pointer on fill in order to manage open positions filled by the broker
 	new_order.get()->__broker = this;
 }

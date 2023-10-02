@@ -14,7 +14,7 @@ export module Broker:Base;
 
 import <ankerl/unordered_dense.h>;
 import <memory>;
-import <mutex>;
+import <shared_mutex>;
 import <unordered_map>;
 import <filesystem>;
 import <expected>;
@@ -31,11 +31,20 @@ export namespace Agis
 
 class Asset;
 
+enum class MarginType
+{
+	INTRADAY_INITIAL,
+	INTRADAY_MAINTENANCE,
+	OVERNIGHT_INITIAL,
+	OVERNIGHT_MAINTENANCE,
+	SHORT_OVERNIGHT_INITIAL,
+	SHORT_OVERNIGHT_MAINTENANCE
+};
+
 //============================================================================
 struct TradeableAsset
 {
 	Asset* asset;
-	bool		is_margin_pct;
 	uint16_t 	unit_multiplier;
 	double		intraday_initial_margin = 1;
 	double		intraday_maintenance_margin = 1;
@@ -63,6 +72,8 @@ public:
 
 	[[nodiscard]] AGIS_API std::expected<bool, AgisException> load_tradeable_assets(std::string json_string) noexcept;
 	[[nodiscard]] AGIS_API std::expected<bool, AgisException> load_tradeable_assets(fs::path p) noexcept;
+	
+	[[nodiscard]] AGIS_API std::expected<double, AgisException> get_margin_requirement(size_t asset_index, MarginType margin_type) noexcept;
 	[[nodiscard]] std::string const& get_id() const noexcept { return _broker_id; };
 	[[nodiscard]] size_t get_index() const noexcept { return _broker_index; };
 
@@ -74,7 +85,7 @@ private:
 
 	friend class BrokerMap;
 
-	std::mutex _broker_mutex;
+	std::shared_mutex _broker_mutex;
 	std::string _broker_id;
 	size_t _broker_index = 0;
 
