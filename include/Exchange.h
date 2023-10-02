@@ -58,6 +58,7 @@ class  Exchange
 	friend class ExchangeMap;
 public:
 	AGIS_API Exchange(
+		AssetType asset_type,
 		std::string exchange_id,
 		std::string source_dir,
 		Frequency freq,
@@ -217,7 +218,7 @@ protected:
 private:
 	std::mutex _mutex;
 	static std::atomic<size_t> exchange_counter;
-
+	AssetType asset_type;
 	std::string exchange_id;
 	std::string source_dir;
 	std::string dt_format;
@@ -272,6 +273,7 @@ public:
 	/// <param name="dt_format">the format of the datetime index</param>
 	/// <returns>status if the new exchange was created succesfully</returns>
 	AGIS_API [[nodiscard]] AgisResult<bool> new_exchange(
+		AssetType asset_type,
 		std::string exchange_id_,
 		std::string source_dir_,
 		Frequency freq_,

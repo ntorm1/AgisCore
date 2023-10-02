@@ -37,6 +37,8 @@ import <ankerl/unordered_dense.h>;
 class Exchange;
 class ExchangeMap;
 
+import :Core;
+
 
 export namespace Agis
 {
@@ -62,6 +64,7 @@ public:
     /// <param name="time_zone">the time zone of the asset</param>
     /// <returns></returns>
     AGIS_API Asset(
+        AssetType asset_type,
         std::string asset_id,
         std::string exchange_id,
         std::optional<size_t> warmup = std::nullopt,
@@ -241,7 +244,7 @@ protected:
 private:
     bool is_loaded = false;
     std::string asset_id;
-
+    AssetType asset_type;
     size_t asset_index;
     size_t exchange_offset;
 

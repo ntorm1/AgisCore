@@ -426,14 +426,18 @@ void PortfolioMap::restore(AgisRouter& router, const Document& j) {
 
 
 //============================================================================
-PortfolioRef PortfolioMap::get_portfolio(std::string const& id) const
+PortfolioRef
+PortfolioMap::get_portfolio(std::string const& id) const
 {
     auto index = this->portfolio_map.at(id);
     auto p = std::cref(this->portfolios.at(index));
     return p;
 }
 
-std::vector<std::string> PortfolioMap::get_portfolio_ids() const
+
+//============================================================================
+std::vector<std::string>
+PortfolioMap::get_portfolio_ids() const
 {
     std::vector<std::string> v;
     for (auto p : this->portfolio_map)
@@ -443,8 +447,10 @@ std::vector<std::string> PortfolioMap::get_portfolio_ids() const
     return v;
 }
 
+
 //============================================================================
-std::expected<rapidjson::Document, AgisException> PortfolioMap::to_json() const
+std::expected<rapidjson::Document, AgisException>
+PortfolioMap::to_json() const
 {
     Document j(kObjectType);
     for (const auto& pair : portfolios) {

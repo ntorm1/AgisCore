@@ -29,6 +29,7 @@ module;
 module Asset:Base;
 
 import :Observer;
+import :Core;
 
 import <string>;
 
@@ -39,12 +40,14 @@ namespace Agis
 
 //============================================================================
 Asset::Asset(
+    AssetType asset_type_,
     std::string asset_id_,
     std::string exchange_id_,
     std::optional<size_t> warmup_,
     Frequency freq_,
     std::string time_zone_)
 {
+    this->asset_type = asset_type_;
     this->current_index = 0;
     this->asset_id = asset_id_;
     this->exchange_id = exchange_id_;

@@ -16,51 +16,72 @@ import <ankerl/unordered_dense.h>;
 import <memory>;
 import <mutex>;
 import <unordered_map>;
-
+import <filesystem>;
 import <expected>;
 import <functional>;
 
-
-class AgisStrategy;
-
 typedef std::unique_ptr<Order> OrderPtr;
+
+namespace fs = std::filesystem;
+
+export class ExchangeMap;
 
 export namespace Agis 
 {
 
-class BrokerMap;
+class Asset;
 
+//============================================================================
+struct TradeableAsset
+{
+	Asset* asset;
+	bool		is_margin_pct;
+	uint16_t 	unit_multiplier;
+	double		intraday_initial_margin = 1;
+	double		intraday_maintenance_margin = 1;
+	double		overnight_initial_margin = 1;
+	double		overnight_maintenance_margin = 1;
+	double		short_overnight_initial_margin = 1;
+	double		short_overnight_maintenance_margin = 1;
+};
+
+
+//============================================================================
 class Broker
 {
 	friend class AgisStrategy;
-	friend class BrokerMap;
 public:
-	Broker() = delete;
 	Broker(
-		std::string broker_id
-	) {
-		_broker_id = broker_id;
-	};
+		std::string broker_id,
+		ExchangeMap* exchange_map
+	) : _exchange_map(exchange_map), _broker_id(broker_id) {};
+	Broker() = delete;
 	virtual ~Broker() = default;
 
+	void __on_order_fill(std::reference_wrapper<OrderPtr> new_order) noexcept;
 	void __validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept;
 
-	AGIS_API void add_tradeable_assets(size_t asset_index) noexcept;
-	AGIS_API void add_tradeable_assets(std::vector<size_t> asset_indices) noexcept;
+	[[nodiscard]] AGIS_API std::expected<bool, AgisException> load_tradeable_assets(std::string json_string) noexcept;
+	[[nodiscard]] AGIS_API std::expected<bool, AgisException> load_tradeable_assets(fs::path p) noexcept;
 	[[nodiscard]] std::string const& get_id() const noexcept { return _broker_id; };
 	[[nodiscard]] size_t get_index() const noexcept { return _broker_index; };
 
 protected:
-	std::expected<bool, AgisException> strategy_subscribe(size_t strategy_id) noexcept;
-	std::expected<bool, AgisException> deposit_cash(size_t strategy_id, double amount) noexcept;
+	std::expected<bool, AgisException> strategy_subscribe(AgisStrategy* strategy) noexcept;
 	void set_broker_index(size_t broker_index) noexcept { _broker_index = broker_index; };
+
 private:
+
+	friend class BrokerMap;
+
+	std::mutex _broker_mutex;
 	std::string _broker_id;
 	size_t _broker_index = 0;
 
-	std::unordered_map<size_t, std::mutex> strategy_locks;		///< Locks for each strategy
-	ankerl::unordered_dense::map<size_t, double> deposits;		///< Cash deposits in the broker's account
-	std::vector<bool> tradeable_assets;							///< Assets that can be traded through the broker
+	ExchangeMap* _exchange_map;
+	std::unordered_map<size_t, std::mutex> strategy_locks;					///< Locks for each strategy
+	ankerl::unordered_dense::map<size_t, AgisStrategy*> strategies;			///< Strategies subscribed to the broker
+	ankerl::unordered_dense::map<size_t, TradeableAsset> tradeable_assets;	///< Tradeable assets
 
 	double _interest_rate;	///< Interest rate on cash held in the broker's account
 	double _margin_rate;	///< Margin rate charged on margin debt
@@ -68,17 +89,22 @@ private:
 
 using BrokerPtr = std::shared_ptr<Broker>;
 
+
+//============================================================================
 class BrokerMap
 {
 public:
-	BrokerMap() = default;
+	BrokerMap(ExchangeMap* exchange_map) : _exchange_map(exchange_map) {};
 	~BrokerMap() = default;
 
+	AGIS_API void __on_order_fill(std::reference_wrapper<OrderPtr> new_order) noexcept;
 	AGIS_API void __validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept;
+	AGIS_API std::expected<BrokerPtr, AgisException> new_broker(std::string broker_id) noexcept;
 	AGIS_API std::expected<bool, AgisException> register_broker(BrokerPtr new_broker) noexcept;
 	AGIS_API std::expected<BrokerPtr, AgisException> get_broker(std::string broker_id) noexcept;
 
 private:
+	ExchangeMap* _exchange_map;
 	ankerl::unordered_dense::map<std::string, size_t> _broker_id_map;
 	ankerl::unordered_dense::map<size_t, BrokerPtr> _broker_map;
 };

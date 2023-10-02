@@ -13,6 +13,7 @@ class Order;
 
 namespace Agis {
     class Asset;
+    class Broker;
 }
 
 using namespace Agis;
@@ -47,8 +48,9 @@ struct TradePartition {
 
 
 struct AGIS_API Trade {
-    AssetPtr __asset;           ///< pointer to the underlying asset of the trade
-    AgisStrategy* strategy;     ///< raw pointer to the strategy that generated the trade
+    AssetPtr __asset;         ///< pointer to the underlying asset of the trade
+    AgisStrategy* strategy;   ///< raw pointer to the strategy that generated the trade
+    Broker* broker;           ///< raw pointer to the broker that the trade was placed to
 
     double units;
     double average_price;

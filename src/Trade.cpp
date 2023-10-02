@@ -12,6 +12,7 @@ std::atomic<size_t> Trade::trade_counter(0);
 //============================================================================
 Trade::Trade(AgisStrategy* strategy_, OrderPtr const& filled_order):
     strategy(strategy_),
+    broker(filled_order->__broker),
     __asset(filled_order->__asset)
 {
     this->asset_index = filled_order->get_asset_index();

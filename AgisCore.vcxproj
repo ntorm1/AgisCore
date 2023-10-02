@@ -199,12 +199,12 @@
   <ItemGroup>
     <ClCompile Include="modules\asset\Asset.Base.cpp" />
     <ClCompile Include="modules\asset\Asset.Base.ixx" />
+    <ClCompile Include="modules\asset\Asset.Core.ixx" />
     <ClCompile Include="modules\asset\Asset.ixx" />
     <ClCompile Include="modules\asset\Asset.Observer.cpp" />
     <ClCompile Include="modules\asset\Asset.Observer.ixx" />
     <ClCompile Include="modules\broker\Broker.Base.cpp" />
     <ClCompile Include="modules\broker\Broker.Base.ixx" />
-    <ClCompile Include="modules\broker\Broker.Dummy.ixx" />
     <ClCompile Include="modules\broker\Broker.ixx" />
     <ClCompile Include="src\AbstractAgisStrategy.cpp" />
     <ClCompile Include="src\AbstractStrategyTree.cpp" />

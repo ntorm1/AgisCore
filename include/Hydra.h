@@ -22,18 +22,11 @@
 #include "AgisRouter.h"
 #include "AbstractAgisStrategy.h"
 
-#include "Exchange.h"
-
 struct HydraPrivate;
 
 class Hydra
 {
-private:
-	/**
-	 * @brief Container holding all exchange objects that are currently registered
-	*/
-	ExchangeMap exchanges;
-	
+private:	
 	/**
 	 * @brief Container holding all portfolios that are currently registered
 	*/
@@ -139,6 +132,7 @@ public:
 	/// <param name="dt_format">format of the datetime index</param>
 	/// <returns></returns>
 	AGIS_API [[nodiscard]] AgisResult<bool> new_exchange(
+		AssetType asset_type_,
 		std::string exchange_id_,
 		std::string source_dir_,
 		Frequency freq_,
@@ -173,7 +167,7 @@ public:
 	/// Get a const ref to the exchange map containing all registered exchanges
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API ExchangeMap const& get_exchanges() const { return this->exchanges; }
+	AGIS_API ExchangeMap const& get_exchanges() const noexcept;
 	
 	/// <summary>
 	/// Get const ref to the portfolio map containing all registered portfolios
@@ -194,12 +188,10 @@ public:
 	/// <returns></returns>
 	AGIS_API PortfolioPtr const get_portfolio(std::string const& portfolio_id) const;
 
-	/**
-	 * @brief Get a broker registered to the hydra instance
-	 * @param broker_id unique id of the broker to get
-	 * @return result of the operation
-	*/
+
 	AGIS_API std::expected<BrokerPtr, AgisException> get_broker(std::string const& broker_id);
+	AGIS_API std::expected<BrokerPtr, AgisException> new_broker(std::string const& broker_id);
+
 
 	/// <summary>
 	/// Get pointer to const AgisStrategy registered to the hydra instance
@@ -283,8 +275,8 @@ public:
 	AGIS_API AgisResult<std::string> strategy_index_to_id(size_t const& index) const;
 	AGIS_API AgisResult<std::string> portfolio_index_to_id(size_t const& index) const;
 
-	AGIS_API auto __get_dt_index(bool cutoff = false) const {return this->exchanges.__get_dt_index(cutoff);}
-	AGIS_API size_t get_candle_count() { return this->exchanges.get_candle_count(); };
+	AGIS_API auto __get_dt_index(bool cutoff = false) const noexcept;
+	AGIS_API size_t get_candle_count() const noexcept;
 	AGIS_API bool asset_exists(std::string asset_id) const;
 	AGIS_API bool portfolio_exists(std::string const& portfolio_id) const;
 	AGIS_API bool strategy_exists(std::string const& strategy_id) const;

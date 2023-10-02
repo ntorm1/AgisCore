@@ -106,7 +106,8 @@ void AgisRouter::processOrder(OrderPtr order) {
         return;
     case OrderState::FILLED: {
         // order has been filled by the exchange and is routed to the portfolio
-        this->portfolios->__on_order_fill(order);
+        this->brokers->__on_order_fill(order_ref);
+        this->portfolios->__on_order_fill(order_ref);
         // allow for bet hedge to be processed in the same step
         if (order->has_beta_hedge_order()) {
             this->process_beta_hedge(order);

@@ -25,7 +25,7 @@ AgisStrategy::AgisStrategy(
 	broker(broker),
 	tracers(this)
 {
-	this->broker->strategy_subscribe(this->strategy_index);
+	this->broker->strategy_subscribe(this);
 	this->tracers.starting_cash.store(
 		portfolio_allocation_ * portfolio_->get_cash()
 	);

@@ -11,6 +11,10 @@
 #include "Trade.h"
 #include "Utils.h"
 
+namespace Agis {
+    class Broker;
+}
+
 class Order;
 class Hydra;
 struct Trade;
@@ -58,6 +62,7 @@ public:
     bool phantom_order = false;     /// is the order a phantom order (placed by benchmark strategy)
     bool force_close = false;       /// force an order to close out a position
     AssetPtr __asset = nullptr;		/// pointer to the asset the order is for
+    Broker* __broker = nullptr;		/// pointer to the broker the order was placed on 
 
     /**
      * @brief pointer to the trade altered by this order

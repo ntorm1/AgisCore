@@ -23,6 +23,7 @@ std::vector<std::string> exchange_view_opps = {
 
 //============================================================================
 Exchange::Exchange(
+		AssetType asset_type_,
 		std::string exchange_id_, 
 		std::string source_dir_,
 		Frequency freq_,
@@ -30,6 +31,7 @@ Exchange::Exchange(
 		ExchangeMap* exchanges_) : 
 	exchanges(exchanges_)
 {
+	this->asset_type = asset_type_;
 	this->exchange_id = exchange_id_;
 	this->source_dir = source_dir_;
 	this->freq = freq_;
@@ -67,7 +69,7 @@ void ExchangeMap::restore(rapidjson::Document const& j)
 		auto const& source_dir_ = exchange_json["source_dir"].GetString();
 		auto const& dt_format_ = exchange_json["dt_format"].GetString();
 		auto freq_ = StringToFrequency(exchange_json["freq"].GetString());
-		this->new_exchange(exchange_id_, source_dir_, freq_, dt_format_);
+		this->new_exchange(AssetType::US_EQUITY, exchange_id_, source_dir_, freq_, dt_format_);
 
 		// set market asset if needed
 		MarketAsset market_asset = MarketAsset(
@@ -617,7 +619,12 @@ AGIS_API AgisResult<bool> Exchange::restore_h5(std::optional<std::vector<std::st
 			H5::DataSpace dataspaceIndex = datasetIndex.getSpace();
 			
 			std::optional<size_t> warmup = this->market_asset.has_value() ? this->market_asset.value().beta_lookback : std::nullopt;
-			auto asset = std::make_shared<Asset>(asset_id, this->exchange_id, warmup);
+			auto asset = std::make_shared<Asset>(
+				this->asset_type,
+				asset_id,
+				this->exchange_id,
+				warmup
+			);
 			this->assets.push_back(asset);
 			AGIS_DO_OR_RETURN(asset->load(
 				dataset,
@@ -676,7 +683,12 @@ AgisResult<bool> Exchange::restore(
 				continue;
 			}
 			std::optional<size_t> warmup = this->market_asset.has_value() ? this->market_asset.value().beta_lookback : std::nullopt;
-			auto asset = std::make_shared<Asset>(asset_id, this->exchange_id, warmup);
+			auto asset = std::make_shared<Asset>(
+				this->asset_type,
+				asset_id,
+				this->exchange_id,
+				warmup
+			);
 
 			this->assets.push_back(asset);
 			AGIS_DO_OR_RETURN(asset->load(file, this->dt_format), bool);
@@ -926,6 +938,7 @@ AgisResult<bool> ExchangeMap::restore_exchange(
 
 //============================================================================
 AgisResult<bool> ExchangeMap::new_exchange(
+	AssetType asset_type_,
 	std::string exchange_id_,
 	std::string source_dir_,
 	Frequency freq_,
@@ -939,6 +952,7 @@ AgisResult<bool> ExchangeMap::new_exchange(
 	
 	// Build the new exchange object and add to the map
 	auto exchange = std::make_shared<Exchange>(
+		asset_type_,
 		exchange_id_,
 		source_dir_,
 		freq_,
