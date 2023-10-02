@@ -10,7 +10,13 @@
 
 class Hydra;
 class Order;
-class Asset;
+
+namespace Agis {
+    class Asset;
+}
+
+using namespace Agis;
+
 typedef std::shared_ptr<Asset> AssetPtr;
 typedef std::unique_ptr<Order> OrderPtr;
 typedef const Hydra* HydraPtr;

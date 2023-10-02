@@ -8,6 +8,7 @@
 #include <bitset>
 #include <cstdint>
 #include <atomic>
+#include <expected>
 #include <iostream>
 #include <Eigen/Dense>
 
@@ -95,8 +96,8 @@ protected:
     VectorXd portfolio_weights;
 
 private:
-    AgisResult<double> get_portfolio_volatility();
-    AgisResult<double> get_benchmark_volatility();
+    std::expected<double, AgisException> get_portfolio_volatility();
+    std::expected<double, AgisException> get_benchmark_volatility();
 
     std::atomic<double> net_beta = 0;
     std::atomic<double> net_leverage_ratio = 0;

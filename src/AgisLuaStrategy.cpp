@@ -3,8 +3,11 @@
 #include <fstream>
 #include "AbstractStrategyTree.h"
 #include "AgisLuaStrategy.h"
-#include "AgisObservers.h"
 #include "AgisFunctional.h"
+
+import Asset;
+
+using namespace Agis;
 
 SOL_BASE_CLASSES(AgisLuaStrategy, AgisStrategy);
 SOL_DERIVED_CLASSES(AgisLuaStrategy, AgisLuaStrategy);

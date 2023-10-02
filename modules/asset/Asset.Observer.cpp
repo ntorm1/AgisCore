@@ -1,10 +1,18 @@
-#include "pch.h"
-#include "AgisObservers.h"
-#include "Asset.h"
+module;
 
-size_t IncrementalCovariance::step_size(1);
-size_t IncrementalCovariance::period(0);
+#pragma once
+#include "AgisException.h"
 
+module Asset:Observer;
+
+import :Base;
+
+#define AGIS_EXCEP(msg) \
+    AgisException(std::string(__FILE__) + ":" + std::to_string(__LINE__) + " - " + msg)
+
+
+namespace Agis
+{
 
 //============================================================================
 void AssetObserver::add_observer() {
@@ -19,32 +27,32 @@ void AssetObserver::remove_observer() {
 
 
 //============================================================================
-AgisResult<AssetPtr> get_enclosing_asset(
+std::expected<AssetPtr, AgisException>  get_enclosing_asset(
     std::shared_ptr<Asset> a1,
     std::shared_ptr<Asset> a2
 )
 {
     auto res = a1->encloses(a2);
     if (res.is_exception()) {
-        return AgisResult<AssetPtr>(res.get_exception());
+        return  std::unexpected<AgisException>(res.get_exception());
     }
     // a1 is the enclosing asset
     if (res.unwrap()) {
-        return AgisResult<AssetPtr>(a1);
+        return a1;
     }
     else {
         res = a2->encloses(a1);
         if (res.is_exception()) {
-            return AgisResult<AssetPtr>(res.get_exception());
+            return  std::unexpected<AgisException>(res.get_exception());
         }
         // a2 is the enclosing asset
         else if (res.unwrap()) {
-            return AgisResult<AssetPtr>(a2);
+            return a2;
         }
         // no enclosing asset was fount
         else {
             auto msg = "Assets " + a1->get_asset_id() + " and " + a2->get_asset_id() + " do not enclose each other";
-            return AgisResult<AssetPtr>(AGIS_EXCEP(msg));
+            return  std::unexpected<AgisException>(AGIS_EXCEP(msg));
         }
     }
 }
@@ -72,10 +80,10 @@ IncrementalCovariance::IncrementalCovariance(
     // find the enclosing asset. One aset most enclose the other i.e. the datetimeindex of the child 
     // must be a subset of the enclosing asset and have no gaps
     auto res = get_enclosing_asset(a1, a2);
-    if (res.is_exception()) {
-        throw res.get_exception();
+    if (!res.has_value()) {
+        throw res.error();
     }
-    this->enclosing_asset = res.unwrap();
+    this->enclosing_asset = res.value();
     if (this->enclosing_asset == a1) {
         this->child_asset = a2;
     }
@@ -164,9 +172,9 @@ void IncrementalCovariance::on_reset()
 //============================================================================
 std::string IncrementalCovariance::str_rep() const noexcept
 {
-    
+
     return this->child_asset->get_asset_id() + "_INC_COV_" + std::to_string(this->period);
-    
+
 }
 
 
@@ -217,7 +225,7 @@ void VarVisitor::build() {
         sum += col[i];
         sos += col[i] * col[i];
 
-        if (i >= r_count - 1) { 
+        if (i >= r_count - 1) {
             double mean = sum / r_count;
             double variance = (sos / (r_count - 1)) - (mean * mean);
             this->result[i] = variance;
@@ -254,23 +262,28 @@ void RollingZScoreVisitor::build() {
 }
 
 //============================================================================
-AGIS_API AgisResult<AssetObserverPtr> create_inc_cov_observer(
+std::expected<AssetObserverPtr, AgisException> create_inc_cov_observer(
     std::shared_ptr<Asset> a1,
     std::shared_ptr<Asset> a2
 ) {
     std::shared_ptr<AssetObserver> ptr = nullptr;
-    AGIS_TRY_RESULT(ptr = std::make_shared<IncrementalCovariance>(
-        a1,
-        a2
-    ), AssetObserverPtr);
-    if (!ptr) return AgisResult<AssetObserverPtr>(AGIS_EXCEP("Failed to create observer"));
-    return AgisResult<AssetObserverPtr>(ptr);
+    try {
+        ptr = std::make_shared<IncrementalCovariance>(
+            a1,
+            a2
+        );
+    }
+    catch (std::exception& e) {
+		return std::unexpected<AgisException>(AGIS_EXCEP(e.what()));
+	}
+
+    if (!ptr) return std::unexpected<AgisException>(AGIS_EXCEP("Failed to create observer"));
+    return ptr;
 }
 
 
-#ifdef USE_DATAFRAME
 //============================================================================
-AGIS_API AgisResult<AssetObserverPtr> create_roll_col_observer(
+std::expected<AssetObserverPtr, AgisException> create_roll_col_observer(
     Asset* asset_,
     AssetObserverType type_,
     std::string col_name_,
@@ -292,9 +305,10 @@ AGIS_API AgisResult<AssetObserverPtr> create_roll_col_observer(
         }
     }
     catch (std::exception& e) {
-		return AgisResult<AssetObserverPtr>(AGIS_EXCEP(e.what()));
-	}
-    if (!ptr) return AgisResult<AssetObserverPtr>(AGIS_EXCEP("Failed to create observer"));
-    return AgisResult<AssetObserverPtr>(ptr);
+        return std::unexpected<AgisException>(AGIS_EXCEP(e.what()));
+    }
+    if (!ptr) return std::unexpected<AgisException>(AGIS_EXCEP("Failed to create observer"));
+    return ptr;
 }
-#endif
+
+}

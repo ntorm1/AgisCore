@@ -8,18 +8,19 @@
 #include <string>
 #include <utility>
 
-#include "Asset.h"
 #include "Order.h"
 #include "AgisRisk.h"
 #include "ExchangeView.h"
+
+import Asset;
+
+using namespace Agis;
 
 class Exchange;
 class ExchangeMap;
 struct ExchangeView;
 class AgisRouter;
-class AssetObserver;
 
-typedef std::shared_ptr<AssetObserver> AssetObserverPtr;
 AGIS_API typedef ankerl::unordered_dense::map<std::string, std::shared_ptr<Exchange>> Exchanges;
 AGIS_API typedef std::shared_ptr<Exchange> ExchangePtr;
 
@@ -188,6 +189,7 @@ public:
 	void __process_limit_order(std::unique_ptr<Order>& order, bool on_close);
 	AGIS_API void __set_volatility_lookback(size_t window_size);
 	void __add_asset_observer(AssetObserverPtr&& observer) {this->asset_observers.push_back(std::move(observer));}
+	void __add_asset_observer(AssetObserverPtr observer) { this->asset_observers.push_back(std::move(observer)); }
 
 
 
@@ -543,9 +545,9 @@ AgisResult<bool> exchange_add_observer(
 ) {
 	auto& observers = exchange->__get_asset_observers();
 	for (auto& asset : exchange->get_assets()) {
-		AgisResult<AssetObserverPtr> observer = func(asset.get(), std::forward<Args>(args)...);
-		if (observer.is_exception()) return AgisResult<bool>(observer.get_exception());
-		exchange->__add_asset_observer(observer.unwrap());
+		std::expected<AssetObserverPtr, AgisException> observer = func(asset.get(), std::forward<Args>(args)...);
+		if (!observer.has_value()) return AgisResult<bool>(observer.error());
+		exchange->__add_asset_observer(observer.value());
 		auto asset_obv_raw = observers.back().get();
 		asset->add_observer(asset_obv_raw);
 	}

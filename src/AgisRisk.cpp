@@ -1,13 +1,14 @@
 #include "pch.h"
 #include "AgisRisk.h"
-#include "Asset.h"
 #include "Order.h"
 #include "Exchange.h"
 #include "AgisStrategy.h"
-#include "AgisObservers.h"
+
+import Asset;
+
+using namespace Agis;
 
 constexpr auto SQRT_252 = 15.874507866387544;
-
 
 //============================================================================
 double covariance(const std::vector<double>& values1, const std::vector<double>& values2, size_t start, size_t end)
@@ -176,18 +177,18 @@ std::vector<double> rolling_volatility(std::span<double> const prices, size_t wi
 
 
 //============================================================================
-AgisResult<double> calculate_portfolio_volatility(
+std::expected<double, AgisException> calculate_portfolio_volatility(
     VectorXd const& portfolio_weights,
     MatrixXd const& covariance_matrix
 )
 {
     // check dimensions
     if (portfolio_weights.size() != covariance_matrix.rows()) {
-        return AgisResult<double>(AGIS_EXCEP("Weights vector size does not match covariance matrix size"));
+        return std::unexpected<AgisException>(AGIS_EXCEP("Weights vector size does not match covariance matrix size"));
     }
 
     auto res = std::sqrt(portfolio_weights.transpose().dot(covariance_matrix * 252 * portfolio_weights));
-    return AgisResult<double>(res);
+    return res;
 }
 
 
@@ -258,9 +259,6 @@ AgisCovarianceMatrix::AgisCovarianceMatrix(
     this->step_size = step_size_;
     this->exchange_map = exchange_map;
 
-    IncrementalCovariance::step_size = this->step_size;
-    IncrementalCovariance::period = this->lookback;
-
     auto& assets = exchange_map->get_assets();
     auto asset_count = assets.size();
     this->covariance_matrix.resize(asset_count, asset_count);
@@ -278,8 +276,8 @@ AgisCovarianceMatrix::AgisCovarianceMatrix(
                     assets[i],
                     assets[j]
                 );
-                if(observer.is_exception()) throw observer.get_exception();
-                incremental_covariance = std::dynamic_pointer_cast<IncrementalCovariance>(observer.unwrap());
+                if(!observer.has_value()) throw observer.error();
+                incremental_covariance = std::dynamic_pointer_cast<IncrementalCovariance>(observer.value());
             }
             catch (std::runtime_error& e) {
 			    throw e;
@@ -287,6 +285,8 @@ AgisCovarianceMatrix::AgisCovarianceMatrix(
             auto upper_triangular = &this->covariance_matrix(i, j);
             auto lower_triangular = &this->covariance_matrix(j, i);
             incremental_covariance->set_pointers(upper_triangular, lower_triangular);
+            incremental_covariance->set_step_size(this->step_size);
+            incremental_covariance->set_period(this->lookback);
             incremental_covariance_matrix.push_back(incremental_covariance);
 		}
     }

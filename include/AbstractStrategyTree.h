@@ -6,10 +6,12 @@
 #endif
 #include <vector>
 #include <memory>
-#include "Asset.h"
+
 #include "AgisErrors.h"
 #include "AgisPointers.h"
 #include "AgisStrategy.h"
+
+import Asset;
 
 class ASTNode;
 class AssetNode;

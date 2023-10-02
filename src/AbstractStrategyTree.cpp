@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "AbstractStrategyTree.h"
-#include "AgisObservers.h"
+
 
 //============================================================================
 AGIS_API std::unique_ptr<AbstractAssetLambdaRead> create_asset_lambda_read(std::string col, int index) {

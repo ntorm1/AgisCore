@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <numeric>
 #include "AgisAnalysis.h"
 #include "Portfolio.h"
 #include "AgisStrategy.h"

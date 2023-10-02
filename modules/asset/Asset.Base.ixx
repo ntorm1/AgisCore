@@ -1,15 +1,16 @@
+module;
+
 #pragma once
 #ifdef AGISCORE_EXPORTS
 #define AGIS_API __declspec(dllexport)
 #else
 #define AGIS_API __declspec(dllimport)
 #endif
-#include "pch.h"
 
-#include <string>
-#include <span>
-#include <filesystem>
-#include "AgisErrors.h"
+#define _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING
+#define _SILENCE_CXX23_DENORM_DEPRECATION_WARNING
+
+#include "AgisException.h"
 
 #define ARROW_API_H
 #define H5_HAVE_H5CPP
@@ -22,69 +23,28 @@
 #include <arrow/api.h>
 #endif
 
-#ifndef USER_ANKERL
-#include <ankerl/unordered_dense.h>
-#endif // !USER_ANKERL
-
 #include "Utils.h"
 #include "AgisEnums.h"
 #include "AgisPointers.h"
 
-class AssetObserver;
-class Asset;
+export module Asset:Base;
 
-AGIS_API typedef std::shared_ptr<Asset> AssetPtr;
-
-
-/**
-*   @par Usage
-* 
-*   Asset's are created directly from files and can take the form of csv, hdf5, or parquet.
-*   For csv files, the data should like the following, note the string datetime index: 
-*   
-*   | Index                | Open   | Close |
-*   |----------------------|--------|-------|
-*   |     2019-01-01       |   10.10|10.12  |
-*   |     2019-01-02       |   12.2 |10.13  |
-*   |     2019-01-03       |    9.8 |10.14  |
-*   
-* 
-*   To create an asset from hdf5 data, you need two datasets. One for the nanosecond epoch index,
-*   and one for the actual data. Note the index should be an int64 nanosecond epoch index, not string.
-*   Use the following python code as an example to see how to format the .h5 file so that we can read it.
-*   
-*   @code{.py}
-*   _path = os.path.join(path, "hdf5", "data.h5")
-*   with h5py.File(_path, "a") as file:
-*       # Convert the DataFrame to a NumPy array
-*       cols = ["open","high","low","close","volume"]
-*       data = df_mid[cols].to_numpy()
-
-*       # Create a new dataset and save the data
-*       file.create_dataset(f"{ticker}/datetime", data=df_mid["ts_event"].to_numpy())
-*       dataset = file.create_dataset(f"{ticker}/data", data=data)
-*
-*       # Store column names as attributes
-*       for col_name in cols:
-*           dataset.attrs[col_name] = col_name
-*   @endcode
-* 
-*   Assets should not be created directly but should instead be created by restoring 
-*   an exchange. That being said, if you want to create a new asset and load data you can 
-*   do the following to create an asset instance and load the data. Note the the file extension
-*   will automatically detect how to load the data, if it is invalid extension then you will get
-*   an error return code on the load:
-* 
-*   @code
-*   auto asset = std::make_shared<Asset>("asset_id", "exchange_id");
-*   auto status = asset->load("C:/user/data/spy_daily/aapl.csv", "%Y-%m-%d");
-*   @endcode
-* 
-*/
+import <string>;
+import <span>;
+import <filesystem>;
+import <ankerl/unordered_dense.h>;
 
 class Exchange;
 class ExchangeMap;
 
+
+export namespace Agis
+{
+
+class Asset;
+class AssetObserver;
+
+using AssetPtr = std::shared_ptr<Asset>;
 
 class  Asset
 {
@@ -135,7 +95,7 @@ public:
 
     /**
      * @brief remove an observer from the asset
-     * @param observer 
+     * @param observer
     */
     AGIS_API void remove_observer(AssetObserver* observer);
 
@@ -174,12 +134,12 @@ public:
     AGIS_API const std::span<double const> get_volatility_column() const;
 
     AGIS_API bool __get_is_valid_next_time() const { return __is_valid_next_time; }
-    AGIS_API bool __is_last_row() const {return this->current_index == this->rows + 1;}
+    AGIS_API bool __is_last_row() const { return this->current_index == this->rows + 1; }
     AGIS_API double __get(std::string col, size_t row) const;
     AGIS_API inline long long __get_dt(size_t row) const { return *(this->dt_index + row); };
-    AGIS_API inline size_t __get_open_index() const {return this->open_index;}
+    AGIS_API inline size_t __get_open_index() const { return this->open_index; }
     AGIS_API inline size_t __get_close_index() const { return this->close_index; }
-    
+
     AGIS_API double __get_market_price(bool on_close) const;
     AGIS_API AgisMatrix<double> const __get__data() const;
     AGIS_API std::span<double> const __get_column(size_t column_index) const;
@@ -187,7 +147,7 @@ public:
     AGIS_API std::span<long long> const __get_dt_index(bool adjust_for_warmup = true) const;
     AGIS_API std::vector<std::string> __get_dt_index_str(bool adjust_for_warmup = true) const;
     size_t __get_index(bool offset = true) const { return offset ? this->asset_index : this->asset_index - this->exchange_offset; }
-    bool __get_is_aligned() const { return this->__is_aligned;}
+    bool __get_is_aligned() const { return this->__is_aligned; }
 
 
     bool __contains_column(std::string const& col) { return this->headers.count(col) > 0; }
@@ -195,7 +155,7 @@ public:
     void __set_warmup(size_t warmup_) { if (this->warmup < warmup_) this->warmup = warmup_; }
     void __set_in_exchange_view(bool x) { this->__in_exchange_view = x; }
     bool __is_valid_time(long long& datetime);
-    long long __get_asset_time() const { return this->dt_index[this->current_index];}
+    long long __get_asset_time() const { return this->dt_index[this->current_index]; }
 
 
     /// <summary>
@@ -231,29 +191,29 @@ protected:
     /// <param name="dt_fmt">the format of the datetime index</param>
     /// <param name="window">a range of valid times to load, in the form of seconds since midnight</param>
     /// <returns></returns>
-        AGIS_API [[nodiscard]] AgisResult<bool> load(
-            std::string source,
-            std::string dt_fmt,
-            std::optional<std::pair<long long, long long>> window = std::nullopt
-        );
+    AGIS_API [[nodiscard]] AgisResult<bool> load(
+        std::string source,
+        std::string dt_fmt,
+        std::optional<std::pair<long long, long long>> window = std::nullopt
+    );
 
-    #ifdef H5_HAVE_H5CPP
-        /// <summary>
-        /// Load a asset data from an H5 dataset and datetime index.
-        /// </summary>
-        /// <param name="dataset">H5 dataset for the asset data</param>
-        /// <param name="dataspace">H5 dataspace for the asset data matrix</param>
-        /// <param name="datasetIndex">H5 dataset for the asset index</param>
-        /// <param name="dataspaceIndex">H5 dataspace for the asset index</param>
-        /// <returns></returns>
-        AGIS_API [[nodiscard]] AgisResult<bool> load(
-            H5::DataSet& dataset,
-            H5::DataSpace& dataspace,
-            H5::DataSet& datasetIndex,
-            H5::DataSpace& dataspaceIndex,
-            std::string dt_fmt
-        );
-    #endif
+#ifdef H5_HAVE_H5CPP
+    /// <summary>
+    /// Load a asset data from an H5 dataset and datetime index.
+    /// </summary>
+    /// <param name="dataset">H5 dataset for the asset data</param>
+    /// <param name="dataspace">H5 dataspace for the asset data matrix</param>
+    /// <param name="datasetIndex">H5 dataset for the asset index</param>
+    /// <param name="dataspaceIndex">H5 dataspace for the asset index</param>
+    /// <returns></returns>
+    AGIS_API [[nodiscard]] AgisResult<bool> load(
+        H5::DataSet& dataset,
+        H5::DataSpace& dataspace,
+        H5::DataSet& datasetIndex,
+        H5::DataSpace& dataspaceIndex,
+        std::string dt_fmt
+    );
+#endif
 
     void __goto(long long datetime);
     void __reset();
@@ -272,9 +232,9 @@ protected:
     bool __is_market_asset = false;
 
     bool __is_last_view() const { return this->current_index - 1 == this->rows; }
-    bool __in_warmup() const { 
-        if(this->current_index == 0) return true;
-        return (this->current_index - 1) < this->warmup; 
+    bool __in_warmup() const {
+        if (this->current_index == 0) return true;
+        return (this->current_index - 1) < this->warmup;
     }
 
 
@@ -292,18 +252,18 @@ private:
     size_t warmup = 0;
     Frequency freq;
 
-    size_t rows          = 0;
-    size_t columns       = 0;
+    size_t rows = 0;
+    size_t columns = 0;
     size_t current_index = 0;
     size_t open_index;
     size_t close_index;
     long long* dt_index = nullptr;
-    double* data        = nullptr;
-    double* close       = nullptr;
-    double* open        = nullptr;
+    double* data = nullptr;
+    double* close = nullptr;
+    double* open = nullptr;
 
     /**
-     * @brief vector of rolling annualized volatility defined by some lookback N. Set via 
+     * @brief vector of rolling annualized volatility defined by some lookback N. Set via
      * and exchange's set_volatility() method.
     */
     std::vector<double> volatility_vector;
@@ -329,12 +289,11 @@ private:
 
 };
 
-
 struct MarketAsset
 {
     // constructor
-    MarketAsset(AssetPtr asset_, std::optional<size_t> beta_lookback_ = std::nullopt) 
-    : asset(asset_), beta_lookback(beta_lookback_) 
+    MarketAsset(AssetPtr asset_, std::optional<size_t> beta_lookback_ = std::nullopt)
+        : asset(asset_), beta_lookback(beta_lookback_)
     {
         this->market_index = asset->get_asset_index();
         this->market_id = asset->get_asset_id();
@@ -351,12 +310,14 @@ struct MarketAsset
     bool operator==(const MarketAsset& other) const
     {
         auto a = this->beta_lookback.value_or(0) == other.beta_lookback.value_or(0);
-		auto b = this->market_id == other.market_id;
+        auto b = this->market_id == other.market_id;
         return a && b;
-	}
-   
+    }
+
     size_t                  market_index;
     std::string             market_id;
     AssetPtr                asset;
     std::optional<size_t>   beta_lookback;
 };
+
+}

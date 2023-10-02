@@ -3,11 +3,12 @@
 #include <tbb/parallel_for_each.h>
 #include <chrono>
 #include <Windows.h>
+#include <H5Cpp.h>
+
 #include "utils_array.h"
 #include "Exchange.h"
 
 #include "AgisRouter.h"
-#include "AgisObservers.h"
 #include "AgisRisk.h"
 #include "AgisFunctional.h"
 

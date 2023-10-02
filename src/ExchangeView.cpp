@@ -59,10 +59,10 @@ AgisResult<bool> ExchangeView::vol_target(double target)
 	auto cov_matrix = exchange_map->get_covariance_matrix();
 	if (cov_matrix.is_exception()) return AgisResult<bool>(cov_matrix.get_exception());
 	auto vol = calculate_portfolio_volatility(weights, cov_matrix.unwrap()->get_eigen_matrix());
-	if (vol.is_exception()) return AgisResult<bool>(vol.get_exception());
+	if (!vol.has_value()) return AgisResult<bool>(vol.error());
 
 	// calculate the vol target
-	double vol_target = target / vol.unwrap();
+	double vol_target = target / vol.value();
 
 	// scale exsiting allocations
 	for (auto& alloc : this->view)

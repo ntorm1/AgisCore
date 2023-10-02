@@ -7,10 +7,17 @@
 #include <vector>
 #include <span>
 #include <optional>
+#include <expected>
 #include <Eigen/Dense>
-#include "Asset.h"
+
+#include "AgisException.h"
+
+namespace Agis {
+	class IncrementalCovariance;
+}
 
 using namespace Eigen;
+using namespace Agis;
 
 typedef Matrix<double, Dynamic, Dynamic> MatrixXd;
 typedef Matrix<double, Dynamic, 1> VectorXi;
@@ -18,10 +25,6 @@ typedef Matrix<double, Dynamic, 1> VectorXi;
 class Order;
 class AgisStrategy;
 class ExchangeMap;
-struct AgisCovarianceMatrix;
-class IncrementalCovariance;
-class AssetObserver;
-
 
 /**
  * @brief Container for holding the covariance matrix for all assets listed on an exchange. It contains 
@@ -117,7 +120,7 @@ AGIS_API std::vector<double> rolling_volatility(
 );
 
 
-AGIS_API AgisResult<double> calculate_portfolio_volatility(
+AGIS_API std::expected<double, AgisException> calculate_portfolio_volatility(
 	VectorXd const& portfolio_weights,
 	MatrixXd const& covariance_matrix
 );

@@ -1,11 +1,17 @@
-#include "Asset.h"
-#include "pch.h"
-#include <string>
-#include <fstream>
-#include <algorithm>
+module;
 
-#include "AgisRisk.h"
-#include "AgisObservers.h"
+#define ARROW_API_H
+#define H5_HAVE_H5CPP
+
+#define _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING
+#define _SILENCE_CXX23_DENORM_DEPRECATION_WARNING
+
+#include <optional>
+#include <fstream>
+
+#ifdef H5_HAVE_H5CPP
+#include <H5Cpp.h>
+#endif
 
 #ifdef ARROW_API_H
 #include <arrow/api.h>
@@ -14,6 +20,22 @@
 #include <parquet/arrow/reader.h>
 #include <arrow/filesystem/localfs.h>
 #endif
+
+#include "AgisException.h"
+#include "AgisEnums.h"
+#include "AgisRisk.h"
+#include "Utils.h"
+
+module Asset:Base;
+
+import :Observer;
+
+import <string>;
+
+
+namespace Agis
+{
+
 
 //============================================================================
 Asset::Asset(
@@ -129,7 +151,7 @@ AGIS_API AgisResult<bool> Asset::load(
             this->headers[attrValue] = static_cast<size_t>(i);
         }
     }
-    
+
     AGIS_DO_OR_RETURN(this->load_headers(), bool);
 
     // Get the number of rows and columns from the dataspace
@@ -184,15 +206,15 @@ AgisResult<bool> Asset::encloses(AssetPtr asset_b)
         return AgisResult<bool>(asset_b_start_index_res.get_exception());
     }
     auto asset_b_start_index = asset_b_start_index_res.unwrap();
-	// check if asset_b is contained in this
-	for (size_t i = 0; i < asset_b->rows; i++)
-	{
-		if (this->dt_index[asset_b_start_index + i] != asset_b_index[i])
-		{
-			return AgisResult<bool>(false);
-		}
-	}
-	return AgisResult<bool>(true);
+    // check if asset_b is contained in this
+    for (size_t i = 0; i < asset_b->rows; i++)
+    {
+        if (this->dt_index[asset_b_start_index + i] != asset_b_index[i])
+        {
+            return AgisResult<bool>(false);
+        }
+    }
+    return AgisResult<bool>(true);
 }
 
 
@@ -220,9 +242,9 @@ void Asset::add_observer(AssetObserver* observer)
     auto it = this->observers.find(str_rep);
     if (it == this->observers.end())
     {
-		this->observers.emplace(std::move(str_rep), observer);
-	}
-    else 
+        this->observers.emplace(std::move(str_rep), observer);
+    }
+    else
     {
         (*it).second->set_touch(true);
     }
@@ -249,8 +271,8 @@ std::vector<double> Asset::generate_baseline_returns(double starting_amount)
     returns[0] = starting_amount / close_price[0];
     for (size_t i = 1; i < this->rows; i++)
     {
-		returns[i] = returns[i - 1] * close_price[i] / close_price[i - 1];
-	}
+        returns[i] = returns[i - 1] * close_price[i] / close_price[i - 1];
+    }
     return returns;
 }
 
@@ -317,7 +339,7 @@ AgisResult<bool> Asset::load_csv()
     this->columns = this->headers.size();
 
     // Load in the actual data
-    this->data = new double[this->rows*this->columns];
+    this->data = new double[this->rows * this->columns];
     this->dt_index = new long long[this->rows];
 
     size_t row_counter = 0;
@@ -352,8 +374,10 @@ AgisResult<bool> Asset::load_csv()
 #ifdef ARROW_API_H
 const arrow::Status Asset::load_parquet()
 {
-    arrow::SetCpuThreadPoolCapacity(1);
-    arrow::io::SetIOThreadPoolCapacity(1);
+    auto res = arrow::SetCpuThreadPoolCapacity(1);
+    if (res != arrow::Status::OK()) return res;
+    res = arrow::io::SetIOThreadPoolCapacity(1);
+    if (res != arrow::Status::OK()) return res;
     arrow::MemoryPool* pool = arrow::default_memory_pool();
 
     // Bind our input file to source
@@ -443,7 +467,7 @@ std::span<double> const Asset::__get_column(size_t column_index) const
 std::span<double> const Asset::__get_column(std::string const& column_name) const
 {
     auto col_offset = this->headers.at(column_name);
-    return std::span<double>(this->data + (col_offset*this->rows), this->rows);
+    return std::span<double>(this->data + (col_offset * this->rows), this->rows);
 }
 
 
@@ -452,8 +476,8 @@ std::span<long long> const Asset::__get_dt_index(bool adjust_for_warmup) const
 {
     // return the dt index without the warmup period moving the pointer 
     // forward so that the final union index will be adjusted to all warmups
-    if(adjust_for_warmup)
-        return std::span(this->dt_index + this->warmup,this->rows - this->warmup);
+    if (adjust_for_warmup)
+        return std::span(this->dt_index + this->warmup, this->rows - this->warmup);
     else
         return std::span(this->dt_index, this->rows);
 }
@@ -482,15 +506,15 @@ bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
     if (lookback >= close_column.size())
     {
         return false;
-    }   
+    }
 
     // adjust the warmup to account for the lookback period
     this->__set_warmup(lookback);
-    
+
     std::span<long long> market_datetime_index = market_asset->__get_dt_index(false);
     std::span<long long> datetime_index = this->__get_dt_index(false);
     long long first_datetime = datetime_index[0];
-    
+
     // find the first datetime in the market asset that is equal to the first datetime in this asset
     auto first_datetime_index = std::find(
         market_datetime_index.begin(),
@@ -502,7 +526,7 @@ bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
         market_datetime_index.begin(),
         first_datetime_index
     );
- 
+
     std::vector<double> returns_this, returns_market;
     returns_this.resize(this->rows - 1);
     returns_market.resize(this->rows - 1);
@@ -514,8 +538,8 @@ bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
         double return_market = (market_close_col[i + first_datetime_index_loc] - market_close_col[i + first_datetime_index_loc - 1]) /
             market_close_col[i + first_datetime_index_loc - 1];
 
-        returns_this[i-1] = return_this;
-        returns_market[i-1] = return_market;
+        returns_this[i - 1] = return_this;
+        returns_market[i - 1] = return_market;
     }
     this->beta_vector = rolling_beta(returns_this, returns_market, lookback);
     assert(this->beta_vector.size() == this->rows);
@@ -652,7 +676,7 @@ void Asset::__reset()
     // move datetime index and data pointer back to start
     this->current_index = 0;
     this->__is_expired = false;
-    if(!__is_aligned) this->__is_streaming = false;
+    if (!__is_aligned) this->__is_streaming = false;
     this->close = (this->data + (this->rows) * this->close_index);
     this->open = (this->data + (this->rows) * this->open_index);
 
@@ -701,23 +725,23 @@ AgisResult<double> Asset::get_asset_feature(std::string const& col, int index) c
 {
 #ifdef _DEBUG
 
-    if (abs(index) > static_cast<int>(current_index - 1) || index > 0) 
+    if (abs(index) > static_cast<int>(current_index - 1) || index > 0)
     {
         return AgisResult<double>(AGIS_EXCEP("Invalid row index: " + std::to_string(index)));
     }
     if (!__is_streaming)
     {
-		return AgisResult<double>(AGIS_EXCEP("Asset is not streaming"));
-	}
-    if(!this->headers.contains(col)) 
-	{
-		return AgisResult<double>(AGIS_EXCEP("Column does not exist: " + col));
-	}
+        return AgisResult<double>(AGIS_EXCEP("Asset is not streaming"));
+    }
+    if (!this->headers.contains(col))
+    {
+        return AgisResult<double>(AGIS_EXCEP("Column does not exist: " + col));
+    }
 #endif
 
     size_t col_offset = this->headers.at(col) * this->rows;
     size_t row_offset = this->current_index + index - 1;
-    return AgisResult<double> (*(this->data + row_offset + col_offset));
+    return AgisResult<double>(*(this->data + row_offset + col_offset));
 }
 
 
@@ -745,10 +769,10 @@ AgisResult<double> Asset::get_asset_feature(size_t col, int index) const
 AgisResult<double> Asset::get_asset_observer_result(std::string const& observer_name) const noexcept
 {
     auto it = this->observers.find(observer_name);
-	if (it == this->observers.end())
-	{
-		return AgisResult<double>(AGIS_EXCEP("Observer does not exist: " + observer_name));
-	}
+    if (it == this->observers.end())
+    {
+        return AgisResult<double>(AGIS_EXCEP("Observer does not exist: " + observer_name));
+    }
     return AgisResult<double>((*it).second->get_result());
 }
 
@@ -791,6 +815,6 @@ double Asset::__get(std::string col, size_t row) const
     return *(this->data + row + col_offset);
 }
 
-template class AGIS_API StridedPointer<long long>;
-template class AGIS_API StridedPointer<double>;
-template class AGIS_API AgisMatrix<double>;
+
+
+}

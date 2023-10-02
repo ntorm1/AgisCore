@@ -1,6 +1,10 @@
 #include "pch.h"
 #include "AbstractAgisStrategy.h"
 
+import Asset;
+
+using namespace Agis;
+
 //============================================================================
 void AbstractAgisStrategy::next()
 {

@@ -177,7 +177,6 @@
     <ClInclude Include="include\AgisException.h" />
     <ClInclude Include="include\AgisFunctional.h" />
     <ClInclude Include="include\AgisLuaStrategy.h" />
-    <ClInclude Include="include\AgisObservers.h" />
     <ClInclude Include="include\AgisOverloads.h" />
     <ClInclude Include="include\AgisPointers.h" />
     <ClInclude Include="include\AgisRisk.h" />
@@ -185,7 +184,6 @@
     <ClInclude Include="include\AgisStrategy.h" />
     <ClInclude Include="include\AgisStrategyRegistry.h" />
     <ClInclude Include="include\AgisStrategyTracers.h" />
-    <ClInclude Include="include\Asset.h" />
     <ClInclude Include="include\Exchange.h" />
     <ClInclude Include="include\ExchangeView.h" />
     <ClInclude Include="include\framework.h" />
@@ -199,6 +197,11 @@
     <ClInclude Include="include\utils_array.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="modules\asset\Asset.Base.cpp" />
+    <ClCompile Include="modules\asset\Asset.Base.ixx" />
+    <ClCompile Include="modules\asset\Asset.ixx" />
+    <ClCompile Include="modules\asset\Asset.Observer.cpp" />
+    <ClCompile Include="modules\asset\Asset.Observer.ixx" />
     <ClCompile Include="modules\broker\Broker.Base.cpp" />
     <ClCompile Include="modules\broker\Broker.Base.ixx" />
     <ClCompile Include="modules\broker\Broker.Dummy.ixx" />
@@ -208,12 +211,10 @@
     <ClCompile Include="src\AgisAnalysis.cpp" />
     <ClCompile Include="src\AgisFunctional.cpp" />
     <ClCompile Include="src\AgisLuaStrategy.cpp" />
-    <ClCompile Include="src\AgisObservers.cpp" />
     <ClCompile Include="src\AgisRisk.cpp" />
     <ClCompile Include="src\AgisRouter.cpp" />
     <ClCompile Include="src\AgisStrategy.cpp" />
     <ClCompile Include="src\AgisStrategyTracers.cpp" />
-    <ClCompile Include="src\Asset.cpp" />
     <ClCompile Include="src\dllmain.cpp" />
     <ClCompile Include="src\Exchange.cpp" />
     <ClCompile Include="src\ExchangeView.cpp" />

@@ -27,9 +27,6 @@
     <ClInclude Include="include\AgisErrors.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Asset.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\Utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -90,9 +87,6 @@
     <ClInclude Include="include\AgisLuaStrategy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\AgisObservers.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\AgisException.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -111,9 +105,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Hydra.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Asset.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Utils.cpp">
@@ -158,9 +149,6 @@
     <ClCompile Include="src\AbstractStrategyTree.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\AgisObservers.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="modules\broker\Broker.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -171,6 +159,21 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="modules\broker\Broker.Base.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\asset\Asset.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\asset\Asset.Base.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\asset\Asset.Base.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\asset\Asset.Observer.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\asset\Asset.Observer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

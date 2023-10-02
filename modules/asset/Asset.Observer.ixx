@@ -1,20 +1,34 @@
+module;
+
 #pragma once
 #ifdef AGISCORE_EXPORTS
 #define AGIS_API __declspec(dllexport)
 #else
 #define AGIS_API __declspec(dllimport)
 #endif
-#include "pch.h"
-#include <span>
-#include <unordered_map>
+
+#include <vector>
+#include <optional>
+#include "AgisPointers.h"
+#include "AgisException.h"
+
+export module Asset:Observer;
+
+import <expected>;
+import <span>;
+import <string>;
+import <unordered_map>;
+
+struct AgisCovarianceMatrix;
+
+export namespace Agis
+{
 
 class Asset;
 class AssetObserver;
 class IncrementalCovariance;
 
-typedef std::shared_ptr<Asset> AssetPtr;
-typedef std::shared_ptr<AssetObserver> AssetObserverPtr;
-
+using AssetObserverPtr = std::shared_ptr<AssetObserver>;
 
 //============================================================================
 enum class AGIS_API AssetObserverType {
@@ -24,23 +38,30 @@ enum class AGIS_API AssetObserverType {
 };
 
 
-//============================================================================
-static std::unordered_map<AssetObserverType, std::string> AssetObserverTypeMap = {
-	{ AssetObserverType::COL_ROL_MEAN, "COL_ROL_MEAN" },
-	{ AssetObserverType::COL_ROL_VAR, "COL_ROL_VAR" },
-	{ AssetObserverType::COL_ROL_ZSCORE, "COL_ROL_ZSCORE" },
-};
+std::string AssetObserverTypeToString(AssetObserverType type) {
+	switch (type) {
+	case AssetObserverType::COL_ROL_MEAN:
+		return "COL_ROL_MEAN";
+	case AssetObserverType::COL_ROL_VAR:
+		return "COL_ROL_VAR";
+	case AssetObserverType::COL_ROL_ZSCORE:
+		return "COL_ROL_ZSCORE";
+	default:
+		return "Unknown"; // Return a default value for unknown enums
+	}
+}
 
 
 //============================================================================
 class AssetObserver {
+	friend struct AgisCovarianceMatrix;
 public:
-    virtual ~AssetObserver() {}
-    AssetObserver(NonNullRawPtr<Asset> asset_) : asset(asset_) {}
-    AssetObserver(Asset* asset_) : asset(asset_) {}
+	virtual ~AssetObserver() {}
+	AssetObserver(NonNullRawPtr<Asset> asset_) : asset(asset_) {}
+	AssetObserver(Asset* asset_) : asset(asset_) {}
 
-    virtual void on_step() = 0;
-    virtual void on_reset() = 0;
+	virtual void on_step() = 0;
+	virtual void on_reset() = 0;
 	virtual inline double get_result() const noexcept = 0;
 	bool get_touch() const noexcept { return this->touch; }
 	size_t get_warmup() const noexcept { return this->warmup; }
@@ -54,7 +75,7 @@ public:
 	void set_touch(bool t) { this->touch = t; }
 
 protected:
-    void set_asset_ptr(Asset* asset_) { this->asset = asset_; }
+	void set_asset_ptr(Asset* asset_) { this->asset = asset_; }
 	void add_observer();
 	void remove_observer();
 	void set_warmup(size_t w) { this->warmup = w; }
@@ -83,7 +104,7 @@ public:
 	DataFrameColObserver(
 		Asset* asset_,
 		AssetObserverType type_
-	): 
+	) :
 		AssetObserver(asset_),
 		observer_type(type_)
 	{}
@@ -112,10 +133,9 @@ public:
 
 	/**
 	 * @brief accessor for the visitor index column
-	 * @return 
+	 * @return
 	*/
 	inline double get_result() const noexcept override {
-		assert(this->index - 1 <= this->result.size());
 		return this->result[this->index - 1];
 	}
 
@@ -142,8 +162,8 @@ public:
 		Asset* asset_,
 		std::string col_name_,
 		size_t r_count_
-	) : 
-		r_count(r_count_),	
+	) :
+		r_count(r_count_),
 		DataFrameColObserver(asset_, AssetObserverType::COL_ROL_MEAN)
 	{
 		this->col_name = col_name_;
@@ -153,7 +173,7 @@ public:
 	void build() override;
 
 	std::string str_rep() const noexcept override {
-		return col_name + "_" + AssetObserverTypeMap.at(this->observer_type) + "_" + std::to_string(this->r_count);
+		return col_name + "_" + AssetObserverTypeToString(this->observer_type) + "_" + std::to_string(this->r_count);
 	}
 
 private:
@@ -182,7 +202,7 @@ public:
 	void build() override;
 
 	std::string str_rep() const noexcept override {
-		return col_name + "_" + AssetObserverTypeMap.at(this->observer_type) + "_" + std::to_string(this->r_count);
+		return col_name + "_" + AssetObserverTypeToString(this->observer_type) + "_" + std::to_string(this->r_count);
 	}
 
 private:
@@ -212,7 +232,7 @@ public:
 	void build() override;
 
 	std::string str_rep() const noexcept override {
-		return col_name + "_" + AssetObserverTypeMap.at(this->observer_type) + "_" + std::to_string(this->r_count) + "_ZScore";
+		return col_name + "_" + AssetObserverTypeToString(this->observer_type) + "_" + std::to_string(this->r_count) + "_ZScore";
 	}
 
 private:
@@ -233,8 +253,8 @@ public:
 		std::shared_ptr<Asset> a2
 	);
 
-	static size_t step_size;
-	static size_t period;
+	size_t step_size = 1;
+	size_t period = 252;
 
 	/**
 	 * @brief set the pointers into the covariance matrix that this incremental covariance struct will update
@@ -242,6 +262,9 @@ public:
 	 * @param lower_triangular_ pointer to the lower triangular portion of the covariance matrix
 	*/
 	void set_pointers(double* upper_triangular_, double* lower_triangular_);
+
+	void set_step_size(size_t step_size_) { this->step_size = step_size_; }
+	void set_period(size_t period_) { this->period = period_; }
 
 	/**
 	 * @brief function called on step of exchange to update this incremental covariance struct
@@ -269,8 +292,8 @@ public:
 	}
 
 private:
-	AssetPtr enclosing_asset = nullptr;
-	AssetPtr child_asset = nullptr;
+	std::shared_ptr<Asset> enclosing_asset = nullptr;
+	std::shared_ptr<Asset> child_asset = nullptr;
 	std::span<double const> enclosing_span;
 	std::span<double const> child_span;
 	size_t enclosing_span_start_index;
@@ -290,18 +313,18 @@ private:
 
 
 //============================================================================
-AGIS_API AgisResult<AssetObserverPtr> create_inc_cov_observer(
+AGIS_API std::expected<AssetObserverPtr, AgisException> create_inc_cov_observer(
 	std::shared_ptr<Asset> a1,
 	std::shared_ptr<Asset> a2
 );
 
 
-#ifdef USE_DATAFRAME
 //============================================================================
-AGIS_API AgisResult<AssetObserverPtr> create_roll_col_observer(
+AGIS_API std::expected<AssetObserverPtr, AgisException> create_roll_col_observer(
 	Asset* asset_,
 	AssetObserverType type_,
 	std::string col_name_,
 	size_t r_count_
 );
-#endif
+
+}
