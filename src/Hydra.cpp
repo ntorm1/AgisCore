@@ -115,7 +115,7 @@ AgisResult<bool> Hydra::new_exchange(
     Frequency freq_,
     std::string dt_format_,
     std::optional<std::vector<std::string>> asset_ids,
-    std::optional<MarketAsset> market_asset_)
+    std::optional<std::shared_ptr<MarketAsset>> market_asset_)
 {
     this->is_built = false;
     auto res = this->p->exchanges.new_exchange(asset_type_, exchange_id_, source_dir_, freq_, dt_format_);
@@ -302,7 +302,7 @@ size_t Hydra::get_candle_count() const noexcept
 
 
 //============================================================================
-auto Hydra::__get_dt_index(bool cutoff) const noexcept
+std::span<long long>  Hydra::__get_dt_index(bool cutoff) const noexcept
 {
     return this->p->exchanges.__get_dt_index(cutoff);
 }
@@ -418,7 +418,7 @@ AgisResult<bool> Hydra::__cleanup()
 
 
 //============================================================================
-void Hydra::save_state(Document& j)
+void Hydra::save_state(rapidjson::Document& j)
 {
     // Save exchanges
     j.AddMember("exchanges", this->p->exchanges.to_json(), j.GetAllocator());
@@ -591,3 +591,6 @@ template struct AGIS_API AgisResult<std::string>;
 template struct AGIS_API AgisResult<size_t>;
 template struct AGIS_API AgisResult<TradeExitPtr>;
 template struct AGIS_API AgisResult<AssetObserverPtr>;
+
+template struct AGIS_API AgisMatrix<double>;
+template struct AGIS_API StridedPointer<double>;

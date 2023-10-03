@@ -8,19 +8,15 @@ module;
 #endif
 
 #include "AgisException.h"
+#include "AgisEnums.h"
+#include <expected>
 
 export module Asset:Core;
 
-import <expected>;
+
 
 export namespace Agis
 {
-
-enum class AGIS_API AssetType
-{
-	US_EQUITY,
-	US_FUTURE,
-};
 
 std::expected <AssetType, AgisException> AssetTypeFromString(std::string asset_type_str) {
 	if (asset_type_str == "US_EQUITY") {

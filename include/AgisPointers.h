@@ -233,24 +233,21 @@ class AGIS_API AgisMatrix {
 public:
     // Constructor
     AgisMatrix(T* ptr, std::size_t rows_, std::size_t columns_)
-        : _data(ptr), _rows(rows_), _columns(columns_) {}
-    AgisMatrix() = default;
-
-    std::size_t rows() const { return this->_rows; }
-    std::size_t columns() const { return this->_columns; }
+        : _data(ptr), rows(rows_), columns(columns_) {}
 
     StridedPointer<T> const column(size_t column_index) const {
         return StridedPointer<T>(
-            this->_data + (column_index*this->_rows), 
-            this->_rows, 
+            this->_data + (column_index*this->rows), 
+            this->rows, 
             1
         );
     }
 
+    size_t rows;
+    size_t columns;
+
 private:
-    T* _data;              // Pointer to the data
-    std::size_t _rows;     // Number of rows
-    std::size_t _columns;  // Number of columns
+    T* _data;              
 };
 
 template <typename T>

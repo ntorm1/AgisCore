@@ -1,6 +1,9 @@
 module;
 
 #pragma once
+#include <cmath>
+#include <memory>
+#include <stdexcept>
 #include "AgisException.h"
 
 module Asset:Observer;

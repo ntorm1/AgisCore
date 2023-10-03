@@ -10,6 +10,10 @@ module;
 #define _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING
 #define _SILENCE_CXX23_DENORM_DEPRECATION_WARNING
 
+#include <string>
+#include <span>
+#include <filesystem>
+
 #include "AgisException.h"
 
 #define ARROW_API_H
@@ -26,13 +30,9 @@ module;
 #include "Utils.h"
 #include "AgisEnums.h"
 #include "AgisPointers.h"
+#include <ankerl/unordered_dense.h>
 
 export module Asset:Base;
-
-import <string>;
-import <span>;
-import <filesystem>;
-import <ankerl/unordered_dense.h>;
 
 class Exchange;
 class ExchangeMap;
@@ -115,15 +115,16 @@ public:
     /// <returns></returns>
     std::vector<double> generate_baseline_returns(double starting_amount);
 
-    AGIS_API inline  std::string get_asset_id() const { return this->asset_id; }
-    AGIS_API inline  size_t get_asset_index() const { return this->asset_index; }
-    AGIS_API inline  size_t const get_size() const { return this->rows - this->warmup; }
-    AGIS_API inline  size_t const get_rows() const { return this->rows; }
-    AGIS_API inline  size_t const get_cols() const { return this->columns; }
-    AGIS_API inline  size_t const get_warmup()const { return this->warmup; }
-    AGIS_API inline Frequency const get_frequency() const { return this->freq; }
+    AGIS_API inline std::string get_asset_id() const noexcept  { return this->asset_id; }
+    AGIS_API inline size_t get_asset_index() const noexcept  { return this->asset_index; }
+    AGIS_API inline size_t const get_size() const noexcept  { return this->rows - this->warmup; }
+    AGIS_API inline size_t const get_rows() const noexcept  { return this->rows; }
+    AGIS_API inline size_t const get_cols() const noexcept  { return this->columns; }
+    AGIS_API inline size_t const get_warmup()const noexcept  { return this->warmup; }
+    AGIS_API inline size_t const get_unit_multiplier() const noexcept { return this->unit_multiplier; }
+    AGIS_API inline Frequency const get_frequency() const noexcept  { return this->freq; }
     AGIS_API size_t get_current_index() const;
-    AGIS_API inline  std::string const& get_exchange_id() { return this->exchange_id; }
+    AGIS_API inline  std::string const& get_exchange_id() noexcept { return this->exchange_id; }
     AGIS_API std::vector<std::string> get_column_names() const;
     AGIS_API inline ankerl::unordered_dense::map<std::string, size_t> const& get_headers() { return this->headers; };
     AGIS_API void assign_asset_feature(size_t col, int index, AgisResult<double>& res);
@@ -156,6 +157,7 @@ public:
     bool __contains_column(std::string const& col) { return this->headers.count(col) > 0; }
     bool __valid_row(int n)const { return abs(n) <= (this->current_index - 1); }
     void __set_warmup(size_t warmup_) { if (this->warmup < warmup_) this->warmup = warmup_; }
+    void __set_unit_multiplier(size_t unit_multiplier_) noexcept { this->unit_multiplier = unit_multiplier_; }
     void __set_in_exchange_view(bool x) { this->__in_exchange_view = x; }
     bool __is_valid_time(long long& datetime);
     long long __get_asset_time() const { return this->dt_index[this->current_index]; }
@@ -252,6 +254,7 @@ private:
     std::string source;
     std::string dt_fmt;
     std::string tz;
+    size_t unit_multiplier = 1;
     size_t warmup = 0;
     Frequency freq;
 

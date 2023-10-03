@@ -4,6 +4,9 @@
 #include "AgisStrategy.h"
 #include "Hydra.h"
 
+import Asset;
+
+using namespace Agis;
 using namespace rapidjson;
 
 std::atomic<size_t> Trade::trade_counter(0);
@@ -21,9 +24,10 @@ Trade::Trade(AgisStrategy* strategy_, OrderPtr const& filled_order):
 
     // set the trade member variables
     this->units = filled_order->get_units();
+    this->units_multiplier = __asset->get_unit_multiplier();
     this->average_price = filled_order->get_average_price();
     this->open_price = this->average_price;
-    this->nlv = this->units * this->average_price;
+    this->nlv = this->units * this->average_price * units_multiplier;
     this->unrealized_pl = 0;
     this->realized_pl = 0;
     this->close_price = 0;
@@ -50,7 +54,7 @@ void Trade::close(OrderPtr const& filled_order)
 {
     this->close_price = filled_order->get_average_price();
     this->trade_close_time = filled_order->get_fill_time();
-    this->realized_pl +=(this->units * (this->close_price - this->average_price));
+    this->realized_pl +=(this->units * this->units_multiplier * (this->close_price - this->average_price));
     this->unrealized_pl = 0;
 
     // tell the strategy we are closing
@@ -74,7 +78,7 @@ void Trade::increase(OrderPtr const& filled_order)
 void Trade::reduce(OrderPtr const& filled_order)
 {
     auto units_ = filled_order->get_units();
-    auto adjustment = -1 * (units_*(filled_order->get_average_price()-this->average_price));
+    auto adjustment = -1 * (units_ * this->units_multiplier * (filled_order->get_average_price()-this->average_price));
     strategy->unrealized_pl -= adjustment;
     this->realized_pl += adjustment;
     this->unrealized_pl -= adjustment;
@@ -105,8 +109,8 @@ void Trade::adjust(OrderPtr const& filled_order)
 void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
 {
     // adjust the source strategy nlv and unrealized pl
-    auto nlv_new = this->units * market_price;
-    auto unrealized_pl_new = this->units*(market_price-this->average_price);
+    auto nlv_new = this->units * market_price * this->units_multiplier;
+    auto unrealized_pl_new = this->units * this->units_multiplier * (market_price-this->average_price);
     
     // adjust strategy levels 
     strategy->tracers.nlv_add_assign(nlv_new);

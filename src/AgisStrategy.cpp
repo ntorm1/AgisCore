@@ -8,6 +8,7 @@
 #include "AgisStrategy.h"
 
 import Broker;
+import Asset;
 
 using namespace Agis;
 using namespace rapidjson;
@@ -329,7 +330,7 @@ AGIS_API void AgisStrategy::strategy_allocate(
 	// if beta hedging touch the beta hedge trade manually as the asset is not in the allocation vector
 	if (apply_beta_hedge)
 	{
-		auto market_index = exchange_view.exchange->__get_market_asset_struct().value().market_index;
+		auto market_index = exchange_view.exchange->__get_market_asset_struct().value()->market_index;
 		auto trade_opt = this->get_trade(market_index);
 		if (trade_opt.has_value()) {
 			trade_opt.value()->strategy_alloc_touch = true;

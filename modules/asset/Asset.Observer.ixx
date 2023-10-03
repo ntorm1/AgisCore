@@ -6,18 +6,16 @@ module;
 #else
 #define AGIS_API __declspec(dllimport)
 #endif
-
+#include <string>
+#include <span>
 #include <vector>
 #include <optional>
+#include <unordered_map>
+#include <expected>
 #include "AgisPointers.h"
 #include "AgisException.h"
 
 export module Asset:Observer;
-
-import <expected>;
-import <span>;
-import <string>;
-import <unordered_map>;
 
 struct AgisCovarianceMatrix;
 

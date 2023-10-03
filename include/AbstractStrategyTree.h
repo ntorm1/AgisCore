@@ -11,7 +11,10 @@
 #include "AgisPointers.h"
 #include "AgisStrategy.h"
 
-import Asset;
+namespace Agis {
+	class Asset;
+}
+
 
 class ASTNode;
 class AssetNode;
@@ -134,9 +137,7 @@ public:
 
 
 	//============================================================================
-	AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const override {
-		return asset->get_asset_observer_result(this->observer_name);
-	};
+	AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const override;
 
 private:
 	std::string observer_name;
@@ -178,12 +179,7 @@ public:
 
 
 	//============================================================================
-	void set_col_index_lambda(size_t col_index) {
-		auto l = [=](std::shared_ptr<const Asset> const& asset) -> AgisResult<double> {
-			return asset->get_asset_feature(col_index, index.value());
-		};
-		this->func = l;
-	}
+	void set_col_index_lambda(size_t col_index);
 
 
 	//============================================================================
@@ -207,47 +203,10 @@ public:
 		AgisLogicalType logical_type_,
 		AgisLogicalRightVal right_node_,
 		bool numeric_cast = false
-	):
-		left_node(std::move(left_node_)),
-		logical_type(logical_type_),
-		right_node(std::move(right_node_)),
-		AbstractAssetLambdaNode(AssetLambdaType::LOGICAL)
-	{
-		// set the warmup equal to the left node warmup and optionally the max of that and the right node
-		this->warmup = this->left_node->get_warmup();
-		if (std::holds_alternative<std::unique_ptr<AbstractAssetLambdaNode>>(this->right_node)) {
-			auto& right_val_node = std::get<std::unique_ptr<AbstractAssetLambdaNode>>(this->right_node);
-			this->warmup = std::max(this->warmup, right_val_node->get_warmup());
-		}
-	}
+	);
 
 	//============================================================================
-	AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const override {
-		// execute left node to get value
-		AgisResult<double> res = left_node->execute();
-		bool res_bool = false;
-		if (res.is_exception() || res.is_nan()) return res;
-
-		// pass the result of the left node to the logical opperation with the right node
-		// that is either a scaler double or another asset lambda node
-		if (std::holds_alternative<double>(this->right_node)) {
-			auto right_val_double = std::get<double>(this->right_node);
-			res_bool = this->logical_compare(res.unwrap(), right_val_double);
-			if (!res_bool && !this->numeric_cast) res.set_value(AGIS_NAN);
-		}
-		else {
-			auto& right_val_node = std::get<std::unique_ptr<AbstractAssetLambdaNode>>(this->right_node);
-			auto right_res = right_val_node->execute();
-			if (right_res.is_exception() || right_res.is_nan()) return right_res;
-			res_bool = this->logical_compare(res.unwrap(), right_res.unwrap());
-			if (!res_bool && !this->numeric_cast) res.set_value(AGIS_NAN);
-		}
-		
-		// if numeric cast, take the boolean result of the logical opperation and cast to double
-		// i.e. if the logical opperation is true, return 1.0, else return 0.0
-		if (this->numeric_cast)	res.set_value(static_cast<double>(res_bool));
-		return res;
-	}
+	AgisResult<double> execute(std::shared_ptr<const Asset> const& asset) const override;
 
 private:
 	AgisLogicalOperation logical_compare;

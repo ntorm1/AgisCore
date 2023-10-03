@@ -10,11 +10,17 @@
 
 #include "Order.h"
 #include "AgisRisk.h"
+#include "AgisEnums.h"
 #include "ExchangeView.h"
 
-import Asset;
+namespace Agis {
+	class Asset;
+	struct MarketAsset;
+	class AssetObserver;
+}
 
 using namespace Agis;
+
 
 class Exchange;
 class ExchangeMap;
@@ -23,6 +29,7 @@ class AgisRouter;
 
 AGIS_API typedef ankerl::unordered_dense::map<std::string, std::shared_ptr<Exchange>> Exchanges;
 AGIS_API typedef std::shared_ptr<Exchange> ExchangePtr;
+typedef  std::shared_ptr<AssetObserver> AssetObserverPtr;
 
 /// <summary>
 /// Struct representing a point in time using eastern time.
@@ -76,7 +83,7 @@ public:
 	/// <returns>status if the load was succesful</returns>
 	AGIS_API [[nodiscard]] AgisResult<bool> restore(
 		std::optional<std::vector<std::string>> asset_ids = std::nullopt,
-		std::optional<MarketAsset> market_asset = std::nullopt
+		std::optional<std::shared_ptr<MarketAsset>> market_asset = std::nullopt
 	);
 
 	/// <summary>
@@ -176,8 +183,7 @@ public:
 	AGIS_API [[nodiscard]] AgisResult<AssetPtr> __get_market_asset() const;
 	AGIS_API [[nodiscard]] auto const& __get_assets() const { return this->assets; };
 	AGIS_API [[nodiscard]] ExchangeMap const* __get_exchange_map() const { return this->exchanges; };
-	AGIS_API [[nodiscard]] MarketAsset& __get_market_asset_struct_ref() { return this->market_asset.value(); };
-	AGIS_API [[nodiscard]] std::optional<MarketAsset> __get_market_asset_struct() const { return this->market_asset;};
+	AGIS_API [[nodiscard]] std::optional<std::shared_ptr<MarketAsset>> __get_market_asset_struct() const noexcept;
 	AGIS_API [[nodiscard]] size_t __get_exchange_offset() const { return this->exchange_offset; };
 	AGIS_API [[nodiscard]] auto& __get_asset_observers() { return this->asset_observers; };
 
@@ -233,7 +239,7 @@ private:
 	ankerl::unordered_dense::map<std::string, size_t> headers;
 	ExchangeMap* exchanges;
 
-	std::optional<MarketAsset> market_asset = std::nullopt;
+	std::optional<std::shared_ptr<MarketAsset>> market_asset = std::nullopt;
 
 	long long* dt_index = nullptr;
 	long long exchange_time;
@@ -283,7 +289,7 @@ public:
 	AGIS_API [[nodiscard]] AgisResult<bool> restore_exchange(
 		std::string const& exchange_id_,
 		std::optional<std::vector<std::string>> asset_ids = std::nullopt,
-		std::optional<MarketAsset> market_asset = std::nullopt
+		std::optional<std::shared_ptr<MarketAsset>> market_asset = std::nullopt
 	);
 
 	/// <summary>

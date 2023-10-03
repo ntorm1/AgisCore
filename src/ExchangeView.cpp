@@ -4,6 +4,10 @@
 #include "Trade.h"
 #include "AgisRisk.h"
 
+import Asset;
+
+using namespace Agis;
+
 //============================================================================
 ExchangeView::ExchangeView(const Exchange* exchange_, size_t count, bool reserve)
 {

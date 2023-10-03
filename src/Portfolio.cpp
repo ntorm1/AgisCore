@@ -5,6 +5,9 @@
 #include "Portfolio.h"
 #include "AgisStrategy.h"
 
+import Asset;
+
+using namespace Agis;
 using namespace rapidjson;
 
 std::atomic<size_t> Position::position_counter(0);
@@ -532,7 +535,6 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
     }
 
     // process new incoming order
-   
     if (!this->position_exists(asset_index))
     {
         this->open_position(order);
@@ -557,6 +559,9 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
         }
         else this->close_position(order);
     }
+    // unlock the position mutex (following opps are atomic)
+    position_mutex.unlock();
+
     // adjust account levels
     auto amount = order->get_units() * order->get_average_price();
 
@@ -566,12 +571,10 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
         amount += frictions.value().calculate_frictions(order);
 	}
 
-    this->tracers.cash.fetch_add(-amount);
-
     // adjust the strategy's cash
     auto strategy = this->strategies.at(order->get_strategy_index());
-    strategy->tracers.cash_add_assign(-amount);
-    position_mutex.unlock();
+    strategy->tracers.cash.fetch_add(-amount);
+    this->tracers.cash.fetch_add(-amount);
 }
 
 

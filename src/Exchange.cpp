@@ -12,6 +12,10 @@
 #include "AgisRisk.h"
 #include "AgisFunctional.h"
 
+import Asset;
+
+using namespace Agis;
+
 using namespace rapidjson;
 
 std::atomic<size_t> Exchange::exchange_counter(0);
@@ -72,7 +76,7 @@ void ExchangeMap::restore(rapidjson::Document const& j)
 		this->new_exchange(AssetType::US_EQUITY, exchange_id_, source_dir_, freq_, dt_format_);
 
 		// set market asset if needed
-		MarketAsset market_asset = MarketAsset(
+		auto market_asset = std::make_shared<MarketAsset>(
 			exchange_json["market_asset"].GetString(), exchange_json["market_warmup"].GetInt()
 		);
 
@@ -117,9 +121,9 @@ rapidjson::Document Exchange::to_json() const
 	j.AddMember("volatility_lookback", volatility_lookback, j.GetAllocator());
 
 	if (market_asset.has_value()) {
-		rapidjson::Value market_asset_id(market_asset.value().asset->get_asset_id().c_str(), j.GetAllocator());
+		rapidjson::Value market_asset_id(market_asset.value()->asset->get_asset_id().c_str(), j.GetAllocator());
 		j.AddMember("market_asset", market_asset_id.Move(), j.GetAllocator());
-		j.AddMember("market_warmup", market_asset.value().beta_lookback.value(), j.GetAllocator());
+		j.AddMember("market_warmup", market_asset.value()->beta_lookback.value(), j.GetAllocator());
 	}
 	else {
 		j.AddMember("market_asset", "", j.GetAllocator());
@@ -264,7 +268,7 @@ AgisResult<bool> Exchange::__set_market_asset(
 
 	// set the market asset and disable it from the exchange view
 	market_asset_->__in_exchange_view = false;
-	this->market_asset = { market_asset_ , beta_lookback};
+	this->market_asset = std::make_shared<MarketAsset>(market_asset_, beta_lookback);
 
 	if(!beta_lookback.has_value()) return AgisResult<bool>(true);
 
@@ -290,10 +294,18 @@ AgisResult<bool> Exchange::__set_market_asset(
 
 
 //============================================================================
-AGIS_API [[nodiscard]] AgisResult<AssetPtr> Exchange::__get_market_asset() const
+AgisResult<AssetPtr> Exchange::__get_market_asset() const
 {
 	if(!this->market_asset.has_value()) return AgisResult<AssetPtr>(AGIS_EXCEP("market asset not set"));
-	return AgisResult<AssetPtr>(this->market_asset.value().asset);
+	return AgisResult<AssetPtr>(this->market_asset.value()->asset);
+}
+
+
+//============================================================================
+std::optional<std::shared_ptr<MarketAsset>> Exchange::__get_market_asset_struct() const noexcept
+{
+	if(this->market_asset.has_value()) return this->market_asset.value();
+	return std::nullopt;
 }
 
 
@@ -618,7 +630,7 @@ AGIS_API AgisResult<bool> Exchange::restore_h5(std::optional<std::vector<std::st
 			H5::DataSet datasetIndex = file.openDataSet(asset_id + "/datetime");
 			H5::DataSpace dataspaceIndex = datasetIndex.getSpace();
 			
-			std::optional<size_t> warmup = this->market_asset.has_value() ? this->market_asset.value().beta_lookback : std::nullopt;
+			std::optional<size_t> warmup = this->market_asset.has_value() ? this->market_asset.value()->beta_lookback : std::nullopt;
 			auto asset = std::make_shared<Asset>(
 				this->asset_type,
 				asset_id,
@@ -652,7 +664,7 @@ AGIS_API AgisResult<bool> Exchange::restore_h5(std::optional<std::vector<std::st
 //============================================================================
 AgisResult<bool> Exchange::restore(
 	std::optional<std::vector<std::string>> asset_ids,
-	std::optional<MarketAsset> market_asset)
+	std::optional<std::shared_ptr<MarketAsset>> market_asset)
 {
 	this->market_asset = market_asset;
 
@@ -682,7 +694,7 @@ AgisResult<bool> Exchange::restore(
 			{
 				continue;
 			}
-			std::optional<size_t> warmup = this->market_asset.has_value() ? this->market_asset.value().beta_lookback : std::nullopt;
+			std::optional<size_t> warmup = this->market_asset.has_value() ? this->market_asset.value()->beta_lookback : std::nullopt;
 			auto asset = std::make_shared<Asset>(
 				this->asset_type,
 				asset_id,
@@ -704,7 +716,7 @@ AgisResult<bool> Exchange::restore(
 			this->assets.begin(),
 			this->assets.end(),
 			[&](const AssetPtr& asset) {
-				return asset->get_asset_id() == this->market_asset.value().market_id;
+				return asset->get_asset_id() == this->market_asset.value()->market_id;
 			}
 		);
 		if (new_market_asset_ptr == this->assets.end())
@@ -712,11 +724,11 @@ AgisResult<bool> Exchange::restore(
 			return AgisResult<bool>(AGIS_EXCEP("Market asset not found"));
 		}
 		// build the beta vectors if the market asset has a beta lookback
-		if (this->market_asset.value().beta_lookback.has_value())
+		if (this->market_asset.value()->beta_lookback.has_value())
 		{
 			for (auto& asset : this->assets)
 			{
-				asset->__set_beta(*new_market_asset_ptr, this->market_asset.value().beta_lookback.value());
+				asset->__set_beta(*new_market_asset_ptr, this->market_asset.value()->beta_lookback.value());
 			}
 		}
 	}
@@ -890,7 +902,7 @@ rapidjson::Document ExchangeMap::to_json() const {
 AgisResult<bool> ExchangeMap::restore_exchange(
 	std::string const& exchange_id_,
 	std::optional<std::vector<std::string>> asset_ids,
-	std::optional<MarketAsset> market_asset
+	std::optional<std::shared_ptr<MarketAsset>> market_asset
 )
 {
 	// Load in the exchange's data
@@ -918,7 +930,7 @@ AgisResult<bool> ExchangeMap::restore_exchange(
 			this->assets.begin(),
 			this->assets.end(),
 			[&](const AssetPtr& asset) {
-				return asset->get_asset_id() == market_asset.value().market_id;
+				return asset->get_asset_id() == market_asset.value()->market_id;
 			}
 		);
 		if (new_market_asset_ptr == this->assets.end())
@@ -926,9 +938,9 @@ AgisResult<bool> ExchangeMap::restore_exchange(
 			UNLOCK_GUARD
 			return AgisResult<bool>(AGIS_EXCEP("Market asset not found"));
 		}
-		auto& market_asset_struct = exchange->__get_market_asset_struct_ref();
-		market_asset_struct.asset = *new_market_asset_ptr;
-		market_asset_struct.market_index = (*new_market_asset_ptr)->get_asset_index();
+		auto market_asset_struct = exchange->__get_market_asset_struct();
+		market_asset_struct.value()->asset = *new_market_asset_ptr;
+		market_asset_struct.value()->market_index = (*new_market_asset_ptr)->get_asset_index();
 	}
 	
 	UNLOCK_GUARD

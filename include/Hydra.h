@@ -138,7 +138,7 @@ public:
 		Frequency freq_,
 		std::string dt_format,
 		std::optional<std::vector<std::string>> asset_ids = std::nullopt,
-		std::optional<MarketAsset> market_asset_ = std::nullopt
+		std::optional<std::shared_ptr<MarketAsset>> market_asset_ = std::nullopt
 	);
 
 	/// <summary>
@@ -275,7 +275,7 @@ public:
 	AGIS_API AgisResult<std::string> strategy_index_to_id(size_t const& index) const;
 	AGIS_API AgisResult<std::string> portfolio_index_to_id(size_t const& index) const;
 
-	AGIS_API auto __get_dt_index(bool cutoff = false) const noexcept;
+	AGIS_API std::span<long long> __get_dt_index(bool cutoff = false) const noexcept;
 	AGIS_API size_t get_candle_count() const noexcept;
 	AGIS_API bool asset_exists(std::string asset_id) const;
 	AGIS_API bool portfolio_exists(std::string const& portfolio_id) const;

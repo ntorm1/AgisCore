@@ -88,3 +88,10 @@ enum class AGIS_API AgisStrategyType {
     BENCHMARK,		// a benchmark strategy that does not interfer with portfolio values
     LUAJIT, 		// a lua jit strategy
 };
+
+
+enum class AGIS_API AssetType
+{
+    US_EQUITY,
+    US_FUTURE,
+};

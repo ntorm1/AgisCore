@@ -6,6 +6,7 @@
 #endif
 
 #include "pch.h"
+#include <expected>
 #include "AgisErrors.h"
 
 class Hydra;
@@ -53,6 +54,7 @@ struct AGIS_API Trade {
     Broker* broker;           ///< raw pointer to the broker that the trade was placed to
 
     double units;
+    size_t units_multiplier;
     double average_price;
     double open_price;
     double close_price;

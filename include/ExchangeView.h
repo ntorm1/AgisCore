@@ -5,6 +5,9 @@
 #define AGIS_API __declspec(dllimport)
 #endif
 #include "pch.h" 
+
+#include <ankerl/unordered_dense.h>
+
 #include "AgisRisk.h"
 
 class Exchange;
