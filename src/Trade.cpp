@@ -27,7 +27,11 @@ Trade::Trade(AgisStrategy* strategy_, OrderPtr const& filled_order):
     this->units_multiplier = __asset->get_unit_multiplier();
     this->average_price = filled_order->get_average_price();
     this->open_price = this->average_price;
+
     this->nlv = this->units * this->average_price * units_multiplier;
+    this->margin = filled_order->get_margin_impact();
+    this->nlv -= this->margin;
+
     this->unrealized_pl = 0;
     this->realized_pl = 0;
     this->close_price = 0;

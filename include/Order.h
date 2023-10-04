@@ -33,8 +33,10 @@ private:
     OrderState order_state = OrderState::PENDING;   /// state of the order
     size_t order_id;                                /// unique id of the order
 
-    double units = 0;       /// number of units in the order
-    double avg_price = 0;   /// average price the order was filled at
+    double units = 0;           /// number of units in the order
+    double avg_price = 0;       /// average price the order was filled at
+    double cash_impact = 0;     /// cash impact of the order set by the broker on fill
+    double margin_impact = 0;   /// margin required to put on the order
     std::optional<double> limit = std::nullopt;       /// limit price of the order
 
     long long order_create_time = 0;    /// time the order was created
@@ -100,11 +102,14 @@ public:
     void set_limit(double limit_) { this->limit = limit_; }
     void set_create_time(long long t) { this->order_create_time = t; }
     void set_units(double units) { this->units = units; }
+    void set_cash_impact(double cash_impact) noexcept { this->cash_impact = cash_impact; }
+    void set_margin_impact(double margin_impact) noexcept { this->margin_impact = margin_impact; }
 
-    [[nodiscard]] std::expected<double, AgisException> get_cash_impact() const noexcept;
-    [[nodiscard]] double get_average_price() const { return this->avg_price; }
-    [[nodiscard]] double get_units() const { return this->units; }
-    [[nodiscard]] long long get_fill_time() const { return this->order_fill_time; }
+[[nodiscard]] double get_margin_impact() const noexcept { return this->margin_impact; }
+    [[nodiscard]] double get_cash_impact() const noexcept { return this->cash_impact; }
+    [[nodiscard]] double get_average_price() const noexcept { return this->avg_price; }
+    [[nodiscard]] double get_units() const noexcept { return this->units; }
+    [[nodiscard]] long long get_fill_time() const noexcept { return this->order_fill_time; }
 
 
     inline bool is_filled() const { return this->order_state == OrderState::FILLED; }

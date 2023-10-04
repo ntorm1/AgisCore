@@ -24,6 +24,8 @@ typedef std::unique_ptr<Order> OrderPtr;
 namespace fs = std::filesystem;
 
 export class ExchangeMap;
+export class Portfolio;
+export class AgisRouter;
 
 export namespace Agis 
 {
@@ -63,8 +65,9 @@ class Broker
 public:
 	Broker(
 		std::string broker_id,
+		AgisRouter* router,
 		ExchangeMap* exchange_map
-	) : _exchange_map(exchange_map), _broker_id(broker_id) {};
+	);
 	Broker() = delete;
 	virtual ~Broker() = default;
 
@@ -74,9 +77,12 @@ public:
 	[[nodiscard]] AGIS_API std::expected<bool, AgisException> load_tradeable_assets(std::string json_string) noexcept;
 	[[nodiscard]] AGIS_API std::expected<bool, AgisException> load_tradeable_assets(fs::path p) noexcept;
 	
+	[[nodiscard]] AGIS_API bool trade_exists(size_t asset_index, size_t strategy_index) noexcept;
+
 	[[nodiscard]] AGIS_API std::expected<double, AgisException> get_margin_requirement(size_t asset_index, MarginType margin_type) noexcept;
 	[[nodiscard]] std::string const& get_id() const noexcept { return _broker_id; };
 	[[nodiscard]] size_t get_index() const noexcept { return _broker_index; };
+	[[nodiscard]] void set_order_impacts(std::reference_wrapper<OrderPtr> new_order) noexcept;
 
 protected:
 	std::expected<bool, AgisException> strategy_subscribe(AgisStrategy* strategy) noexcept;
@@ -93,10 +99,10 @@ private:
 	ExchangeMap* _exchange_map;
 	std::unordered_map<size_t, std::mutex> strategy_locks;					///< Locks for each strategy
 	ankerl::unordered_dense::map<size_t, AgisStrategy*> strategies;			///< Strategies subscribed to the broker
-	ankerl::unordered_dense::map<size_t, TradeableAsset> tradeable_assets;	///< Tradeable assets
+	ankerl::unordered_dense::map<size_t, TradeableAsset> tradeable_assets;	///< Tradeable assets												///< Open trades held by the broker
+	AgisRouter* _router;													///< Router for sending orders to the exchange
 
-	double _interest_rate;	///< Interest rate on cash held in the broker's account
-	double _margin_rate;	///< Margin rate charged on margin debt
+	double _cash = 0;
 };
 
 using BrokerPtr = std::shared_ptr<Broker>;
@@ -111,7 +117,7 @@ public:
 
 	AGIS_API void __on_order_fill(std::reference_wrapper<OrderPtr> new_order) noexcept;
 	AGIS_API void __validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept;
-	AGIS_API std::expected<BrokerPtr, AgisException> new_broker(std::string broker_id) noexcept;
+	AGIS_API std::expected<BrokerPtr, AgisException> new_broker(AgisRouter* router, std::string broker_id) noexcept;
 	AGIS_API std::expected<bool, AgisException> register_broker(BrokerPtr new_broker) noexcept;
 	AGIS_API std::expected<BrokerPtr, AgisException> get_broker(std::string broker_id) noexcept;
 

@@ -213,7 +213,7 @@ AGIS_API std::expected<BrokerPtr, AgisException> Hydra::get_broker(std::string c
 //============================================================================
 AGIS_API std::expected<BrokerPtr, AgisException> Hydra::new_broker(std::string const& broker_id)
 {
-    return this->p->brokers.new_broker(broker_id);
+    return this->p->brokers.new_broker(&this->router, broker_id);
 }
 
 

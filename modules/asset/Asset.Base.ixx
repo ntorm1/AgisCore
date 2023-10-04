@@ -133,6 +133,7 @@ public:
     AGIS_API AgisResult<AssetObserver*> get_observer(std::string const& id) const noexcept;
     AGIS_API AgisResult<double> get_asset_observer_result(std::string const& observer_name) const noexcept;
     AGIS_API AgisResult<double> get_beta() const;
+    AGIS_API AssetType get_asset_type() const noexcept { return this->asset_type; }
     AGIS_API AgisResult<double> get_volatility() const;
     AGIS_API const std::span<double const> get_beta_column() const;
     AGIS_API const std::span<double const> get_volatility_column() const;

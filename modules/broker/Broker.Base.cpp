@@ -12,6 +12,7 @@ module;
 #include "AgisException.h"
 #include "AgisStrategy.h"
 #include "Exchange.h"
+#include "Portfolio.h"
 
 module Broker:Base;
 
@@ -27,6 +28,16 @@ using namespace rapidjson;
 
 namespace Agis
 {
+
+
+//============================================================================
+Broker::Broker(
+	std::string broker_id,
+	AgisRouter* router,
+	ExchangeMap* exchange_map
+) : _exchange_map(exchange_map), _broker_id(broker_id), _router(router)
+{}
+
 
 //============================================================================
 std::expected<bool, AgisException>
@@ -125,8 +136,6 @@ Broker::load_tradeable_assets(std::string json_string) noexcept
 std::expected<double, AgisException>
 Broker::get_margin_requirement(size_t asset_index, MarginType margin_type) noexcept
 {
-	std::shared_lock<std::shared_mutex> lock(_broker_mutex);
-
 	auto it = this->tradeable_assets.find(asset_index);
 	if (it == this->tradeable_assets.end()) {
 		return std::unexpected<AgisException>("Asset with index " + std::to_string(asset_index) + " does not exist");
@@ -174,13 +183,27 @@ Broker::load_tradeable_assets(fs::path p) noexcept
 
 
 //============================================================================
+AGIS_API bool Broker::trade_exists(size_t asset_index, size_t strategy_index) noexcept
+{
+	std::shared_lock<std::shared_mutex> broker_lock(_broker_mutex);
+	auto it = this->strategies.find(strategy_index);
+	if (it == this->strategies.end()) {
+		return false;
+	}
+	else {
+		return it->second->get_trade(asset_index).has_value();
+	}
+}
+
+
+//============================================================================
 std::expected<bool, AgisException>
 Broker::strategy_subscribe(AgisStrategy* strategy) noexcept
 {
 	std::unique_lock<std::shared_mutex> broker_lock(_broker_mutex);
 	auto index = strategy->get_strategy_index();
-	std::mutex& position_mutex = this->strategy_locks[index];
-	std::lock_guard<std::mutex> lock(position_mutex);
+	std::mutex& strategy_mutex = this->strategy_locks[index];
+	std::lock_guard<std::mutex> lock(strategy_mutex);
 	auto it = this->strategies.find(index);
 	if (it != this->strategies.end()) {
 		return std::unexpected<AgisException>("Strategy with id " + strategy->get_strategy_id() + " already subscribed");
@@ -193,9 +216,9 @@ Broker::strategy_subscribe(AgisStrategy* strategy) noexcept
 
 
 //============================================================================
-std::expected<BrokerPtr, AgisException> BrokerMap::new_broker(std::string broker_id) noexcept
+std::expected<BrokerPtr, AgisException> BrokerMap::new_broker(AgisRouter* router, std::string broker_id) noexcept
 {
-	auto broker = std::make_shared<Broker>(broker_id, this->_exchange_map);
+	auto broker = std::make_shared<Broker>(broker_id, router, this->_exchange_map);
 	auto res = this->register_broker(broker);
 	if (res.has_value()) return broker;
 	else return std::unexpected<AgisException>(res.error());
@@ -231,13 +254,81 @@ BrokerMap::get_broker(std::string broker_id) noexcept
 	}
 }
 
+
+//============================================================================
+void Broker::set_order_impacts(std::reference_wrapper<OrderPtr> new_order_ref) noexcept
+{
+	// set the cash impact of the order on a strategies balance. Set the initial margin amount for any 
+	// strategy opening a position to initial margin requirement instead of maintenance margin requirement.
+	double margin_req;
+	auto& new_order = new_order_ref.get();
+	auto strategy = this->strategies.at(new_order->get_strategy_index());
+	PortfolioPtr const portfolio = strategy->get_portfolio();
+	auto asset_index = new_order.get()->get_asset_index();
+
+	// Note get_margin_requirement will return value as a percentage. I.e. 0.5 for 50% margin requirement
+	// Charge any strategy opening a position initial margin instead of maintenance margin
+	auto trade_opt = strategy->get_trade(asset_index);
+	if (!trade_opt.has_value()) {
+		if (new_order->get_units() < 0 && new_order->__asset->__is_eod) {
+			margin_req = this->get_margin_requirement(asset_index, MarginType::SHORT_OVERNIGHT_INITIAL).value();
+		}
+		else if (new_order->get_units() < 0 && new_order->__asset->__is_eod) {
+			margin_req = this->get_margin_requirement(asset_index, MarginType::OVERNIGHT_INITIAL).value();
+		}
+		else if (new_order->get_units() > 0 && new_order->__asset->__is_eod) {
+			margin_req = this->get_margin_requirement(asset_index, MarginType::OVERNIGHT_INITIAL).value();
+		}
+		else {
+			margin_req = this->get_margin_requirement(asset_index, MarginType::INTRADAY_INITIAL).value();
+		}
+	}
+	else {
+		if (new_order->get_units() < 0 && new_order->__asset->__is_eod) {
+			margin_req = this->get_margin_requirement(asset_index, MarginType::SHORT_OVERNIGHT_MAINTENANCE).value();
+		}
+		else if (new_order->get_units() < 0 && new_order->__asset->__is_eod) {
+			margin_req = this->get_margin_requirement(asset_index, MarginType::OVERNIGHT_MAINTENANCE).value();
+		}
+		else if (new_order->get_units() > 0 && new_order->__asset->__is_eod) {
+			margin_req = this->get_margin_requirement(asset_index, MarginType::OVERNIGHT_MAINTENANCE).value();
+		}
+		else {
+			margin_req = this->get_margin_requirement(asset_index, MarginType::INTRADAY_MAINTENANCE).value();
+		}
+	}
+	auto notional = new_order->get_average_price() * new_order->get_units() * new_order->__asset->get_unit_multiplier();
+	auto cash_impact = notional * margin_req;
+	auto margin_impact = (1-margin_req) * notional;
+
+	// if the order is for a future the cash impact is the absolute value of cash_impact assuming 
+	// the order is a trade increase. 
+	if(new_order->__asset->get_asset_type() == AssetType::US_FUTURE){
+		auto trade_opt = portfolio->get_trade(asset_index, new_order->get_strategy_index());
+		if (!trade_opt.has_value()) {
+			cash_impact = abs(cash_impact);
+			margin_impact = abs(margin_impact);
+		}
+		else {
+			const SharedTradePtr& trade = trade_opt.value().get();
+			if (std::signbit(trade->units) == std::signbit(new_order->get_units())) {
+				cash_impact = abs(cash_impact);
+				margin_impact = abs(margin_impact);
+			}
+		}
+	}
+	new_order->set_cash_impact(cash_impact);
+	new_order->set_margin_impact(margin_impact);
+}
+
+
 //============================================================================
 void 
 Broker::__on_order_fill(std::reference_wrapper<OrderPtr> new_order) noexcept
 {
-	std::shared_lock<std::shared_mutex> lock(_broker_mutex);
-
-	// set the order's broker pointer on fill in order to manage open positions filled by the broker
+	// lock the broker mutex to adjust broker levels 
+	std::unique_lock<std::shared_mutex> broker_lock(_broker_mutex);
+	this->set_order_impacts(new_order);
 	new_order.get()->__broker = this;
 }
 

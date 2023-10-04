@@ -60,6 +60,7 @@ struct AGIS_API Trade {
     double close_price;
     double last_price;
     double nlv;
+    double margin;
 
     double unrealized_pl;
     double realized_pl;

@@ -20,6 +20,12 @@
 #include "Order.h"
 #include "Trade.h"
 
+namespace Agis {
+    class Broker;
+}
+
+using namespace Agis;
+
 class Portfolio;
 class PortfolioMap;
 class AgisStrategy;
@@ -159,6 +165,7 @@ private:
 
 class Portfolio
 {
+    friend class Broker;
     friend class PortfolioMap;
     friend class AgisStrategyTracers;
 public:
@@ -204,6 +211,7 @@ public:
     /// <param name="strategy_id">unique id of the strategy</param>
     /// <returns></returns>
     AGIS_API std::optional<TradeRef> get_trade(size_t asset_index, std::string const& strategy_id);
+    AGIS_API std::optional<TradeRef> get_trade(size_t asset_index, size_t strategy_index);
 
     AGIS_API ankerl::unordered_dense::map<size_t, PositionPtr> const& __get_positions() const { return this->positions; }
     AGIS_API std::vector<size_t> get_strategy_positions(size_t strategy_index) const;
@@ -345,8 +353,6 @@ private:
      * beind modified from different threads.
     */
     std::unordered_map<size_t, std::mutex> position_mutexes;
-
-    std::optional<Frictions> frictions;
     std::vector<SharedPositionPtr> position_history;
     std::vector<SharedTradePtr> trade_history;
 };

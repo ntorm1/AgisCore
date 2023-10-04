@@ -562,19 +562,12 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
     // unlock the position mutex (following opps are atomic)
     position_mutex.unlock();
 
-    // adjust account levels
-    auto amount = order->get_units() * order->get_average_price();
+    auto cash_adjustment = order->get_cash_impact();
 
-    // adjust for any frictions present
-    if (this->frictions.has_value())
-    {
-        amount += frictions.value().calculate_frictions(order);
-	}
-
-    // adjust the strategy's cash
+    // adjust the strategy's cash as well as the portfolios
     auto strategy = this->strategies.at(order->get_strategy_index());
-    strategy->tracers.cash.fetch_add(-amount);
-    this->tracers.cash.fetch_add(-amount);
+    strategy->tracers.cash_add_assign(-cash_adjustment);
+    this->tracers.cash_add_assign(-cash_adjustment);
 }
 
 
@@ -668,18 +661,24 @@ std::optional<PositionRef> Portfolio::get_position(size_t asset_index) const
 
 
 //============================================================================
-AGIS_API std::optional<TradeRef> Portfolio::get_trade(size_t asset_index, std::string const& strategy_id)
+std::optional<TradeRef> Portfolio::get_trade(size_t asset_index, std::string const& strategy_id)
 {
     if(!this->strategy_ids.contains(strategy_id)) return std::nullopt;
-    auto strategy_index = this->strategy_ids.at(strategy_id);
-    auto position = this->get_position(asset_index);
-    if (!position.has_value()) { return std::nullopt; }
-    return position.value().get()->__get_trade(strategy_index);
+    return this->get_trade(asset_index, this->strategy_ids.at(strategy_id));
 }
 
 
 //============================================================================
-AGIS_API std::vector<size_t> Portfolio::get_strategy_positions(size_t strategy_index) const
+std::optional<TradeRef> Portfolio::get_trade(size_t asset_index, size_t strategy_index)
+{
+    auto position = this->get_position(asset_index);
+	if (!position.has_value()) { return std::nullopt; }
+	return position.value().get()->__get_trade(strategy_index);
+}
+
+
+//============================================================================
+std::vector<size_t> Portfolio::get_strategy_positions(size_t strategy_index) const
 {
     std::vector<size_t> v;
     for (const auto& position : this->positions)

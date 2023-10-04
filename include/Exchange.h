@@ -167,13 +167,13 @@ public:
 	AGIS_API AgisResult<double> get_asset_beta(size_t index) const;
 	AGIS_API AgisResult<size_t> get_column_index(std::string const& col) const;
 
-
-	AGIS_API size_t get_candle_count() const { return this->candles; };
-	AGIS_API size_t get_asset_count() const { return this->assets.size(); }
+	AGIS_API [[nodiscard]] AssetType get_asset_type() const noexcept { return this->asset_type; }
+	AGIS_API size_t get_candle_count() const noexcept { return this->candles; };
+	AGIS_API size_t get_asset_count() const noexcept { return this->assets.size(); }
 	AGIS_API inline auto get_frequency() const { return this->freq; }
-	AGIS_API inline std::string get_source() const { return this->source_dir; }
-	AGIS_API inline std::string get_dt_format() const { return this->dt_format; }
-	AGIS_API inline std::string get_exchange_id() const { return this->exchange_id; }
+	AGIS_API inline std::string get_source() const noexcept { return this->source_dir; }
+	AGIS_API inline std::string get_dt_format() const noexcept { return this->dt_format; }
+	AGIS_API inline std::string get_exchange_id() const noexcept { return this->exchange_id; }
 	AGIS_API inline StridedPointer<long long> const __get_dt_index() const;
 	AGIS_API inline size_t const __get_size() const { return this->dt_index_size; }
 	AGIS_API inline double __get_market_price(size_t asset_index, bool on_close) const;

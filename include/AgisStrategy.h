@@ -52,6 +52,7 @@ class AgisStrategy
 {
 	friend struct Trade;
 	friend class Portfolio;
+	friend class Broker;
 	friend class AgisStrategyMap;
 	friend class AgisStrategyTracers;
 public:
@@ -200,6 +201,7 @@ public:
 	size_t get_strategy_index() const { return this->strategy_index; }
 	size_t get_portfolio_index() const { return this->portfolio->__get_index(); }
 	size_t get_broker_index() const;
+	AGIS_API [[nodiscard]] PortfolioPtr const get_portfolio() const { return this->portfolio; }
 	std::string const& get_strategy_id() const { return this->strategy_id; }
 	std::string get_portfolio_id() const { return this->portfolio->__get_portfolio_id(); }
 	Frequency get_frequency() const { return this->frequency; }
