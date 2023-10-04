@@ -89,18 +89,32 @@ Broker::load_tradeable_assets(std::string json_string) noexcept
 		// asset's unit multiplier must be the same across all brokers. I.e. a CL oil futures contract
 		// allways represents 1000 barrels of oil. If the unit multiplier is different, return an error
 		size_t exsisting_multiplier = tradeable_asset.asset->get_unit_multiplier();
-		if (it.HasMember("unit_multiplier") && exsisting_multiplier != it["unit_multiplier"].GetUint()) {
+		if (it.HasMember("unit_multiplier") && exsisting_multiplier && exsisting_multiplier != it["unit_multiplier"].GetUint()) {
 			return std::unexpected<AgisException>("Asset with id " + asset_id + " already has a unit multiplier of " + std::to_string(exsisting_multiplier));
 		}
 
-		tradeable_asset.unit_multiplier = it.HasMember("unit_multiplier") ? it["unit_multiplier"].GetUint() : 1;
-		tradeable_asset.intraday_initial_margin = it.HasMember("intraday_initial_margin") ? it["intraday_initial_margin"].GetDouble() : 1;
-		tradeable_asset.intraday_maintenance_margin = it.HasMember("intraday_maintenance_margin") ? it["intraday_maintenance_margin"].GetDouble() : 1;
-		tradeable_asset.overnight_initial_margin = it.HasMember("overnight_initial_margin") ? it["overnight_initial_margin"].GetDouble() : 1;
-		tradeable_asset.overnight_maintenance_margin = it.HasMember("overnight_maintenance_margin") ? it["overnight_maintenance_margin"].GetDouble() : 1;
-		tradeable_asset.short_overnight_initial_margin = it.HasMember("short_overnight_initial_margin") ? it["short_overnight_initial_margin"].GetDouble() : 1;
-		tradeable_asset.short_overnight_maintenance_margin = it.HasMember("short_overnight_maintenance_margin") ? it["short_overnight_maintenance_margin"].GetDouble() : 1;		
-		this->tradeable_assets.insert({ asset_index, std::move(tradeable_asset)});
+		if (it.HasMember("unit_multiplier") &&
+			it.HasMember("intraday_initial_margin") &&
+			it.HasMember("intraday_maintenance_margin") &&
+			it.HasMember("overnight_initial_margin") &&
+			it.HasMember("overnight_maintenance_margin") &&
+			it.HasMember("short_overnight_initial_margin") &&
+			it.HasMember("short_overnight_maintenance_margin")) {
+
+			// All members exist, populate the struct
+			tradeable_asset.unit_multiplier = it["unit_multiplier"].GetUint();
+			tradeable_asset.intraday_initial_margin = it["intraday_initial_margin"].GetDouble();
+			tradeable_asset.intraday_maintenance_margin = it["intraday_maintenance_margin"].GetDouble();
+			tradeable_asset.overnight_initial_margin = it["overnight_initial_margin"].GetDouble();
+			tradeable_asset.overnight_maintenance_margin = it["overnight_maintenance_margin"].GetDouble();
+			tradeable_asset.short_overnight_initial_margin = it["short_overnight_initial_margin"].GetDouble();
+			tradeable_asset.short_overnight_maintenance_margin = it["short_overnight_maintenance_margin"].GetDouble();
+
+			this->tradeable_assets.insert({ asset_index, std::move(tradeable_asset) });
+		}
+		else {
+			return std::unexpected<AgisException>("Asset with id " + asset_id + " must specify all margin requirement");
+		}
 	}
 
 	return true;

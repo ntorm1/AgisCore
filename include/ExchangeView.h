@@ -153,14 +153,6 @@ struct ExchangeView
 	*/
 	AGIS_API AgisResult<bool> vol_target(double target);
 
-	/**
-	 * @brief takes a portfolio allocation in terms of percentage of nlv and scales it to target a specific level
-	 * of overall portfolio volatility using the main exchange map covaraince matrix
-	 * @param agis_cov_matrix const ref to an agis covariance matrix
-	 * @return result of operations
-	*/
-	AGIS_API AgisResult<bool> apply_vol_target(std::shared_ptr<AgisCovarianceMatrix> const agis_cov_matrix);
-
 	/// <summary>
 	/// Generate a beta hedge for the portfolio and adjust allocation weights to match 
 	/// the target leverage of the portfolio. Note assumes the allocations are % of nlv

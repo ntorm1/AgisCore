@@ -592,5 +592,5 @@ template struct AGIS_API AgisResult<size_t>;
 template struct AGIS_API AgisResult<TradeExitPtr>;
 template struct AGIS_API AgisResult<AssetObserverPtr>;
 
-template struct AGIS_API AgisMatrix<double>;
+template class AGIS_API AgisMatrix<double>;
 template struct AGIS_API StridedPointer<double>;

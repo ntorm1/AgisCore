@@ -30,6 +30,7 @@ export namespace Agis
 
 class Asset;
 
+
 enum class MarginType
 {
 	INTRADAY_INITIAL,
@@ -39,6 +40,7 @@ enum class MarginType
 	SHORT_OVERNIGHT_INITIAL,
 	SHORT_OVERNIGHT_MAINTENANCE
 };
+
 
 //============================================================================
 struct TradeableAsset

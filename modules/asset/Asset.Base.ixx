@@ -162,7 +162,6 @@ public:
     bool __is_valid_time(long long& datetime);
     long long __get_asset_time() const { return this->dt_index[this->current_index]; }
 
-
     /// <summary>
     /// Does the asset's datetime index match the exchange's datetime index
     /// </summary>
@@ -187,6 +186,11 @@ public:
     /// Is the current time step of the asset that last available time step.
     /// </summary>
     bool __is_valid_next_time = true;
+
+    /**
+     * @brief returns true if current time step is the last time step on the day.
+    */
+    bool __is_eod = false;
 
 protected:
     /// <summary>
@@ -254,7 +258,7 @@ private:
     std::string source;
     std::string dt_fmt;
     std::string tz;
-    size_t unit_multiplier = 1;
+    size_t unit_multiplier = 0;
     size_t warmup = 0;
     Frequency freq;
 

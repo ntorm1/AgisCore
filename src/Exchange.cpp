@@ -536,6 +536,22 @@ void Exchange::build(size_t exchange_offset_)
 
 
 //============================================================================
+bool are_same_day(long long time1, long long time2) {
+	// Convert nanoseconds to seconds
+	time_t t1 = static_cast<time_t>(time1 / 1000000000);
+	time_t t2 = static_cast<time_t>(time2 / 1000000000);
+
+	// Convert to tm structs
+	struct tm tm1, tm2;
+	gmtime_s(&tm1, &t1);
+	gmtime_s(&tm2, &t2);
+
+	// Compare year, month, and day
+	return tm1.tm_mday == tm2.tm_mday;
+}
+
+
+//============================================================================
 bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 {
 	// if the current index is the last then return false, all assets listed on this exchange
@@ -547,6 +563,11 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 
 	// set exchange time to compare to assets
 	this->exchange_time = this->dt_index[this->current_index];
+
+	// set eod flag on assets
+	bool is_eod = false;
+	if(this->current_index == this->dt_index_size - 1) is_eod = true;
+	else if(are_same_day(this->exchange_time, this->dt_index[this->current_index + 1])) is_eod = true;
 	 
 	// Define a lambda function that processes each asset
 	auto process_asset = [&](auto& asset) {
@@ -555,6 +576,8 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 		{
 			return;
 		}
+		// set eod flag on asset
+		asset->__is_eod = is_eod;
 
 		// if asset is alligned to exchange just step forward in time, clean up if needed 
 		if (asset->__is_aligned) {

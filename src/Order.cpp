@@ -73,6 +73,13 @@ std::expected<rapidjson::Document, AgisException> Order::serialize(HydraPtr hydr
 
 
 //============================================================================
+std::expected<double, AgisException> Order::get_cash_impact() const noexcept
+{
+    return 0.0;
+}
+
+
+//============================================================================
 OrderPtr Order::generate_inverse_order()
 {
     auto order = std::make_unique<Order>(

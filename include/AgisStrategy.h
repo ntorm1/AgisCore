@@ -25,6 +25,7 @@ namespace Agis {
 	class Broker;
 	typedef std::shared_ptr<Broker> BrokerPtr;
 };
+
 using namespace Agis;
 
 class AgisStrategy;

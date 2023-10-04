@@ -101,6 +101,7 @@ public:
     void set_create_time(long long t) { this->order_create_time = t; }
     void set_units(double units) { this->units = units; }
 
+    [[nodiscard]] std::expected<double, AgisException> get_cash_impact() const noexcept;
     [[nodiscard]] double get_average_price() const { return this->avg_price; }
     [[nodiscard]] double get_units() const { return this->units; }
     [[nodiscard]] long long get_fill_time() const { return this->order_fill_time; }
