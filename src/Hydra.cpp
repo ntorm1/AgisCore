@@ -602,4 +602,4 @@ template struct AGIS_API AgisResult<TradeExitPtr>;
 template struct AGIS_API AgisResult<AssetObserverPtr>;
 
 template class AGIS_API AgisMatrix<double>;
-template struct AGIS_API StridedPointer<double>;
+template class AGIS_API StridedPointer<double>;

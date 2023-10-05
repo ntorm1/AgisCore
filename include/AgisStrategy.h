@@ -10,13 +10,11 @@
 
 #include "AgisEnums.h"
 #include "AgisFunctional.h"
-#include "AgisRouter.h"
 #include "AgisRisk.h"
 #include "AgisAnalysis.h"
 #include "AgisStrategyTracers.h"
 #include "Order.h"
 #include "Portfolio.h"
-#include "Exchange.h"
 
 namespace fs = std::filesystem;
 
@@ -26,9 +24,15 @@ namespace Agis {
 	typedef std::shared_ptr<Broker> BrokerPtr;
 };
 
+class AgisStrategy;
+class AgisRouter;
+class Exchange;
+class ExchangeMap;
+struct ExchangeView;
+typedef std::shared_ptr<Exchange> ExchangePtr;
+
 using namespace Agis;
 
-class AgisStrategy;
 
 
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;

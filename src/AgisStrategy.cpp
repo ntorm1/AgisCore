@@ -6,6 +6,8 @@
 #include "AgisAnalysis.h"
 #include "AgisErrors.h"
 #include "AgisStrategy.h"
+#include "AgisRouter.h"
+#include "Exchange.h"
 
 import Broker;
 import Asset;

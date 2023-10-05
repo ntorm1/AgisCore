@@ -260,7 +260,6 @@ void Broker::set_order_impacts(std::reference_wrapper<OrderPtr> new_order_ref) n
 {
 	// set the cash impact of the order on a strategies balance. Set the initial margin amount for any 
 	// strategy opening a position to initial margin requirement instead of maintenance margin requirement.
-	double margin_req;
 	auto& new_order = new_order_ref.get();
 	auto strategy = this->strategies.at(new_order->get_strategy_index());
 	PortfolioPtr const portfolio = strategy->get_portfolio();
@@ -269,34 +268,21 @@ void Broker::set_order_impacts(std::reference_wrapper<OrderPtr> new_order_ref) n
 	// Note get_margin_requirement will return value as a percentage. I.e. 0.5 for 50% margin requirement
 	// Charge any strategy opening a position initial margin instead of maintenance margin
 	auto trade_opt = strategy->get_trade(asset_index);
-	if (!trade_opt.has_value()) {
-		if (new_order->get_units() < 0 && new_order->__asset->__is_eod) {
-			margin_req = this->get_margin_requirement(asset_index, MarginType::SHORT_OVERNIGHT_INITIAL).value();
-		}
-		else if (new_order->get_units() < 0 && new_order->__asset->__is_eod) {
-			margin_req = this->get_margin_requirement(asset_index, MarginType::OVERNIGHT_INITIAL).value();
-		}
-		else if (new_order->get_units() > 0 && new_order->__asset->__is_eod) {
-			margin_req = this->get_margin_requirement(asset_index, MarginType::OVERNIGHT_INITIAL).value();
+	bool is_eod = new_order->__asset->__is_eod;
+	MarginType margin_type;
+	if (new_order->get_units() < 0) {
+		if (is_eod) {
+			margin_type = trade_opt.has_value() ? MarginType::OVERNIGHT_MAINTENANCE : MarginType::SHORT_OVERNIGHT_MAINTENANCE;
 		}
 		else {
-			margin_req = this->get_margin_requirement(asset_index, MarginType::INTRADAY_INITIAL).value();
+			margin_type = trade_opt.has_value() ? MarginType::INTRADAY_MAINTENANCE : MarginType::INTRADAY_INITIAL;
 		}
 	}
 	else {
-		if (new_order->get_units() < 0 && new_order->__asset->__is_eod) {
-			margin_req = this->get_margin_requirement(asset_index, MarginType::SHORT_OVERNIGHT_MAINTENANCE).value();
-		}
-		else if (new_order->get_units() < 0 && new_order->__asset->__is_eod) {
-			margin_req = this->get_margin_requirement(asset_index, MarginType::OVERNIGHT_MAINTENANCE).value();
-		}
-		else if (new_order->get_units() > 0 && new_order->__asset->__is_eod) {
-			margin_req = this->get_margin_requirement(asset_index, MarginType::OVERNIGHT_MAINTENANCE).value();
-		}
-		else {
-			margin_req = this->get_margin_requirement(asset_index, MarginType::INTRADAY_MAINTENANCE).value();
-		}
+		margin_type = is_eod ? MarginType::OVERNIGHT_INITIAL : MarginType::INTRADAY_INITIAL;
 	}
+	double margin_req = this->get_margin_requirement(asset_index, margin_type).value();
+
 	auto notional = new_order->get_average_price() * new_order->get_units() * new_order->__asset->get_unit_multiplier();
 	auto cash_impact = notional * margin_req;
 	auto margin_impact = (1-margin_req) * notional;
