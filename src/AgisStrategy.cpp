@@ -23,17 +23,16 @@ AgisStrategy::AgisStrategy(
 	double portfolio_allocation_
 ) :
 	portfolio(portfolio_),
-	broker(broker),
+	broker(broker_),
+	strategy_id(id),
+	strategy_index(strategy_counter++),
 	tracers(this)
 {
 	this->broker->strategy_subscribe(this);
 	this->tracers.starting_cash.store(
 		portfolio_allocation_ * portfolio_->get_cash()
 	);
-	this->strategy_id = id;
-	this->strategy_index = strategy_counter++;
 	this->router = nullptr;
-
 	this->portfolio_allocation = portfolio_allocation_;
 	this->tracers.nlv = portfolio_allocation * portfolio->get_cash();
 	this->tracers.cash = portfolio_allocation * portfolio->get_cash();

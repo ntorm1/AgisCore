@@ -153,7 +153,16 @@ std::expected<bool, AgisException> Hydra::register_broker(BrokerPtr broker)
 	}
 }
 
-AGIS_API ExchangeMap const& Hydra::get_exchanges() const noexcept
+
+//============================================================================
+BrokerMap* Hydra::__get_brokers() const noexcept
+{
+    return &this->p->brokers;
+}
+
+
+//============================================================================
+ExchangeMap const& Hydra::get_exchanges() const noexcept
 {
     return this->p->exchanges; 
 }

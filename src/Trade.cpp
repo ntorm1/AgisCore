@@ -114,6 +114,7 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
 {
     // adjust the source strategy nlv and unrealized pl
     auto nlv_new = this->units * market_price * this->units_multiplier;
+    nlv_new -= this->margin;
     auto unrealized_pl_new = this->units * this->units_multiplier * (market_price-this->average_price);
     
     // adjust strategy levels 

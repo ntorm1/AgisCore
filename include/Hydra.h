@@ -163,16 +163,9 @@ public:
 	*/
 	AGIS_API std::expected<bool, AgisException> register_broker(BrokerPtr broker);
 
-	/// <summary>
-	/// Get a const ref to the exchange map containing all registered exchanges
-	/// </summary>
-	/// <returns></returns>
+	AGIS_API BrokerMap* __get_brokers() const noexcept;
+	AGIS_API AgisRouter* __get_router() noexcept { return &this->router; }
 	AGIS_API ExchangeMap const& get_exchanges() const noexcept;
-	
-	/// <summary>
-	/// Get const ref to the portfolio map containing all registered portfolios
-	/// </summary>
-	/// <returns></returns>
 	AGIS_API PortfolioMap const& get_portfolios() const { return this->portfolios; }
 
 	/// <summary>

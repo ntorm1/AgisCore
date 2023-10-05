@@ -114,12 +114,7 @@ public:
 	/// <param name="path"></param>
 	/// <returns></returns>
 	AGIS_API inline virtual void restore(fs::path path) {};
-
-	/**
-	 * @brief Subscribe to an exchange, next() will be called when that exchange steps
-	 * @param exchange_id unique id of the exchange to subscribe to
-	 * @return wether or not the subscription was successful
-	*/
+	
 	AGIS_API [[nodiscard]] AgisResult<bool> exchange_subscribe(std::string const& exchange_id);
 
 	/// <summary>
@@ -312,6 +307,12 @@ public:
 	AGIS_API inline std::vector<double> get_net_leverage_ratio_history() const { return tracers.net_leverage_ratio_history; }
 	AGIS_API inline std::vector<double> const& get_portfolio_vol_vec() { return tracers.portfolio_volatility_history; }
 
+	OrderPtr AGIS_API create_market_order(
+		size_t asset_index,
+		double units,
+		std::optional<TradeExitPtr> exit = std::nullopt
+	);
+
 protected:
 	/**
 	 * @brief Attempts to send order to the router after validating it
@@ -319,12 +320,6 @@ protected:
 	 * @return 
 	*/
 	void AGIS_API place_order(OrderPtr order);
-
-	OrderPtr AGIS_API create_market_order(
-		size_t asset_index,
-		double units,
-		std::optional<TradeExitPtr> exit = std::nullopt
-	);
 
 	void AGIS_API place_market_order(
 		size_t asset_index,

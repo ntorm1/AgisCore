@@ -248,16 +248,11 @@ public:
     static void __reset_counter() { Portfolio::portfolio_counter = 0; }
     void __remember_order(SharedOrderPtr order);
     void __on_assets_expired(AgisRouter& router, ThreadSafeVector<size_t> const& ids);
+    AGIS_API void __on_order_fill(OrderPtr const& order);
     bool __is_beta_trace() const { return this->tracers.has(Tracer::BETA); }
 
 
 protected:
-    /// <summary>
-    /// Function called from the order router when an order placed to this portfolio is filled
-    /// </summary>
-    /// <param name="order">referance to a filled order object</param>
-    void __on_order_fill(OrderPtr const& order);
-
     /// <summary>
     /// Function called when an order is placed that is not mean to affect he portfolio. Used for 
     /// benchmark strategies that shouldn't affect the portfolio's value
