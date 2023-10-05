@@ -114,13 +114,13 @@ Broker::load_tradeable_assets(std::string json_string) noexcept
 
 			// All members exist, populate the struct
 			tradeable_asset.unit_multiplier = it["unit_multiplier"].GetUint();
+			tradeable_asset.asset->__set_unit_multiplier(tradeable_asset.unit_multiplier);
 			tradeable_asset.intraday_initial_margin = it["intraday_initial_margin"].GetDouble();
 			tradeable_asset.intraday_maintenance_margin = it["intraday_maintenance_margin"].GetDouble();
 			tradeable_asset.overnight_initial_margin = it["overnight_initial_margin"].GetDouble();
 			tradeable_asset.overnight_maintenance_margin = it["overnight_maintenance_margin"].GetDouble();
 			tradeable_asset.short_overnight_initial_margin = it["short_overnight_initial_margin"].GetDouble();
 			tradeable_asset.short_overnight_maintenance_margin = it["short_overnight_maintenance_margin"].GetDouble();
-
 			this->tradeable_assets.insert({ asset_index, std::move(tradeable_asset) });
 		}
 		else {
