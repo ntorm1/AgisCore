@@ -251,19 +251,22 @@ AGIS_API void AgisStrategy::strategy_allocate(
 	{
 		if (!alloc.live) continue;
 		size_t asset_index = alloc.asset_index;
+		auto asset_opt = this->exchange_map->get_asset(asset_index);
+		if(asset_opt.is_exception()) throw AgisException(asset_opt.get_exception());
+		auto asset = asset_opt.unwrap();
 		double size = alloc.allocation_amount;
 		switch (alloc_type)
 		{
 			case AllocType::UNITS:
 				break;
 			case AllocType::DOLLARS: {
-				auto market_price = this->exchange_map->__get_market_price(asset_index, true);
-				size /= market_price;
+				auto market_price = asset->__get_market_price(true);
+				size /= (market_price * asset->get_unit_multiplier());
 				break; 
 			}
 			case AllocType::PCT: {
-				auto market_price = this->exchange_map->__get_market_price(asset_index, true);
-				size *=  (this->tracers.nlv.load() / market_price);
+				auto market_price = asset->__get_market_price(true);
+				size *=  (this->tracers.nlv.load() / (market_price * asset->get_unit_multiplier()));
 				break;
 			}
 		}

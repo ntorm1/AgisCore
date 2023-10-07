@@ -165,6 +165,7 @@ private:
 
 class Portfolio
 {
+    friend struct Trade;
     friend class Broker;
     friend class PortfolioMap;
     friend class AgisStrategyTracers;

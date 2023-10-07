@@ -575,7 +575,7 @@ void Portfolio::__on_order_fill(OrderPtr const& order)
 AgisResult<bool> Portfolio::__evaluate(bool on_close, bool is_reprice)
 {
     LOCK_GUARD
-    this->tracers.nlv.store(this->tracers.cash.load());
+    this->tracers.nlv.store(0);
     this->unrealized_pl = 0;
     ThreadSafeVector<OrderPtr> orders;
 
@@ -610,6 +610,8 @@ AgisResult<bool> Portfolio::__evaluate(bool on_close, bool is_reprice)
             router.place_order(std::move(order));
         }
     }
+    this->tracers.nlv.fetch_add(this->tracers.cash.load());
+
 
     // and orders placed by the portfolio to clean up or force close
     if (orders.size())
@@ -633,6 +635,7 @@ AgisResult<bool> Portfolio::__evaluate(bool on_close, bool is_reprice)
     // log strategy levels
     for (const auto& strat : this->strategies)
     {
+        strat.second->tracers.nlv.fetch_add(strat.second->tracers.cash.load());
         auto res = strat.second->__evaluate(on_close);
         if (res.is_exception()) {
             UNLOCK_GUARD;

@@ -351,12 +351,6 @@ public:
 
 
 	AGIS_API auto const& get_assets() const noexcept {return this->assets;}
-	
-	/// <summary>
-	/// Does a asset with this id exist already
-	/// </summary>
-	/// <param name="asset_id">id of the asset to search for</param>
-	/// <returns>Does a asset with this id exist already</returns>
 	AGIS_API bool asset_exists(std::string const& asset_id) const;
 
 	/// <summary>

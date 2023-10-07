@@ -123,7 +123,9 @@ AgisResult<bool> AgisStrategyTracers::evaluate()
 {
 	// Note: at this point all trades have been evaluated and the cash balance has been updated
 	// so we only have to observer the values or use them to calculate other values.
-	if (this->has(Tracer::NLV)) this->nlv_history.push_back(this->nlv.load());
+	if (this->has(Tracer::NLV)) this->nlv_history.push_back(
+		this->nlv.load()
+	);
 	if (this->has(Tracer::CASH)) this->cash_history.push_back(this->cash.load());
 
 	if (this->has(Tracer::BETA)) {
@@ -150,7 +152,7 @@ AgisResult<bool> AgisStrategyTracers::evaluate()
 //============================================================================
 void AgisStrategyTracers::zero_out_tracers()
 {
-	this->nlv.store(this->cash.load());
+	this->nlv.store(0);
 	if (this->has(Tracer::BETA)) this->net_beta = 0.0f;
 	if (this->has(Tracer::LEVERAGE)) this->net_leverage_ratio = 0.0f;
 	if (this->strategy->limits.max_leverage.has_value()) this->strategy->limits.phantom_cash = 0.0f;

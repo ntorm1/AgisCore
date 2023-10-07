@@ -5,6 +5,7 @@
 #include "Hydra.h"
 
 import Asset;
+import Broker;
 
 using namespace Agis;
 using namespace rapidjson;
@@ -149,13 +150,37 @@ void Trade::evaluate_stock(double market_price) noexcept
 
 
 //============================================================================
-void Trade::evaluate_future(double market_price) noexcept
+void Trade::evaluate_future(double market_price, bool is_reprice) noexcept
 {
-    auto nlv_adjustment = this->units * (market_price-this->average_price) * this->units_multiplier;
-    this->nlv = this->collateral + nlv_adjustment;
-    strategy->tracers.nlv_add_assign(nlv);
-    strategy->unrealized_pl += (nlv_adjustment);
-    this->unrealized_pl = nlv_adjustment;
+    // futures are evaluated by either posting or releasing collateral to maintain the trade
+    bool is_eod = this->__asset->__is_eod;
+    double margin_req;
+    if (is_eod) {
+        if (this->units < 0) {
+            margin_req = broker->get_margin_requirement(this->asset_index, MarginType::SHORT_OVERNIGHT_MAINTENANCE).value();
+        }
+        else {
+            margin_req = broker->get_margin_requirement(this->asset_index, MarginType::OVERNIGHT_MAINTENANCE).value();
+        }
+    }
+    else {
+        margin_req = broker->get_margin_requirement(this->asset_index, MarginType::INTRADAY_MAINTENANCE).value();
+    }
+    
+    // adjust cash levels base on new collateral requirements
+    if (is_reprice) {
+        this->margin = (1 - margin_req) * this->units * this->units_multiplier * market_price;
+        auto new_collateral = margin_req * abs(this->units) * this->units_multiplier * market_price;
+        auto collateral_adjustment = this->collateral - new_collateral;
+        auto cash_adjustment = (market_price - this->last_price) * this->units * this->units_multiplier;
+        cash_adjustment += collateral_adjustment;
+
+        this->collateral = new_collateral;
+        this->strategy->tracers.cash_add_assign(cash_adjustment);
+        this->strategy->portfolio->tracers.cash_add_assign(cash_adjustment);
+    }
+    this->nlv = this->collateral;
+    this->strategy->tracers.nlv_add_assign(nlv);
 
     // if strategy is tracing volatility, set the portfolio weight equah to the nlv of the trade
     // must be divided by the total nlv of the strategy after all trades are evaluated
@@ -177,7 +202,7 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
 			this->evaluate_stock(market_price);
 			break;
 		case AssetType::US_FUTURE:
-			this->evaluate_future(market_price);
+			this->evaluate_future(market_price, is_reprice);
 			break;
 		default:
 			break;
@@ -198,7 +223,6 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
             abs(this->units) * market_price * this->units_multiplier
         );
     }
-
 
     this->last_price = market_price;
     if (on_close && !is_reprice) { this->bars_held++; }
@@ -260,6 +284,16 @@ bool Trade::partition_exists(size_t asset_index)
         if (partition->child_trade->asset_index == asset_index) return true;
     }
     return false;
+}
+
+
+//============================================================================
+bool Trade::order_reduces(std::reference_wrapper<OrderPtr> new_order_ref) const noexcept
+{
+    if (std::signbit(this->units) == std::signbit(new_order_ref.get()->get_units())) {
+        return false;
+    }
+    return true;
 }
 
 

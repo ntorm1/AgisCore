@@ -172,7 +172,6 @@ Broker::get_margin_requirement(size_t asset_index, MarginType margin_type) noexc
 }
 
 
-
 //============================================================================
 AGIS_API bool Broker::trade_exists(size_t asset_index, size_t strategy_index) noexcept
 {
@@ -262,7 +261,7 @@ void Broker::set_order_impacts(std::reference_wrapper<OrderPtr> new_order_ref) n
 	bool is_eod = new_order->__asset->__is_eod;
 	MarginType margin_type = (!is_eod)
 		? MarginType::INTRADAY_INITIAL
-		: (new_order->get_units() < 0)
+		: (new_order->get_units() < 0 || (new_order->get_units() < 0 && trade_opt.has_value() && !trade_opt.value()->order_reduces(new_order)))
 		? MarginType::SHORT_OVERNIGHT_INITIAL
 		: MarginType::OVERNIGHT_INITIAL;
 	double margin_req = this->get_margin_requirement(asset_index, margin_type).value();
@@ -277,15 +276,17 @@ void Broker::set_order_impacts(std::reference_wrapper<OrderPtr> new_order_ref) n
 		margin_impact = abs(margin_impact);
 	}
 	else {
+		auto trade = trade_opt.value();
 		// if order is an increasing order than the sign of the cash and margin impact is absolute
-		if (std::signbit(trade_opt.value()->units) == std::signbit(new_order->get_units())) {
+		if (!trade->order_reduces(new_order)) {
 			cash_impact = abs(cash_impact);
 			margin_impact = abs(margin_impact);
 		}
-		// if the order is a reversal, the sign of the cash and margin impact is flipped
+		// if the order is a reversal, the sign of the cash and margin impact is flipped. The margin impact
+		// is a release of existing margin held in the trade.
 		else {
-			cash_impact = -abs(cash_impact);
-			margin_impact = -abs(margin_impact);
+			cash_impact = -abs((trade->collateral / trade->units) * new_order->get_units());
+			margin_impact = -abs((trade->margin / trade->units) * new_order->get_units());
 		}
 	}
 

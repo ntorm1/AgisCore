@@ -107,6 +107,7 @@ struct AGIS_API Trade {
 
     void take_partition(std::shared_ptr<TradePartition> partition) { this->child_partitions.push_back(std::move(partition)); };
     [[nodiscard]] std::shared_ptr<TradePartition> get_child_partition(size_t asset_index);
+    [[nodiscard]] bool order_reduces(std::reference_wrapper<OrderPtr> new_order_ref) const noexcept;
     [[nodiscard]] bool partition_exists(size_t asset_index);
 
     [[nodiscard]] size_t get_asset_index() const noexcept { return this->asset_index; }
@@ -118,7 +119,7 @@ private:
     static std::atomic<size_t> trade_counter;
 
     void evaluate_stock(double market_price) noexcept;
-    void evaluate_future(double market_price) noexcept;
+    void evaluate_future(double market_price, bool is_reprice) noexcept;
 };
 
 
