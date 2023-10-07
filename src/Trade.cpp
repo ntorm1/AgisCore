@@ -28,9 +28,24 @@ Trade::Trade(AgisStrategy* strategy_, OrderPtr const& filled_order):
     this->average_price = filled_order->get_average_price();
     this->open_price = this->average_price;
 
-    this->nlv = this->units * this->average_price * units_multiplier;
-    this->margin = filled_order->get_margin_impact();
-    this->nlv -= this->margin;
+
+    switch (this->__asset->get_asset_type()) {
+    case AssetType::US_EQUITY: {
+        this->nlv = this->units * this->average_price * units_multiplier;
+        this->margin = filled_order->get_margin_impact();
+        this->collateral = filled_order->get_cash_impact();
+        this->nlv -= this->margin;
+        break;
+    }
+    case AssetType::US_FUTURE: {
+        this->nlv = filled_order->get_cash_impact();
+        this->margin = filled_order->get_margin_impact();
+        this->collateral = filled_order->get_cash_impact();
+        break;
+    }
+    default:
+        break;
+    }
 
     this->unrealized_pl = 0;
     this->realized_pl = 0;
@@ -110,32 +125,15 @@ void Trade::adjust(OrderPtr const& filled_order)
 
 
 //============================================================================
-void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
+void Trade::evaluate_stock(double market_price) noexcept
 {
-    // adjust the source strategy nlv and unrealized pl
     auto nlv_new = this->units * market_price * this->units_multiplier;
     nlv_new -= this->margin;
-    auto unrealized_pl_new = this->units * this->units_multiplier * (market_price-this->average_price);
-    
+    auto unrealized_pl_new = this->units * this->units_multiplier * (market_price - this->average_price);
+
     // adjust strategy levels 
     strategy->tracers.nlv_add_assign(nlv_new);
     strategy->unrealized_pl += (unrealized_pl_new - this->unrealized_pl);
-
-    // adjust strategy net beta levels
-    if (strategy->tracers.has(Tracer::BETA))
-    {
-        auto beta_dollars = (
-            this->units * market_price * __asset->get_beta().unwrap_or(0.0f)
-        );
-        strategy->tracers.net_beta_add_assign(beta_dollars);
-    }
-
-    // adjust the strategy net leverage ratio to the abs of the position value
-    if (strategy->tracers.has(Tracer::LEVERAGE)) {
-        strategy->tracers.net_leverage_ratio_add_assign(
-            abs(this->units) * market_price
-        );
-    }
 
     // if strategy is tracing volatility, set the portfolio weight equah to the nlv of the trade
     // must be divided by the total nlv of the strategy after all trades are evaluated
@@ -145,6 +143,61 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
 
     this->nlv = nlv_new;
     this->unrealized_pl = unrealized_pl_new;
+}
+
+
+//============================================================================
+void Trade::evaluate_future(double market_price) noexcept
+{
+    auto nlv_adjustment = this->units * (market_price-this->average_price) * this->units_multiplier;
+    this->nlv = this->collateral + nlv_adjustment;
+    strategy->tracers.nlv_add_assign(nlv);
+    strategy->unrealized_pl += (nlv_adjustment);
+    this->unrealized_pl = nlv_adjustment;
+
+    // if strategy is tracing volatility, set the portfolio weight equah to the nlv of the trade
+    // must be divided by the total nlv of the strategy after all trades are evaluated
+    if (strategy->tracers.has(Tracer::VOLATILITY)) {
+        strategy->tracers.set_portfolio_weight(
+            this->asset_index,
+            this->units * market_price * this->units_multiplier
+        );
+    }
+}
+
+
+//============================================================================
+void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
+{
+    // adjust the source strategy nlv and unrealized pl
+    switch (this->__asset->get_asset_type()) {
+        case AssetType::US_EQUITY:
+			this->evaluate_stock(market_price);
+			break;
+		case AssetType::US_FUTURE:
+			this->evaluate_future(market_price);
+			break;
+		default:
+			break;
+    }
+
+    // adjust strategy net beta levels
+    if (strategy->tracers.has(Tracer::BETA))
+    {
+        auto beta_dollars = (
+            this->units * market_price * __asset->get_beta().unwrap_or(0.0f)
+            );
+        strategy->tracers.net_beta_add_assign(beta_dollars);
+    }
+
+    // adjust the strategy net leverage ratio to the abs of the position value
+    if (strategy->tracers.has(Tracer::LEVERAGE)) {
+        strategy->tracers.net_leverage_ratio_add_assign(
+            abs(this->units) * market_price * this->units_multiplier
+        );
+    }
+
+
     this->last_price = market_price;
     if (on_close && !is_reprice) { this->bars_held++; }
 }

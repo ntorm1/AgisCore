@@ -61,6 +61,7 @@ struct AGIS_API Trade {
     double last_price;
     double nlv;
     double margin;
+    double collateral;
 
     double unrealized_pl;
     double realized_pl;
@@ -112,8 +113,12 @@ struct AGIS_API Trade {
     [[nodiscard]] size_t get_strategy_index() const noexcept { return this->strategy_index; }
     [[nodiscard]] size_t get_portfolio_index() const noexcept { return this->portfolio_index; }
     inline static void __reset_counter() { trade_counter.store(0); }
+
 private:
     static std::atomic<size_t> trade_counter;
+
+    void evaluate_stock(double market_price) noexcept;
+    void evaluate_future(double market_price) noexcept;
 };
 
 

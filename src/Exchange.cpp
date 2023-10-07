@@ -567,7 +567,7 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 	// set eod flag on assets
 	bool is_eod = false;
 	if(this->current_index == this->dt_index_size - 1) is_eod = true;
-	else if(are_same_day(this->exchange_time, this->dt_index[this->current_index + 1])) is_eod = true;
+	else if(!are_same_day(this->exchange_time, this->dt_index[this->current_index + 1])) is_eod = true;
 	 
 	// Define a lambda function that processes each asset
 	auto process_asset = [&](auto& asset) {

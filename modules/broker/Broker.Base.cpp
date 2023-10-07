@@ -41,7 +41,7 @@ Broker::Broker(
 
 //============================================================================
 std::expected<bool, AgisException>
-Broker::load_tradeable_assets(std::string json_string) noexcept
+Broker::load_tradeable_assets(std::string const& json_string) noexcept
 {
 	// load rapidjson document from string
 	Document d;
@@ -65,21 +65,12 @@ Broker::load_tradeable_assets(std::string json_string) noexcept
 			return std::unexpected<AgisException>("found element in array is not a json object");
 		}
 
-		// test if key "asset_type" exists
-		if (!it.HasMember("asset_type")) {
-			return std::unexpected<AgisException>("Found element that does not contain key \"asset_type\"");
-		}
 		// get the asset_id as a string or return an error
 		if (!it.HasMember("asset_id")) {
 			return std::unexpected<AgisException>("Found element that does not contain key \"asset_id\"");
 		}
 
-		// get the asset type as string and convert to enum
-		std::string asset_type = it["asset_type"].GetString();
-		auto asset_type_enum_opt = AssetTypeFromString(asset_type);
-		if (!asset_type_enum_opt.has_value()) {
-			return std::unexpected<AgisException>(asset_type_enum_opt.error());
-		}
+
 
 		// get the asset id as string, make sure it exists
 		std::string asset_id = it["asset_id"].GetString();
@@ -131,35 +122,6 @@ Broker::load_tradeable_assets(std::string json_string) noexcept
 	return true;
 }
 
-
-//============================================================================
-std::expected<double, AgisException>
-Broker::get_margin_requirement(size_t asset_index, MarginType margin_type) noexcept
-{
-	auto it = this->tradeable_assets.find(asset_index);
-	if (it == this->tradeable_assets.end()) {
-		return std::unexpected<AgisException>("Asset with index " + std::to_string(asset_index) + " does not exist");
-	}
-	switch (margin_type)
-	{
-		case MarginType::INTRADAY_INITIAL:
-			return it->second.intraday_initial_margin;
-		case MarginType::INTRADAY_MAINTENANCE:
-			return it->second.intraday_maintenance_margin;
-		case MarginType::OVERNIGHT_INITIAL:
-			return it->second.overnight_initial_margin;
-		case MarginType::OVERNIGHT_MAINTENANCE:
-			return it->second.overnight_maintenance_margin;
-		case MarginType::SHORT_OVERNIGHT_INITIAL:
-			return it->second.short_overnight_initial_margin;
-		case MarginType::SHORT_OVERNIGHT_MAINTENANCE:
-			return it->second.short_overnight_maintenance_margin;
-		default:
-				return std::unexpected<AgisException>("Invalid margin type");
-	}
-}
-
-
 //============================================================================
 std::expected<bool, AgisException>
 Broker::load_tradeable_assets(fs::path p) noexcept
@@ -180,6 +142,35 @@ Broker::load_tradeable_assets(fs::path p) noexcept
 				(std::istreambuf_iterator<char>()));
 	return this->load_tradeable_assets(json_string);
 }
+
+
+//============================================================================
+std::expected<double, AgisException>
+Broker::get_margin_requirement(size_t asset_index, MarginType margin_type) noexcept
+{
+	auto it = this->tradeable_assets.find(asset_index);
+	if (it == this->tradeable_assets.end()) {
+		return std::unexpected<AgisException>("Asset with index " + std::to_string(asset_index) + " does not exist");
+	}
+	switch (margin_type)
+	{
+	case MarginType::INTRADAY_INITIAL:
+		return it->second.intraday_initial_margin;
+	case MarginType::INTRADAY_MAINTENANCE:
+		return it->second.intraday_maintenance_margin;
+	case MarginType::OVERNIGHT_INITIAL:
+		return it->second.overnight_initial_margin;
+	case MarginType::OVERNIGHT_MAINTENANCE:
+		return it->second.overnight_maintenance_margin;
+	case MarginType::SHORT_OVERNIGHT_INITIAL:
+		return it->second.short_overnight_initial_margin;
+	case MarginType::SHORT_OVERNIGHT_MAINTENANCE:
+		return it->second.short_overnight_maintenance_margin;
+	default:
+		return std::unexpected<AgisException>("Invalid margin type");
+	}
+}
+
 
 
 //============================================================================
@@ -277,9 +268,7 @@ void Broker::set_order_impacts(std::reference_wrapper<OrderPtr> new_order_ref) n
 		margin_type = trade_opt.has_value() ? MarginType::SHORT_OVERNIGHT_MAINTENANCE : MarginType::SHORT_OVERNIGHT_INITIAL;
 	}
 	else {
-		if (is_eod) {
 			margin_type = trade_opt.has_value() ? MarginType::OVERNIGHT_MAINTENANCE : MarginType::OVERNIGHT_INITIAL;
-		}
 	}
 	double margin_req = this->get_margin_requirement(asset_index, margin_type).value();
 
@@ -287,22 +276,24 @@ void Broker::set_order_impacts(std::reference_wrapper<OrderPtr> new_order_ref) n
 	auto cash_impact = notional * margin_req;
 	auto margin_impact = (1-margin_req) * notional;
 
-	// if the order is for a future the cash impact is the absolute value of cash_impact assuming 
-	// the order is a trade increase. 
-	if(new_order->__asset->get_asset_type() == AssetType::US_FUTURE){
-		auto trade_opt = portfolio->get_trade(asset_index, new_order->get_strategy_index());
-		if (!trade_opt.has_value()) {
+	// if the order is opening a position the margin impact is the abs to account for negative units. 
+	if (!trade_opt.has_value()) {
+		cash_impact = abs(cash_impact);
+		margin_impact = abs(margin_impact);
+	}
+	else {
+		// if order is an increasing order than the sign of the cash and margin impact is absolute
+		if (std::signbit(trade_opt.value()->units) == std::signbit(new_order->get_units())) {
 			cash_impact = abs(cash_impact);
 			margin_impact = abs(margin_impact);
 		}
+		// if the order is a reversal, the sign of the cash and margin impact is flipped
 		else {
-			const SharedTradePtr& trade = trade_opt.value().get();
-			if (std::signbit(trade->units) == std::signbit(new_order->get_units())) {
-				cash_impact = abs(cash_impact);
-				margin_impact = abs(margin_impact);
-			}
+			cash_impact = -abs(cash_impact);
+			margin_impact = -abs(margin_impact);
 		}
 	}
+
 	new_order->set_cash_impact(cash_impact);
 	new_order->set_margin_impact(margin_impact);
 }

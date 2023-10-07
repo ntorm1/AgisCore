@@ -74,7 +74,7 @@ public:
 	void __on_order_fill(std::reference_wrapper<OrderPtr> new_order) noexcept;
 	void __validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept;
 
-	[[nodiscard]] AGIS_API std::expected<bool, AgisException> load_tradeable_assets(std::string json_string) noexcept;
+	[[nodiscard]] AGIS_API std::expected<bool, AgisException> load_tradeable_assets(std::string const& json_string) noexcept;
 	[[nodiscard]] AGIS_API std::expected<bool, AgisException> load_tradeable_assets(fs::path p) noexcept;
 	
 	[[nodiscard]] AGIS_API bool trade_exists(size_t asset_index, size_t strategy_index) noexcept;

@@ -64,15 +64,15 @@ void Position::__evaluate(ThreadSafeVector<OrderPtr>& orders, bool on_close, boo
 {
     this->last_price = this->__asset->__get_market_price(on_close);
     if (this->last_price == 0.0f) return;
-
+    this->nlv = 0;
     this->unrealized_pl = this->units*(this->last_price-this->average_price);
-    this->nlv = this->last_price * this->units;
     if (on_close && !is_reprice) { this->bars_held++; }
 
     for (auto& trade_pair : this->trades) 
     {
         auto& trade = trade_pair.second;
         trade->evaluate(this->last_price, on_close, is_reprice);
+        this->nlv += trade->nlv;
 
         // test trade exit
         if (!trade->exit.has_value()) { continue; }
