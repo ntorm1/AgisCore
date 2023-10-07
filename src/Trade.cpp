@@ -110,14 +110,16 @@ void Trade::adjust(OrderPtr const& filled_order)
 {
     // extract order information
     auto units_ = filled_order->get_units();
-    if (units_ * this->units > 0)
-    {
+    if (units_ * this->units > 0){
         this->increase(filled_order);
     }
-    else
-    {
+    else{
         this->reduce(filled_order);
     }
+
+    // update margin balances held in the trade
+    this->margin += filled_order->get_margin_impact();
+    this->collateral += filled_order->get_cash_impact();
 
     // set the filled orders parent
     filled_order->parent_trade = this;

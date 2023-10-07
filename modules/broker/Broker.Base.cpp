@@ -260,16 +260,11 @@ void Broker::set_order_impacts(std::reference_wrapper<OrderPtr> new_order_ref) n
 	// Charge any strategy opening a position initial margin instead of maintenance margin
 	auto trade_opt = strategy->get_trade(asset_index);
 	bool is_eod = new_order->__asset->__is_eod;
-	MarginType margin_type;
-	if (!is_eod) {
-		margin_type = trade_opt.has_value() ? MarginType::INTRADAY_MAINTENANCE : MarginType::INTRADAY_INITIAL;
-	}
-	else if (new_order->get_units() < 0) {
-		margin_type = trade_opt.has_value() ? MarginType::SHORT_OVERNIGHT_MAINTENANCE : MarginType::SHORT_OVERNIGHT_INITIAL;
-	}
-	else {
-			margin_type = trade_opt.has_value() ? MarginType::OVERNIGHT_MAINTENANCE : MarginType::OVERNIGHT_INITIAL;
-	}
+	MarginType margin_type = (!is_eod)
+		? MarginType::INTRADAY_INITIAL
+		: (new_order->get_units() < 0)
+		? MarginType::SHORT_OVERNIGHT_INITIAL
+		: MarginType::OVERNIGHT_INITIAL;
 	double margin_req = this->get_margin_requirement(asset_index, margin_type).value();
 
 	auto notional = new_order->get_average_price() * new_order->get_units() * new_order->__asset->get_unit_multiplier();

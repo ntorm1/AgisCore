@@ -305,6 +305,7 @@ public:
 	AGIS_API inline void __set_allocation(double allocation_) { this->portfolio_allocation = allocation_; }
 	AGIS_API inline void __set_exchange_map(ExchangeMap const* exchange_map_) { this->exchange_map = exchange_map_; }
 
+	AGIS_API std::optional<SharedTradePtr> get_trade(std::string const& asset_id);
 	AGIS_API inline std::vector<double> get_beta_history() const { return tracers.beta_history; }
 	AGIS_API inline std::vector<double> get_nlv_history() const { return tracers.nlv_history; }
 	AGIS_API inline std::vector<double> get_cash_history() const { return tracers.cash_history;}
@@ -365,12 +366,6 @@ protected:
 	*/
 	void __on_trade_closed(size_t asset_index);
 
-	/// <summary>
-	/// Get a trade by asset id
-	/// </summary>
-	/// <param name="asset_id">unique id of the asset to search for</param>
-	/// <returns></returns>
-	AGIS_API std::optional<SharedTradePtr> get_trade(std::string const& asset_id);
 
 	/**
 	 * @brief get const pointer the strategies portfolio weights
