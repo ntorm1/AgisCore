@@ -79,7 +79,6 @@ void Trade::close(OrderPtr const& filled_order)
 
     // tell the strategy we are closing
     this->strategy->__on_trade_closed(this->asset_index);
-
 }
 
 
@@ -284,6 +283,13 @@ bool Trade::partition_exists(size_t asset_index)
         if (partition->child_trade->asset_index == asset_index) return true;
     }
     return false;
+}
+
+
+//============================================================================
+bool Trade::order_closes(std::reference_wrapper<OrderPtr> new_order_ref) const noexcept
+{
+    return (abs(this->units + new_order_ref.get()->get_units()) < DBL_EPSILON);
 }
 
 

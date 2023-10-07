@@ -107,6 +107,7 @@ struct AGIS_API Trade {
 
     void take_partition(std::shared_ptr<TradePartition> partition) { this->child_partitions.push_back(std::move(partition)); };
     [[nodiscard]] std::shared_ptr<TradePartition> get_child_partition(size_t asset_index);
+    [[nodiscard]] bool order_closes(std::reference_wrapper<OrderPtr> new_order_ref) const noexcept;
     [[nodiscard]] bool order_reduces(std::reference_wrapper<OrderPtr> new_order_ref) const noexcept;
     [[nodiscard]] bool partition_exists(size_t asset_index);
 
