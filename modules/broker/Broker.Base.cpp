@@ -265,7 +265,9 @@ void Broker::set_order_impacts(std::reference_wrapper<OrderPtr> new_order_ref) n
 		(
 			(!trade_opt.has_value() && (new_order->get_units() < 0))
 			|| 
-			(trade_opt.has_value() && trade_opt.value()->order_closes(new_order))
+			(trade_opt.has_value() && (new_order->get_units() < 0) && trade_opt.value()->order_closes(new_order))
+			||
+			(trade_opt.has_value() && (new_order->get_units() > 0) && trade_opt.value()->order_reduces(new_order))
 			||
 			(new_order->get_units() < 0 && trade_opt.has_value() && !trade_opt.value()->order_reduces(new_order))
 		)
@@ -273,7 +275,7 @@ void Broker::set_order_impacts(std::reference_wrapper<OrderPtr> new_order_ref) n
 		: MarginType::OVERNIGHT_INITIAL;
 	double margin_req = this->get_margin_requirement(asset_index, margin_type).value();
 
-	auto notional = new_order->get_average_price() * new_order->get_units() * new_order->__asset->get_unit_multiplier();
+	auto notional = new_order->get_average_price() * abs(new_order->get_units()) * new_order->__asset->get_unit_multiplier();
 	auto cash_impact = notional * margin_req;
 	auto margin_impact = (1-margin_req) * notional;
 
@@ -283,7 +285,7 @@ void Broker::set_order_impacts(std::reference_wrapper<OrderPtr> new_order_ref) n
 		margin_impact = abs(margin_impact);
 	}
 	else {
-		auto trade = trade_opt.value();
+		auto& trade = trade_opt.value();
 		// if order is an increasing order than the sign of the cash and margin impact is absolute
 		cash_impact = abs(cash_impact);
 		margin_impact = abs(margin_impact);

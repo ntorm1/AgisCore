@@ -168,7 +168,7 @@ void Trade::evaluate_future(double market_price, bool is_reprice) noexcept
     
     // adjust cash levels base on new collateral requirements
     if (is_reprice) {
-        this->margin = (1 - margin_req) * this->units * this->units_multiplier * market_price;
+        this->margin = (1 - margin_req) * abs(this->units) * this->units_multiplier * market_price;
         auto new_collateral = margin_req * abs(this->units) * this->units_multiplier * market_price;
         auto collateral_adjustment = this->collateral - new_collateral;
         auto cash_adjustment = (market_price - this->last_price) * this->units * this->units_multiplier;
