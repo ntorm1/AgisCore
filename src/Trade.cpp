@@ -229,7 +229,8 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
 
 
 //============================================================================
-std::expected<rapidjson::Document, AgisException> Trade::serialize(HydraPtr hydra) const
+std::expected<rapidjson::Document, AgisException>
+Trade::serialize(HydraPtr hydra) const
 {
     Document trade(kObjectType);
 
@@ -265,7 +266,8 @@ std::expected<rapidjson::Document, AgisException> Trade::serialize(HydraPtr hydr
 
 
 //============================================================================
-std::shared_ptr<TradePartition> Trade::get_child_partition(size_t asset_index)
+std::shared_ptr<TradePartition>
+Trade::get_child_partition(size_t asset_index)
 {
     for (auto& partition : this->child_partitions)
     {
@@ -276,7 +278,8 @@ std::shared_ptr<TradePartition> Trade::get_child_partition(size_t asset_index)
 
 
 //============================================================================
-bool Trade::partition_exists(size_t asset_index)
+bool
+Trade::partition_exists(size_t asset_index)
 {
     for (auto& partition : this->child_partitions)
     {
@@ -287,19 +290,35 @@ bool Trade::partition_exists(size_t asset_index)
 
 
 //============================================================================
-bool Trade::order_closes(std::reference_wrapper<OrderPtr> new_order_ref) const noexcept
+bool
+Trade::order_closes(std::reference_wrapper<OrderPtr> new_order_ref) const noexcept
 {
     return (abs(this->units + new_order_ref.get()->get_units()) < DBL_EPSILON);
 }
 
 
 //============================================================================
-bool Trade::order_reduces(std::reference_wrapper<OrderPtr> new_order_ref) const noexcept
+bool
+Trade::order_reduces(std::reference_wrapper<OrderPtr> new_order_ref) const noexcept
 {
     if (std::signbit(this->units) == std::signbit(new_order_ref.get()->get_units())) {
         return false;
     }
     return true;
+}
+
+
+//============================================================================
+bool
+Trade::order_flips(std::reference_wrapper<OrderPtr> new_order_ref) const noexcept
+{
+    if (std::signbit(this->units) == std::signbit(new_order_ref.get()->get_units())) {
+		return false;
+	}
+    if (abs(this->units) < abs(new_order_ref.get()->get_units())) {
+		return true;
+	}
+    return false;
 }
 
 

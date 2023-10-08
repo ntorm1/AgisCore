@@ -90,6 +90,24 @@ void AgisRouter::process_beta_hedge(OrderPtr& order)
 
 
 //============================================================================
+void
+AgisRouter::process_child_orders(OrderPtr& order) noexcept
+{
+    auto& child_orders = order->get_child_orders();
+    for (auto& child_order : child_orders) {
+        this->brokers->__validate_order(child_order);
+        if (!child_order) continue;
+        if (child_order->get_order_state() == OrderState::REJECTED) {
+            this->remeber_order(std::move(child_order));
+            continue;
+        }
+		child_order->__set_state(OrderState::CHEAT);
+		this->cheat_order(child_order);
+		this->remeber_order(std::move(child_order));
+	}
+}
+
+//============================================================================
 void AgisRouter::processOrder(OrderPtr order) {
     if (!order) { return; }
 
@@ -104,6 +122,7 @@ void AgisRouter::processOrder(OrderPtr order) {
     case OrderState::PENDING:
         // order has been placed by a strategy and is routed to the correct exchange
         this->brokers->__validate_order(order_ref);
+        if(!order) break;
         if(order->get_order_state() == OrderState::REJECTED) break;
         this->exchanges->__place_order(std::move(order_ref.get()));
         return;
@@ -111,10 +130,14 @@ void AgisRouter::processOrder(OrderPtr order) {
         // order has been filled by the exchange and is routed to the portfolio
         this->brokers->__on_order_fill(order_ref);
         this->portfolios->__on_order_fill(order_ref);
-        // allow for bet hedge to be processed in the same step
+        // allow for beta hedge to be processed in the same step
         if (order->has_beta_hedge_order()) {
             this->process_beta_hedge(order);
-        }        
+        }   
+        // allow for any child order to be processed in the same step
+        if (order->has_child_orders()) {
+            this->process_child_orders(order);
+        }
         break;
     }
     case OrderState::CHEAT:
@@ -128,6 +151,7 @@ void AgisRouter::processOrder(OrderPtr order) {
     }
 
     if (!log_orders) return;
+    if (!order);
     this->remeber_order(std::move(order));
 }
 
@@ -136,7 +160,11 @@ void AgisRouter::cheat_order(OrderPtr& order)
 {
     this->exchanges->__process_order(true, order);
     if (order->get_order_state() != OrderState::FILLED) return;
+    this->brokers->__on_order_fill(order);
     this->portfolios->__on_order_fill(order);
+    if (order->has_child_orders()) {
+		this->process_child_orders(order);
+	}
 }
 
 

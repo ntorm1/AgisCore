@@ -1,4 +1,10 @@
 #pragma once
+#pragma once
+#ifdef AGISCORE_EXPORTS
+#define AGIS_API __declspec(dllexport)
+#else
+#define AGIS_API __declspec(dllimport)
+#endif
 
 #include <memory>
 #include <atomic>
@@ -45,16 +51,10 @@ protected:
     /// </summary>
     ThreadSafeVector<SharedOrderPtr> order_history;
 
-    /// <summary>
-    /// Process and incoming order either placed by a strategy or filled by an exchange and route it
-    /// </summary>
-    /// <param name="order"></param>
     void processOrder(OrderPtr order);
-
     void cheat_order(OrderPtr& order);
-
     void remeber_order(OrderPtr order);
-
+    void process_child_orders(OrderPtr& order) noexcept;
     void process_beta_hedge(OrderPtr& order);
 
 public:
@@ -70,7 +70,7 @@ public:
 
     void __reset();
 
-    void __process();
+    AGIS_API void __process();
 
     ThreadSafeVector<SharedOrderPtr> const& get_order_history() { return this->order_history; }
 };

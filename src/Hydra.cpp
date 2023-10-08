@@ -12,18 +12,18 @@ using namespace Agis;
 
 struct HydraPrivate
 {
-    HydraPrivate() : brokers(&this->exchanges){}
+    HydraPrivate(PortfolioMap* portfolios) :
+        brokers(&this->exchanges),
+        router(&this->exchanges, &this->brokers, portfolios)
+    {}
     BrokerMap brokers;
     ExchangeMap exchanges;
+    AgisRouter router;
 };
 
 //============================================================================
 Hydra::Hydra(int logging_, bool init_lua_state):
-    p(new HydraPrivate()),
-    router(
-        &this->p->exchanges,
-        &this->p->brokers,
-        &this->portfolios)
+    p(new HydraPrivate(&this->portfolios))
 {
     this->logging = logging_;
 #ifdef USE_LUAJIT
@@ -67,16 +67,16 @@ void Hydra::__step()
     // process strategy logic at end of each time step
     bool step;
     AGIS_TRY(step = this->strategies.__next());
-    if (step) { this->router.__process(); };
+    if (step) { this->p->router.__process(); };
 
     // process orders on the exchange and route to their portfolios on fill
-    this->p->exchanges.__process_orders(this->router, true);
-    this->router.__process();
+    this->p->exchanges.__process_orders(this->p->router, true);
+    this->p->router.__process();
 
     // evaluate the portfolios on close, then remove any position for assets that are expiring.
     AGIS_TRY(this->portfolios.__evaluate(true));
-    this->portfolios.__on_assets_expired(this->router, expired_index_list);
-    this->router.__process();
+    this->portfolios.__on_assets_expired(this->p->router, expired_index_list);
+    this->p->router.__process();
 }
 
 
@@ -132,7 +132,7 @@ PortfolioPtr const Hydra::new_portfolio(std::string id, double cash)
         AGIS_THROW("portfolio already exists");
     }
     this->is_built = false;
-    auto portfolio = std::make_unique<Portfolio>(this->router, id, cash);
+    auto portfolio = std::make_unique<Portfolio>(this->p->router, id, cash);
     portfolio->__set_exchange_map(&this->p->exchanges);
     this->portfolios.__register_portfolio(std::move(portfolio));
 
@@ -158,6 +158,13 @@ std::expected<bool, AgisException> Hydra::register_broker(BrokerPtr broker)
 BrokerMap* Hydra::__get_brokers() const noexcept
 {
     return &this->p->brokers;
+}
+
+
+//============================================================================
+AgisRouter* Hydra::__get_router() noexcept
+{
+    return &this->p->router;
 }
 
 
@@ -222,7 +229,7 @@ AGIS_API std::expected<BrokerPtr, AgisException> Hydra::get_broker(std::string c
 //============================================================================
 AGIS_API std::expected<BrokerPtr, AgisException> Hydra::new_broker(std::string const& broker_id)
 {
-    return this->p->brokers.new_broker(&this->router, broker_id);
+    return this->p->brokers.new_broker(&this->p->router, broker_id);
 }
 
 
@@ -372,7 +379,7 @@ AGIS_API AgisResult<bool> Hydra::build()
     auto& strats = this->strategies.__get_strategies_mut();
     for (auto& strat : strats)
     {
-        strat.second->__build(&this->router, &this->p->brokers);
+        strat.second->__build(&this->p->router, &this->p->brokers);
         auto strat_ref = std::ref(strat.second);
         this->portfolios.__register_strategy(strat_ref);
     }
@@ -388,7 +395,7 @@ void Hydra::__reset()
     this->current_index = 0;
     this->p->exchanges.__reset();
     this->portfolios.__reset();
-    this->router.__reset();
+    this->p->router.__reset();
     AGIS_TRY(this->strategies.__reset();)
 
     Order::__reset_counter();
@@ -541,7 +548,7 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
 //============================================================================
 AgisResult<bool> Hydra::restore_portfolios(Document const& j)
 {
-    this->portfolios.restore(this->router, j);
+    this->portfolios.restore(this->p->router, j);
 
     const Value& portfolios = j["portfolios"];
     for (Value::ConstMemberIterator portfolio_json = portfolios.MemberBegin(); portfolio_json != portfolios.MemberEnd(); ++portfolio_json) {
@@ -592,6 +599,14 @@ AgisResult<bool> Hydra::set_market_asset(
 {
     this->is_built = false;
     return this->p->exchanges.set_market_asset(exchange_id, asset_id, disable, beta_lookback);
+}
+
+
+//============================================================================
+AGIS_API ThreadSafeVector<SharedOrderPtr> const&
+Hydra::get_order_history()
+{
+    return this->p->router.get_order_history(); 
 }
 
 

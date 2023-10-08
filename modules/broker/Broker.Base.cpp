@@ -265,11 +265,7 @@ void Broker::set_order_impacts(std::reference_wrapper<OrderPtr> new_order_ref) n
 		(
 			(!trade_opt.has_value() && (new_order->get_units() < 0))
 			|| 
-			(trade_opt.has_value() && (new_order->get_units() < 0) && trade_opt.value()->order_closes(new_order))
-			||
-			(trade_opt.has_value() && (new_order->get_units() > 0) && trade_opt.value()->order_reduces(new_order))
-			||
-			(new_order->get_units() < 0 && trade_opt.has_value() && !trade_opt.value()->order_reduces(new_order))
+			(trade_opt.has_value() && (trade_opt.value()->units < 0))
 		)
 		? MarginType::SHORT_OVERNIGHT_INITIAL
 		: MarginType::OVERNIGHT_INITIAL;
@@ -331,13 +327,43 @@ BrokerMap::__on_order_fill(std::reference_wrapper<OrderPtr> new_order) noexcept
 
 //============================================================================
 void
-Broker::__validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept
+Broker::__validate_order(std::reference_wrapper<OrderPtr> new_order_ref) noexcept
 {
 	// test if order's underlying asset is tradeable in this broker instance
-	auto asset_index = new_order.get()->get_asset_index();
+	auto& new_order = new_order_ref.get();
+	auto asset_index = new_order->get_asset_index();
 	if (asset_index >= this->tradeable_assets.size() || !this->tradeable_assets.contains(asset_index)) {
+		new_order->reject(0);
+		return;
+	}
+
+	// if an order will reverse a positions direction, split the order into two pieces.
+	// one piece will close the existing position, the other will open a new position
+	auto it = this->strategies.find(new_order->get_strategy_index());
+	if (it == this->strategies.end()) {
 		new_order.get()->reject(0);
 		return;
+	}
+	auto strategy = it->second;
+	auto trade_opt = strategy->get_trade(asset_index);
+	if (trade_opt.has_value()) {
+		auto& trade = trade_opt.value();
+		// order is flipping sides, generate inverse order to close existing position
+		// and reduce the units of the new order to the remaining units
+		if (trade->order_flips(new_order)) {
+			auto inverse_order = trade->generate_trade_inverse();
+			inverse_order->__set_state(OrderState::CHEAT);
+			inverse_order->__broker = this;
+			auto new_units = new_order->get_units() - inverse_order->get_units();
+			new_order->set_units(new_units);
+
+			// take the original order and move it into the inverse order
+			inverse_order->insert_child_order(std::move(new_order));
+			this->_router->place_order(std::move(inverse_order));	
+
+			// replace the order in the reference wrapper with a nullptr 
+			new_order = nullptr;
+		}
 	}
 }
 

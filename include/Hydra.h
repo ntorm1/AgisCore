@@ -22,6 +22,7 @@
 #include "AgisRouter.h"
 #include "AbstractAgisStrategy.h"
 
+
 struct HydraPrivate;
 
 class Hydra
@@ -37,11 +38,6 @@ private:
 	*/
 	AgisStrategyMap strategies;
 	
-	/**
-	 * @brief An AgisRouter to route orders
-	*/
-	AgisRouter router;
-
 	/**
 	 * @brief Hydra private implementation
 	*/
@@ -164,7 +160,7 @@ public:
 	AGIS_API std::expected<bool, AgisException> register_broker(BrokerPtr broker);
 
 	AGIS_API BrokerMap* __get_brokers() const noexcept;
-	AGIS_API AgisRouter* __get_router() noexcept { return &this->router; }
+	AGIS_API AgisRouter* __get_router() noexcept;
 	AGIS_API ExchangeMap const& get_exchanges() const noexcept;
 	AGIS_API PortfolioMap const& get_portfolios() const { return this->portfolios; }
 
@@ -210,7 +206,7 @@ public:
 	/// Get a const ref to the vector containing the entire order history
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API ThreadSafeVector<SharedOrderPtr> const& get_order_history() { return this->router.get_order_history(); }
+	AGIS_API ThreadSafeVector<SharedOrderPtr> const& get_order_history();
 
 	/// <summary>
 	/// Remove exchange from the hydra instance by exchange id

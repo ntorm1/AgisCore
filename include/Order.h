@@ -54,12 +54,8 @@ private:
     /// <returns></returns>
     std::optional<TradeExitPtr> exit = std::nullopt;
 
-    /**
-     * @brief On optional child order that is linked to this order is to be place on fill 
-     * of the parent order
-    */
     std::optional<OrderPtr> beta_hedge_order;
-
+    std::vector<OrderPtr> child_orders;
 public:
     bool phantom_order = false;     /// is the order a phantom order (placed by benchmark strategy)
     bool force_close = false;       /// force an order to close out a position
@@ -82,6 +78,8 @@ public:
     );
 
     [[nodiscard]] inline std::optional<double> get_limit() const noexcept{ return this->limit; }
+	[[nodiscard]] inline bool has_child_orders() const noexcept { return !this->child_orders.empty(); }
+	[[nodiscard]] inline std::vector<OrderPtr>& get_child_orders() noexcept { return this->child_orders; }
     [[nodiscard]] inline bool has_beta_hedge_order() const noexcept { return this->beta_hedge_order.has_value(); }
     [[nodiscard]] inline TradeExitPtr get_exit() const noexcept { return this->exit.value(); }
     [[nodiscard]] inline OrderPtr const& get_child_order_ref() const noexcept { return this->beta_hedge_order.value(); }
@@ -98,7 +96,8 @@ public:
     [[nodiscard]] inline std::optional<TradeExitPtr> move_exit() noexcept { return std::move(this->exit); }
     [[nodiscard]] bool has_exit() const noexcept { return this->exit.has_value(); }
 
-    void insert_beta_hedge_order(OrderPtr child_order_) { this->beta_hedge_order = std::move(child_order_); }
+    void insert_child_order(OrderPtr child_order_) noexcept;
+    void insert_beta_hedge_order(OrderPtr child_order_) noexcept { this->beta_hedge_order = std::move(child_order_); }
     void set_limit(double limit_) { this->limit = limit_; }
     void set_create_time(long long t) { this->order_create_time = t; }
     void set_units(double units) { this->units = units; }

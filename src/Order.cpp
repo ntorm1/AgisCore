@@ -34,6 +34,13 @@ Order::Order(OrderType order_type_,
 
 
 //============================================================================
+void Order::insert_child_order(OrderPtr child_order_) noexcept
+{
+    this->child_orders.push_back(std::move(child_order_));
+}
+
+
+//============================================================================
 std::expected<rapidjson::Document, AgisException> Order::serialize(HydraPtr hydra) const
 {
     Document order(kObjectType);
