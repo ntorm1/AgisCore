@@ -635,7 +635,6 @@ AgisResult<bool> Portfolio::__evaluate(bool on_close, bool is_reprice)
     // log strategy levels
     for (const auto& strat : this->strategies)
     {
-        strat.second->tracers.nlv.fetch_add(strat.second->tracers.cash.load());
         auto res = strat.second->__evaluate(on_close);
         if (res.is_exception()) {
             UNLOCK_GUARD;

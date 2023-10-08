@@ -152,7 +152,7 @@ AgisResult<bool> AgisStrategyTracers::evaluate()
 //============================================================================
 void AgisStrategyTracers::zero_out_tracers()
 {
-	this->nlv.store(0);
+	this->nlv.store(this->cash.load());
 	if (this->has(Tracer::BETA)) this->net_beta = 0.0f;
 	if (this->has(Tracer::LEVERAGE)) this->net_leverage_ratio = 0.0f;
 	if (this->strategy->limits.max_leverage.has_value()) this->strategy->limits.phantom_cash = 0.0f;

@@ -41,6 +41,31 @@ Broker::Broker(
 
 //============================================================================
 std::expected<bool, AgisException>
+Broker::load_tradeable_assets(
+	TradeableAsset tradeable_asset,
+	std::vector<size_t> const& asset_indecies
+) noexcept
+{
+	for (auto asset_index : asset_indecies) {
+		auto asset = this->_exchange_map->get_asset(asset_index);
+		if (asset.is_exception()) {
+			return std::unexpected<AgisException>(asset.get_exception());
+		}
+		// copy the tradeable asset and set the asset pointer to the asset
+		TradeableAsset tradeable_asset_new = tradeable_asset;
+		tradeable_asset_new.asset = asset.unwrap().get();
+		size_t exsisting_multiplier = tradeable_asset_new.asset->get_unit_multiplier();
+		if (exsisting_multiplier && exsisting_multiplier != tradeable_asset_new.unit_multiplier) {
+			return std::unexpected<AgisException>("Asset already has a unit multiplier of " + std::to_string(exsisting_multiplier));
+		}
+		tradeable_asset_new.asset->__set_unit_multiplier(tradeable_asset_new.unit_multiplier);
+		this->tradeable_assets.insert({ asset_index, std::move(tradeable_asset_new) });
+	}
+	return true;
+}
+
+//============================================================================
+std::expected<bool, AgisException>
 Broker::load_tradeable_assets(std::string const& json_string) noexcept
 {
 	// load rapidjson document from string
@@ -69,7 +94,6 @@ Broker::load_tradeable_assets(std::string const& json_string) noexcept
 		if (!it.HasMember("asset_id")) {
 			return std::unexpected<AgisException>("Found element that does not contain key \"asset_id\"");
 		}
-
 
 
 		// get the asset id as string, make sure it exists

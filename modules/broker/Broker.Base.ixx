@@ -47,8 +47,9 @@ enum class MarginType
 //============================================================================
 struct TradeableAsset
 {
-	Asset* asset;
-	uint16_t 	unit_multiplier;
+	TradeableAsset() = default;
+	Asset* asset = nullptr;
+	uint16_t 	unit_multiplier = 1;
 	double		intraday_initial_margin = 1;
 	double		intraday_maintenance_margin = 1;
 	double		overnight_initial_margin = 1;
@@ -74,6 +75,10 @@ public:
 	void __on_order_fill(std::reference_wrapper<OrderPtr> new_order) noexcept;
 	void __validate_order(std::reference_wrapper<OrderPtr> new_order) noexcept;
 
+	[[nodiscard]] AGIS_API std::expected<bool, AgisException> load_tradeable_assets(
+		TradeableAsset tradeable_asset,
+		std::vector<size_t> const& asset_indecies
+	) noexcept;
 	[[nodiscard]] AGIS_API std::expected<bool, AgisException> load_tradeable_assets(std::string const& json_string) noexcept;
 	[[nodiscard]] AGIS_API std::expected<bool, AgisException> load_tradeable_assets(fs::path p) noexcept;
 	
