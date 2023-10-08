@@ -358,7 +358,7 @@ protected:
 	/// Evaluate the portfolio at the current levels
 	/// </summary>
 	/// <param name="on_close">On the close of a time period</param>
-	AgisResult<bool> __evaluate(bool on_close);
+	AgisResult<bool> __evaluate(bool on_close) noexcept;
 
 	/**
 	 * @brief function called by trade when it is closed to zero out the portfolio weights of the given asset

@@ -420,7 +420,7 @@ public:
 	 * @param on_close get the price at the close step
 	 * @return current market price 
 	*/
-	AGIS_API double __get_market_price(size_t asset_index, bool on_close) const;
+	AGIS_API double __get_market_price(size_t asset_index, bool on_close) const noexcept;
 
 	/**
 	 * @brief get the current market price of an asset by its id and wether or not at the close step.

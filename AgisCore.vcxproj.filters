@@ -93,6 +93,9 @@
     <ClInclude Include="include\AgisEnums.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="external\include\veque.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\dllmain.cpp">
@@ -174,6 +177,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="modules\asset\Asset.Core.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\asset\Asset.Future.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\asset\Asset.Future.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

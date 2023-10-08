@@ -1186,7 +1186,17 @@ std::span<long long> const ExchangeMap::__get_dt_index(bool cutoff) const
 
 
 //============================================================================
-AGIS_API double ExchangeMap::__get_market_price(std::string& asset_id, bool on_close) const
+AgisResult<AssetPtr const>
+ExchangeMap::__get_market_asset(Frequency freq) const
+{
+	if(!this->market_assets.contains(freq)) return AgisResult<AssetPtr const>(AGIS_EXCEP("No market asset found for frequency"));
+	return AgisResult<AssetPtr const>(this->market_assets.at(freq));
+}
+
+
+//============================================================================
+double
+ExchangeMap::__get_market_price(std::string& asset_id, bool on_close) const
 {
 	auto index = this->asset_map.at(asset_id);
 	auto const& asset = this->assets[index];
@@ -1197,15 +1207,8 @@ AGIS_API double ExchangeMap::__get_market_price(std::string& asset_id, bool on_c
 
 
 //============================================================================
-AGIS_API AgisResult<AssetPtr const> ExchangeMap::__get_market_asset(Frequency freq) const
-{
-	if(!this->market_assets.contains(freq)) return AgisResult<AssetPtr const>(AGIS_EXCEP("No market asset found for frequency"));
-	return AgisResult<AssetPtr const>(this->market_assets.at(freq));
-}
-
-
-//============================================================================
-AGIS_API double ExchangeMap::__get_market_price(size_t asset_index, bool on_close) const
+double
+ExchangeMap::__get_market_price(size_t asset_index, bool on_close) const noexcept
 {
 	auto const& asset = this->assets[asset_index];
 	if (!asset) return 0.0f;

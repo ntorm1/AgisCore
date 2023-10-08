@@ -70,7 +70,7 @@ void AgisStrategy::__build(
 
 
 //============================================================================
-AgisResult<bool> AgisStrategy::__evaluate(bool on_close)
+AgisResult<bool> AgisStrategy::__evaluate(bool on_close) noexcept
 {
 	// Note: at this point all trades have been evaluated and the cash balance has been updated
 	// so we only have to observer the values or use them to calculate other values.
