@@ -29,11 +29,6 @@ class Hydra
 {
 private:	
 	/**
-	 * @brief Container holding all portfolios that are currently registered
-	*/
-	PortfolioMap portfolios;
-
-	/**
 	 * @brief Container holding all strategies that are currently registered
 	*/
 	AgisStrategyMap strategies;
@@ -162,7 +157,7 @@ public:
 	AGIS_API BrokerMap* __get_brokers() const noexcept;
 	AGIS_API AgisRouter* __get_router() noexcept;
 	AGIS_API ExchangeMap const& get_exchanges() const noexcept;
-	AGIS_API PortfolioMap const& get_portfolios() const { return this->portfolios; }
+	AGIS_API PortfolioMap const& get_portfolios() const noexcept;
 
 	/// <summary>
 	/// Get ref to the agis strategy map
@@ -200,7 +195,7 @@ public:
 	/// Get const ref to the portfolio map containing all registered portfolios
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API PortfolioMap& __get_portfolios() { return this->portfolios; }
+	AGIS_API PortfolioMap& __get_portfolios();
 
 	/// <summary>
 	/// Get a const ref to the vector containing the entire order history

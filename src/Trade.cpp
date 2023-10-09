@@ -3,6 +3,7 @@
 #include "Order.h"
 #include "AgisStrategy.h"
 #include "Hydra.h"
+#include "Portfolio.h"
 
 import Asset;
 import Broker;

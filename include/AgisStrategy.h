@@ -14,7 +14,6 @@
 #include "AgisAnalysis.h"
 #include "AgisStrategyTracers.h"
 #include "Order.h"
-#include "Portfolio.h"
 
 namespace fs = std::filesystem;
 
@@ -26,9 +25,12 @@ namespace Agis {
 
 class AgisStrategy;
 class AgisRouter;
+class Portfolio;
 class Exchange;
 class ExchangeMap;
 struct ExchangeView;
+
+typedef std::shared_ptr<Portfolio> PortfolioPtr;
 typedef std::shared_ptr<Exchange> ExchangePtr;
 
 using namespace Agis;
@@ -198,11 +200,11 @@ public:
 	AGIS_API std::optional<double> get_portfolio_volatility() const { return this->tracers.get(Tracer::VOLATILITY); }
 
 	size_t get_strategy_index() const { return this->strategy_index; }
-	size_t get_portfolio_index() const { return this->portfolio->__get_index(); }
+	size_t get_portfolio_index() const noexcept;
 	size_t get_broker_index() const;
 	AGIS_API [[nodiscard]] PortfolioPtr const get_portfolio() const { return this->portfolio; }
 	std::string const& get_strategy_id() const { return this->strategy_id; }
-	std::string get_portfolio_id() const { return this->portfolio->__get_portfolio_id(); }
+	std::string get_portfolio_id() const noexcept;
 	Frequency get_frequency() const { return this->frequency; }
 
 

@@ -58,7 +58,7 @@ public:
     using AssetTable::const_iterator;
 
     FutureTable(
-        std::shared_ptr<Exchange> exchange,
+        Exchange* exchange,
         std::string contract_id);
 	~FutureTable();
 

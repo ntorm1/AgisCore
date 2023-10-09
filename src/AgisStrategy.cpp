@@ -8,6 +8,7 @@
 #include "AgisStrategy.h"
 #include "AgisRouter.h"
 #include "Exchange.h"
+#include "Portfolio.h"
 
 import Broker;
 import Asset;
@@ -849,6 +850,20 @@ std::optional<double> AgisStrategy::get_net_leverage_ratio() const
 size_t AgisStrategy::get_broker_index() const
 {
 	return this->broker->get_index();
+}
+
+
+//============================================================================
+size_t AgisStrategy::get_portfolio_index() const noexcept
+{
+	return this->portfolio->__get_index();
+}
+
+
+//============================================================================
+std::string AgisStrategy::get_portfolio_id() const noexcept
+{
+	return this->portfolio->__get_portfolio_id(); 
 }
 
 
