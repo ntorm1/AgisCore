@@ -1530,7 +1530,6 @@ void ExchangeView::sort(size_t N, ExchangeQueryType sort_type)
 	}
 }
 
-
 //============================================================================
 AGIS_API std::string ev_opp_to_str(ExchangeViewOpp ev_opp)
 {

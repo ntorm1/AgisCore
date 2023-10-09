@@ -3,6 +3,7 @@
 #include <tbb/parallel_for_each.h>
 #include <algorithm>
 #include "Portfolio.h"
+#include "Exchange.h"
 #include "AgisStrategy.h"
 
 import Asset;

@@ -11,7 +11,6 @@ module;
 
 #include "AgisException.h"
 #include "AgisStrategy.h"
-#include "Exchange.h"
 #include "Portfolio.h"
 
 module Broker:Base;

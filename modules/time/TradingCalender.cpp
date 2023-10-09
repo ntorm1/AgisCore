@@ -13,7 +13,7 @@ module;
 #include "AgisException.h"
 
 
-module TradingCalender;
+module TradingCalendar;
 
 using namespace std::chrono;
 using namespace boost::gregorian;
@@ -25,7 +25,7 @@ namespace Agis
 
 //============================================================================
 std::expected<bool, AgisException>
-TradingCalender::load_holiday_file(std::string const& file_path)
+TradingCalendar::load_holiday_file(std::string const& file_path)
 {
 	this->_holidays.clear();
 
@@ -81,7 +81,7 @@ TradingCalender::load_holiday_file(std::string const& file_path)
 
 //============================================================================
 bool
-TradingCalender::is_holiday(date const& date_obj) const noexcept
+TradingCalendar::is_holiday(date const& date_obj) const noexcept
 {
 	return std::binary_search(this->_holidays.begin(), this->_holidays.end(), date_obj);
 }
@@ -89,7 +89,7 @@ TradingCalender::is_holiday(date const& date_obj) const noexcept
 
 //============================================================================
 bool
-TradingCalender::is_business_day(date const& date_obj) const noexcept
+TradingCalendar::is_business_day(date const& date_obj) const noexcept
 {
 	return !this->is_holiday(date_obj) &&
 		greg_weekday(date_obj.day_of_week()).as_enum() != boost::gregorian::greg_weekday::weekday_enum::Saturday &&
@@ -98,8 +98,26 @@ TradingCalender::is_business_day(date const& date_obj) const noexcept
 
 
 //============================================================================
+std::expected<bool, AgisException>
+TradingCalendar::is_valid_date(int year, int month, int day) const noexcept
+{
+	if (year < 1900 || year > 2100) {
+		return std::unexpected<AgisException>("Invalid year: " + std::to_string(year));
+	}
+	if (month < 1 || month > 12) {
+		return std::unexpected<AgisException>("Invalid month: " + std::to_string(month));
+	}
+	if (day < 1 || day > 31) {
+		return std::unexpected<AgisException>("Invalid day: " + std::to_string(day));
+	}
+	return true;
+}
+
+
+
+//============================================================================
 date
-TradingCalender::get_previous_business_day(date const& d)
+TradingCalendar::get_previous_business_day(date const& d)
 {
 	return this->business_days_subtract(d, 1);
 }
@@ -107,7 +125,7 @@ TradingCalender::get_previous_business_day(date const& d)
 
 //============================================================================
 date
-TradingCalender::business_days_subtract(date const& d, uint16_t n)
+TradingCalendar::business_days_subtract(date const& d, uint16_t n)
 {
 	date d1 = d;
 	int counter = 0;
@@ -127,7 +145,7 @@ TradingCalender::business_days_subtract(date const& d, uint16_t n)
 
 //============================================================================
 std::expected<long long, AgisException>
-TradingCalender::cl_future_contract_to_expiry(std::string contract_id)
+TradingCalendar::cl_future_contract_to_expiry(std::string contract_id)
 {
 	// expect contract_id to be in the following formats:
 	// 1. CLZ2020 (Dec 2020)
@@ -164,6 +182,11 @@ TradingCalender::cl_future_contract_to_expiry(std::string contract_id)
 	else {
 		month_int -= 1;
 	}
+	auto res = this->is_valid_date(year_int, month_int, 25);
+	if(!res.has_value()){
+		return std::unexpected<AgisException>("Invalid contract id: " + contract_id);
+	}
+
 	date d1(year_int, month_int, 25);
 	// find the first business day before the 25th. Return 6 PM EST
 	if (!this->is_business_day(d1)) {
@@ -184,7 +207,7 @@ TradingCalender::cl_future_contract_to_expiry(std::string contract_id)
 
 //============================================================================
 std::expected<long long, AgisException>
-TradingCalender::zf_futures_contract_to_first_intention(std::string contract_id)
+TradingCalendar::zf_futures_contract_to_first_intention(std::string contract_id)
 {
 	auto expiration_opt = zf_future_contract_to_date(contract_id);
 	if (!expiration_opt.has_value()) {
@@ -194,6 +217,10 @@ TradingCalender::zf_futures_contract_to_first_intention(std::string contract_id)
 	// First Intention Day, also known as First Position Day, is the second business day before
 	// the first business day of the expiring contract’s delivery month. Return 6 PM EST
 	// find the first day of the expiration month
+	auto res = this->is_valid_date(expiration.year(), expiration.month(), 1);
+	if (!res.has_value()) {
+		return std::unexpected<AgisException>("Invalid contract id: " + contract_id);
+	}
 	date d1(expiration.year(), expiration.month(), 1);
 	int counter = 0;
 	while (true) {
@@ -223,7 +250,7 @@ TradingCalender::zf_futures_contract_to_first_intention(std::string contract_id)
 
 //============================================================================
 std::expected<long long, AgisException>
-TradingCalender::zf_future_contract_to_expiry(std::string contract_id)
+TradingCalendar::zf_future_contract_to_expiry(std::string contract_id)
 {
 	auto date_opt = zf_future_contract_to_date(contract_id);
 	if (!date_opt.has_value()) {
@@ -245,7 +272,7 @@ TradingCalender::zf_future_contract_to_expiry(std::string contract_id)
 
 //============================================================================
 std::expected<date, AgisException>
-TradingCalender::zf_future_contract_to_date(std::string contract_id)
+TradingCalendar::zf_future_contract_to_date(std::string contract_id)
 {
 	// expect contract_id to be in the following formats:
 	// 1. ZFZ2020 (Dec 2020)
@@ -273,6 +300,10 @@ TradingCalender::zf_future_contract_to_date(std::string contract_id)
 		return std::unexpected<AgisException>("Invalid contract id: " + contract_id + ": " + e.what());
 	}
 	// ZF futures expire at 12:01 PM CT on the last business day of the contract month
+	auto res = this->is_valid_date(year_int, month_int, 1);
+	if (!res.has_value()) {
+		return std::unexpected<AgisException>("Invalid contract id: " + contract_id);
+	}
 	date d0(year_int, month_int, 1 );
 	date d1 = d0.end_of_month();
 	while (
@@ -288,7 +319,7 @@ TradingCalender::zf_future_contract_to_date(std::string contract_id)
 
 //============================================================================
 std::expected<long long, AgisException>
-TradingCalender::es_future_contract_to_expiry(std::string contract_id)
+TradingCalendar::es_future_contract_to_expiry(std::string contract_id)
 {
 	// expect contract_id to be in the following formats:
 	// 1. ESZ2020 (Dec 2020)
@@ -339,7 +370,7 @@ TradingCalender::es_future_contract_to_expiry(std::string contract_id)
 
 //============================================================================
 uint16_t
-TradingCalender::future_month_code_to_int(char month_code)
+TradingCalendar::future_month_code_to_int(char month_code)
 {
 	switch (month_code) {
 	case 'F':

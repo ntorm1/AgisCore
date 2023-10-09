@@ -34,8 +34,8 @@ module;
 
 export module Asset:Base;
 
-class Exchange;
-class ExchangeMap;
+export class Exchange;
+export class ExchangeMap;
 
 import :Core;
 

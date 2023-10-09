@@ -16,7 +16,7 @@
 #include "AgisRouter.h"
 #include "AgisStrategyTracers.h"
 #include "AgisAnalysis.h"
-#include "Exchange.h"
+
 #include "Order.h"
 #include "Trade.h"
 
@@ -31,6 +31,7 @@ class PortfolioMap;
 class AgisStrategy;
 class BenchMarkStrategy;
 class AgisStrategyMap;
+class ExchangeMap;
 struct Position;
 
 AGIS_API typedef std::unique_ptr<AgisStrategy> AgisStrategyPtr;

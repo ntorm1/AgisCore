@@ -17,6 +17,7 @@ namespace Agis {
 	class Asset;
 	struct MarketAsset;
 	class AssetObserver;
+	class TradingCalendar;
 }
 
 using namespace Agis;
@@ -199,6 +200,8 @@ public:
 	void __add_asset_observer(AssetObserverPtr observer) { this->asset_observers.push_back(std::move(observer)); }
 
 
+	void load_trading_calendar(std::shared_ptr<TradingCalendar> c) { this->_calendar = c; }
+	std::shared_ptr<TradingCalendar> get_trading_calendar() const noexcept {return this->_calendar; }
 
 	AgisResult<bool> validate();
 	void reset();
@@ -239,6 +242,7 @@ private:
 	ankerl::unordered_dense::map<std::string, size_t> headers;
 	ExchangeMap* exchanges;
 
+	std::shared_ptr<TradingCalendar> _calendar = nullptr;
 	std::optional<std::shared_ptr<MarketAsset>> market_asset = std::nullopt;
 
 	long long* dt_index = nullptr;

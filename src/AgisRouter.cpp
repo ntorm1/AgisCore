@@ -12,6 +12,7 @@ constexpr size_t num_threads = 1;
 
 #include "AgisRouter.h"
 #include "Portfolio.h"
+#include "Exchange.h"
 
 
 import Broker;
@@ -151,7 +152,7 @@ void AgisRouter::processOrder(OrderPtr order) {
     }
 
     if (!log_orders) return;
-    if (!order);
+    if (!order) return;
     this->remeber_order(std::move(order));
 }
 

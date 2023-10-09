@@ -22,10 +22,12 @@ import :Base;
 
 export namespace Agis {
 
+
+struct FuturePrivate;
 class Asset;
 typedef std::shared_ptr<Asset> AssetPtr;
 
-
+class TradingCalendar;
 
 class FutureTable {
 public:
@@ -33,10 +35,10 @@ public:
 	typedef veque::veque<AssetPtr>::const_iterator const_iterator;
 
 
-	FutureTable(std::string contract_id) :
-		_contract_id(contract_id)
-	{}
-	~FutureTable() = default;
+    FutureTable(
+        std::shared_ptr<Exchange> exchange,
+        std::string contract_id);
+	~FutureTable();
 
     AssetPtr const front_month() const {
 		return _tradeable.front();
@@ -60,6 +62,7 @@ public:
 
 private:
 	std::string _contract_id;
+    FuturePrivate* p = nullptr;
 	veque::veque<AssetPtr> _tradeable;
 	veque::veque<AssetPtr> _out_of_bounds;
 };
