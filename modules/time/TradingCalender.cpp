@@ -86,6 +86,102 @@ TradingCalender::is_holiday(date const& date_obj) const noexcept
 	return std::binary_search(this->_holidays.begin(), this->_holidays.end(), date_obj);
 }
 
+
+//============================================================================
+bool
+TradingCalender::is_business_day(date const& date_obj) const noexcept
+{
+	return !this->is_holiday(date_obj) &&
+		greg_weekday(date_obj.day_of_week()).as_enum() != boost::gregorian::greg_weekday::weekday_enum::Saturday &&
+		greg_weekday(date_obj.day_of_week()).as_enum() != boost::gregorian::greg_weekday::weekday_enum::Sunday;
+}
+
+
+//============================================================================
+date
+TradingCalender::get_previous_business_day(date const& d)
+{
+	return this->business_days_subtract(d, 1);
+}
+
+
+//============================================================================
+date
+TradingCalender::business_days_subtract(date const& d, uint16_t n)
+{
+	date d1 = d;
+	int counter = 0;
+	while (true) {
+		d1 -= boost::gregorian::days(1);
+		if (greg_weekday(d1.day_of_week()).as_enum() != boost::gregorian::greg_weekday::weekday_enum::Saturday &&
+			greg_weekday(d1.day_of_week()).as_enum() != boost::gregorian::greg_weekday::weekday_enum::Sunday &&
+			!this->is_holiday(d1)){
+			counter++;
+		}
+		if (counter == n) {
+			break;
+		}
+	}
+	return d1;
+}
+
+//============================================================================
+std::expected<long long, AgisException>
+TradingCalender::cl_future_contract_to_expiry(std::string contract_id)
+{
+	// expect contract_id to be in the following formats:
+	// 1. CLZ2020 (Dec 2020)
+	// check length
+	if (contract_id.length() != 7) {
+		return std::unexpected<AgisException>("Invalid contract id: " + contract_id);
+	}
+	// verify first two characters are ES
+	if (contract_id.substr(0, 2) != "CL") {
+		return std::unexpected<AgisException>("Invalid contract id: " + contract_id);
+	}
+	// get the month code
+	char month_code = contract_id[2];
+	// get the month number
+	uint16_t month_int = future_month_code_to_int(month_code);
+	if (month_int == 0) {
+		return std::unexpected<AgisException>("Invalid contract id: " + contract_id);
+	}
+	uint16_t year_int;
+	try {
+		year_int = std::stoi(contract_id.substr(3, 4));
+	}
+	catch (std::invalid_argument const& e) {
+		return std::unexpected<AgisException>("Invalid contract id: " + contract_id + ": " + e.what());
+	}
+	//For crude oil, each contract expires on the third business day prior to 
+	// the 25th calendar day of the month preceding the delivery month.
+	// If the 25th calendar day of the month is a non-business day, trading ceases on the
+	// third business day prior to the business day preceding the 25th calendar day.
+	if (month_int == 1) {
+		month_int = 12;
+		year_int -= 1;
+	}
+	else {
+		month_int -= 1;
+	}
+	date d1(year_int, month_int, 25);
+	// find the first business day before the 25th. Return 6 PM EST
+	if (!this->is_business_day(d1)) {
+		d1 = this->get_previous_business_day(d1);
+	}
+	d1 = this->business_days_subtract(d1, 3);
+	tm t = to_tm(d1);
+	t.tm_hour = 18;
+	t.tm_min = 00;
+	t.tm_sec = 0;
+	// convert to nanosecond epoch time
+	auto tp2 = system_clock::from_time_t(std::mktime(&t));
+	auto ns = duration_cast<nanoseconds>(tp2.time_since_epoch());
+	// return as long long
+	return ns.count();
+}
+
+
 //============================================================================
 std::expected<long long, AgisException>
 TradingCalender::zf_futures_contract_to_first_intention(std::string contract_id)
