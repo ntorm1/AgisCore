@@ -8,6 +8,7 @@ module;
 #include <chrono>
 
 #include <boost/date_time.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #include "AgisException.h"
 
@@ -16,6 +17,7 @@ module TradingCalender;
 
 using namespace std::chrono;
 using namespace boost::gregorian;
+using namespace boost::posix_time;
 
 
 namespace Agis
@@ -62,15 +64,14 @@ TradingCalender::load_holiday_file(std::string const& file_path)
 				dateStream.ignore(); // Ignore the delimiter
 				dateStream >> year;
 
-				if (this->_holidays.size() >= 55) {
-					auto y = 2;
-				}
-
 				date d(year, month, day );
 				this->_holidays.push_back(std::move(d));
 			}
 		}
 		file.close();
+
+		// sort the holidays earliest to latest
+		std::sort(this->_holidays.begin(), this->_holidays.end());
 		return true;
 	}
 	catch (const std::exception& e) {
@@ -78,10 +79,77 @@ TradingCalender::load_holiday_file(std::string const& file_path)
 	}
 }
 
+//============================================================================
+bool
+TradingCalender::is_holiday(date const& date_obj) const noexcept
+{
+	return std::binary_search(this->_holidays.begin(), this->_holidays.end(), date_obj);
+}
+
+//============================================================================
+std::expected<long long, AgisException>
+TradingCalender::zf_futures_contract_to_first_intention(std::string contract_id)
+{
+	auto expiration_opt = zf_future_contract_to_date(contract_id);
+	if (!expiration_opt.has_value()) {
+		return std::unexpected<AgisException>("Invalid contract id: " + contract_id);
+	}
+	date expiration = expiration_opt.value();
+	// First Intention Day, also known as First Position Day, is the second business day before
+	// the first business day of the expiring contract’s delivery month. Return 6 PM EST
+	// find the first day of the expiration month
+	date d1(expiration.year(), expiration.month(), 1);
+	int counter = 0;
+	while (true) {
+		d1 -= boost::gregorian::days(1);
+		if (greg_weekday(d1.day_of_week()).as_enum() == boost::gregorian::greg_weekday::weekday_enum::Saturday ||
+			greg_weekday(d1.day_of_week()).as_enum() == boost::gregorian::greg_weekday::weekday_enum::Sunday ||
+			this->is_holiday(d1))
+		{
+			continue;
+		}
+		counter++;
+		if (counter == 2) {
+			break;
+		}
+	}
+	tm t = to_tm(d1);
+	t.tm_hour = 18;
+	t.tm_min = 00;
+	t.tm_sec = 0;
+	// convert to nanosecond epoch time
+	auto tp2 = system_clock::from_time_t(std::mktime(&t));
+	auto ns = duration_cast<nanoseconds>(tp2.time_since_epoch());
+	// return as long long
+	return ns.count();
+}
+
 
 //============================================================================
 std::expected<long long, AgisException>
 TradingCalender::zf_future_contract_to_expiry(std::string contract_id)
+{
+	auto date_opt = zf_future_contract_to_date(contract_id);
+	if (!date_opt.has_value()) {
+		return std::unexpected<AgisException>("Invalid contract id: " + contract_id);
+	}
+	auto d1 = date_opt.value();
+	tm t = to_tm(d1);
+	t.tm_hour = 12;
+	t.tm_min = 01;
+	t.tm_sec = 0;
+	// convert to nanosecond epoch time
+	auto tp2 = system_clock::from_time_t(std::mktime(&t));
+	auto ns = duration_cast<nanoseconds>(tp2.time_since_epoch());
+	// return as long long
+	return ns.count();
+	
+}
+
+
+//============================================================================
+std::expected<date, AgisException>
+TradingCalender::zf_future_contract_to_date(std::string contract_id)
 {
 	// expect contract_id to be in the following formats:
 	// 1. ZFZ2020 (Dec 2020)
@@ -109,11 +177,16 @@ TradingCalender::zf_future_contract_to_expiry(std::string contract_id)
 		return std::unexpected<AgisException>("Invalid contract id: " + contract_id + ": " + e.what());
 	}
 	// ZF futures expire at 12:01 PM CT on the last business day of the contract month
-	date d0{ year_int, year_int, 0 };
+	date d0(year_int, month_int, 1 );
 	date d1 = d0.end_of_month();
-	while (!greg_weekday(d1.day_of_week())) {
-		d1 -= boost::gregorian::days(2);
+	while (
+		greg_weekday(d1.day_of_week()).as_enum() == boost::gregorian::greg_weekday::weekday_enum::Saturday ||
+		greg_weekday(d1.day_of_week()).as_enum() == boost::gregorian::greg_weekday::weekday_enum::Sunday ||
+		this->is_holiday(d1)
+		) {
+		d1 -= boost::gregorian::days(1);
 	}
+	return d1;
 }
 
 
