@@ -25,9 +25,7 @@ export namespace Agis {
 class Asset;
 typedef std::shared_ptr<Asset> AssetPtr;
 
-AGIS_API std::expected<long long , AgisException> es_future_contract_to_expiry(std::string contract_id);
-AGIS_API std::expected<long long, AgisException> cl_future_contract_to_expiry(std::string contract_id);
-uint16_t future_month_code_to_int(char month_code);
+
 
 class FutureTable {
 public:

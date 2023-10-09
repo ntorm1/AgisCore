@@ -209,6 +209,8 @@
     <ClCompile Include="modules\broker\Broker.Base.cpp" />
     <ClCompile Include="modules\broker\Broker.Base.ixx" />
     <ClCompile Include="modules\broker\Broker.ixx" />
+    <ClCompile Include="modules\time\TradingCalender.cpp" />
+    <ClCompile Include="modules\time\TradingCalender.ixx" />
     <ClCompile Include="src\AbstractAgisStrategy.cpp" />
     <ClCompile Include="src\AbstractStrategyTree.cpp" />
     <ClCompile Include="src\AgisAnalysis.cpp" />
