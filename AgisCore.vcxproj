@@ -201,11 +201,13 @@
     <ClCompile Include="modules\asset\Asset.Base.cpp" />
     <ClCompile Include="modules\asset\Asset.Base.ixx" />
     <ClCompile Include="modules\asset\Asset.Core.ixx" />
+    <ClCompile Include="modules\asset\Asset.Equity.ixx" />
     <ClCompile Include="modules\asset\Asset.Future.cpp" />
     <ClCompile Include="modules\asset\Asset.Future.ixx" />
     <ClCompile Include="modules\asset\Asset.ixx" />
     <ClCompile Include="modules\asset\Asset.Observer.cpp" />
     <ClCompile Include="modules\asset\Asset.Observer.ixx" />
+    <ClCompile Include="modules\asset\Asset.Table.ixx" />
     <ClCompile Include="modules\broker\Broker.Base.cpp" />
     <ClCompile Include="modules\broker\Broker.Base.ixx" />
     <ClCompile Include="modules\broker\Broker.ixx" />

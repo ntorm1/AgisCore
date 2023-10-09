@@ -18,6 +18,7 @@ export module Asset:Future;
 
 import :Core;
 import :Base;
+import :Table;
 
 
 export namespace Agis {
@@ -25,46 +26,47 @@ export namespace Agis {
 
 struct FuturePrivate;
 class Asset;
-typedef std::shared_ptr<Asset> AssetPtr;
-
+class Future;
 class TradingCalendar;
+typedef std::shared_ptr<Asset> AssetPtr;
+typedef std::shared_ptr<Future> FuturePtr;
 
-class FutureTable {
+
+//============================================================================
+class Future : public Asset {
+
 public:
-	typedef veque::veque<AssetPtr>::iterator iterator;
-	typedef veque::veque<AssetPtr>::const_iterator const_iterator;
+    AGIS_API Future(
+        std::string asset_id,
+        std::string exchange_id,
+        std::optional<size_t> warmup = std::nullopt,
+        Frequency freq = Frequency::Day1,
+        std::string time_zone = "America/New_York"
+    ): Asset(AssetType::US_FUTURE, asset_id, exchange_id, warmup, freq, time_zone) {}
 
+    std::expected<bool, AgisException> set_last_trade_date(std::shared_ptr<TradingCalendar> calendar);
+
+private:
+    long long _last_trade_date;
+};
+
+
+//============================================================================
+class FutureTable : AssetTable {
+public:
+    using AssetTable::iterator;
+    using AssetTable::const_iterator;
 
     FutureTable(
         std::shared_ptr<Exchange> exchange,
         std::string contract_id);
 	~FutureTable();
 
-    AssetPtr const front_month() const {
-		return _tradeable.front();
-	}
-
-    iterator begin() {
-        return _tradeable.begin();
-    }
-
-    const_iterator begin() const {
-        return _tradeable.begin();
-    }
-
-    iterator end() {
-        return _tradeable.end();
-    }
-
-    const_iterator end() const {
-        return _tradeable.end();
-    }
+    std::expected<bool, AgisException> build() override;
 
 private:
 	std::string _contract_id;
     FuturePrivate* p = nullptr;
-	veque::veque<AssetPtr> _tradeable;
-	veque::veque<AssetPtr> _out_of_bounds;
 };
 
 }

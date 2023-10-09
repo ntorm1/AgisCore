@@ -247,10 +247,11 @@ protected:
         return (this->current_index - 1) < this->warmup;
     }
 
+    std::string asset_id;
 
 private:
     bool is_loaded = false;
-    std::string asset_id;
+    
     AssetType asset_type;
     size_t asset_index;
     size_t exchange_offset;

@@ -25,6 +25,22 @@ std::vector<std::string> exchange_view_opps = {
 };
 
 
+// create variadic template to handle multiple asset types
+template<typename... Args>
+AssetPtr create_asset(AssetType t, Args&&... args)
+{
+	switch (t)
+	{
+	case AssetType::US_EQUITY:
+		return std::make_shared<Equity>(std::forward<Args>(args)...);
+	case AssetType::US_FUTURE:
+		return std::make_shared<Future>(std::forward<Args>(args)...);
+	default:
+		throw std::runtime_error("invalid asset type");
+	}
+}
+
+
 //============================================================================
 Exchange::Exchange(
 		AssetType asset_type_,
@@ -654,7 +670,7 @@ AGIS_API AgisResult<bool> Exchange::restore_h5(std::optional<std::vector<std::st
 			H5::DataSpace dataspaceIndex = datasetIndex.getSpace();
 			
 			std::optional<size_t> warmup = this->market_asset.has_value() ? this->market_asset.value()->beta_lookback : std::nullopt;
-			auto asset = std::make_shared<Asset>(
+			auto asset = create_asset(
 				this->asset_type,
 				asset_id,
 				this->exchange_id,
@@ -718,7 +734,7 @@ AgisResult<bool> Exchange::restore(
 				continue;
 			}
 			std::optional<size_t> warmup = this->market_asset.has_value() ? this->market_asset.value()->beta_lookback : std::nullopt;
-			auto asset = std::make_shared<Asset>(
+			auto asset = create_asset(
 				this->asset_type,
 				asset_id,
 				this->exchange_id,
