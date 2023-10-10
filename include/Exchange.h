@@ -15,6 +15,7 @@
 
 namespace Agis {
 	class Asset;
+	class AssetTable;
 	struct MarketAsset;
 	class AssetObserver;
 	class TradingCalendar;
@@ -31,6 +32,8 @@ class AgisRouter;
 AGIS_API typedef ankerl::unordered_dense::map<std::string, std::shared_ptr<Exchange>> Exchanges;
 AGIS_API typedef std::shared_ptr<Exchange> ExchangePtr;
 typedef  std::shared_ptr<AssetObserver> AssetObserverPtr;
+typedef std::shared_ptr<Asset> AssetPtr;
+typedef std::shared_ptr<AssetTable> AssetTablePtr;
 
 /// <summary>
 /// Struct representing a point in time using eastern time.
@@ -263,9 +266,9 @@ public:
 	AGIS_API ~ExchangeMap();
 
 	AGIS_API void __build();
-	AGIS_API void __clean_up();
 	AGIS_API bool step();
-	AGIS_API void __clear();
+	void __clean_up();
+	void __clear();
 
 	/// <summary>
 	/// restore the exchange map from a serialized state in a json file
@@ -524,8 +527,11 @@ private:
 	ankerl::unordered_dense::map<std::string, ExchangePtr> exchanges;
 	ankerl::unordered_dense::map<std::string, size_t> asset_map;
 	ankerl::unordered_dense::map<Frequency, AssetPtr> market_assets;
+	
+	ankerl::unordered_dense::map<std::string, AssetTablePtr> asset_tables;
 	std::vector<std::shared_ptr<Asset>> assets;
 	std::vector<std::shared_ptr<Asset>> assets_expired;
+
 	ThreadSafeVector<size_t> expired_asset_index;
 	std::shared_ptr<AgisCovarianceMatrix> covariance_matrix = nullptr;
 

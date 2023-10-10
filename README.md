@@ -1,2 +1,2 @@
 # AgisCore
-for usage pattern see: https://github.com/ntorm1/Nexus/blob/master/include/NexusEnv.h
+Backend trading engine. For usage pattern see GUI:  https://github.com/ntorm1/Nexus/tree/master

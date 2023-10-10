@@ -1404,7 +1404,7 @@ AGIS_API void ExchangeMap::__build()
 	std::fill(assets_expired.begin(), assets_expired.end(), nullptr);
 }
 
-AGIS_API void ExchangeMap::__clean_up()
+void ExchangeMap::__clean_up()
 {
 	// search through all observers, if no strategy tried to build them then remove
 	for (auto& exchange : this->exchanges)
@@ -1429,7 +1429,7 @@ AGIS_API void ExchangeMap::__clean_up()
 
 
 //============================================================================
-AGIS_API bool ExchangeMap::step()
+bool ExchangeMap::step()
 {
 	if (this->current_index == this->dt_index_size)
 	{

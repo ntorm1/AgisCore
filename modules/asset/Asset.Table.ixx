@@ -26,6 +26,8 @@ typedef std::shared_ptr<Asset> AssetPtr;
 
 class AssetTable {
 public:
+	AssetTable(Exchange* exchange) : _exchange(exchange) {}
+
 	typedef veque::veque<AssetPtr>::iterator iterator;
 	typedef veque::veque<AssetPtr>::const_iterator const_iterator;
 
@@ -50,7 +52,7 @@ public:
 private:
 	veque::veque<AssetPtr> _tradeable;
 	veque::veque<AssetPtr> _out_of_bounds;
-
+	Exchange* _exchange;
 };
 
 }

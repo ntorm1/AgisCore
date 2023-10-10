@@ -50,13 +50,11 @@ Future::set_last_trade_date(std::shared_ptr<TradingCalendar> calendar)
 
 //============================================================================
 struct FuturePrivate {
-    FuturePrivate(Exchange* exchange):
-        _exchange(exchange)
+    FuturePrivate(Exchange* exchange)
 	{
-        this->_calendar = this->_exchange->get_trading_calendar();
+        this->_calendar = exchange->get_trading_calendar();
 	}
     std::shared_ptr<TradingCalendar> _calendar;
-    Exchange* _exchange;
 };
 
 
@@ -70,7 +68,7 @@ FutureTable::~FutureTable()
 //============================================================================
 FutureTable::FutureTable(
     Exchange* exchange,
-    std::string contract_id)
+    std::string contract_id) : AssetTable(exchange)
 {
     this->p = new FuturePrivate(exchange);
 }
