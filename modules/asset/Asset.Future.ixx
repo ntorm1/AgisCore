@@ -52,7 +52,7 @@ private:
 
 
 //============================================================================
-class FutureTable : AssetTable {
+class FutureTable : public AssetTable {
 public:
     using AssetTable::iterator;
     using AssetTable::const_iterator;
@@ -62,6 +62,7 @@ public:
         std::string contract_id);
 	~FutureTable();
 
+    std::string const& name() const override { return this->_contract_id; }
     std::expected<bool, AgisException> build() override;
 
 private:

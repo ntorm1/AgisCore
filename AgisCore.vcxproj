@@ -207,6 +207,7 @@
     <ClCompile Include="modules\asset\Asset.ixx" />
     <ClCompile Include="modules\asset\Asset.Observer.cpp" />
     <ClCompile Include="modules\asset\Asset.Observer.ixx" />
+    <ClCompile Include="modules\asset\Asset.table.cpp" />
     <ClCompile Include="modules\asset\Asset.Table.ixx" />
     <ClCompile Include="modules\broker\Broker.Base.cpp" />
     <ClCompile Include="modules\broker\Broker.Base.ixx" />

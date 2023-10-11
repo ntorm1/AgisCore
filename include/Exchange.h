@@ -66,6 +66,7 @@ struct TimePoint {
 
 class  Exchange
 {
+	friend class AssetTable;
 	friend class ExchangeMap;
 public:
 	AGIS_API Exchange(
@@ -110,18 +111,10 @@ public:
 	AGIS_API std::vector<std::string> get_asset_ids() const;
 	AGIS_API std::vector<size_t> get_asset_indices() const;
 
-	/// <summary>
-	/// Does an asset with this id exist on the exchange
-	/// </summary>
-	/// <param name="asset_id">unique id to search for</param>
-	/// <returns>Does the id already exists</returns>
 	AGIS_API bool asset_exists(std::string const& asset_id);
-	
-	/// <summary>
-	/// Get all assets currently registered to the exchange
-	/// </summary>
-	/// <returns></returns>
 	std::vector<std::shared_ptr<Asset>> const& get_assets() const { return this->assets; }
+	std::optional<AssetTablePtr> get_asset_table(std::string asset_id) noexcept;
+
 
 	/// <summary>
 	/// Get a view into the exchange by getting a value for each asset visable on the exchange
@@ -201,7 +194,7 @@ public:
 	AGIS_API void __set_volatility_lookback(size_t window_size);
 	void __add_asset_observer(AssetObserverPtr&& observer) {this->asset_observers.push_back(std::move(observer));}
 	void __add_asset_observer(AssetObserverPtr observer) { this->asset_observers.push_back(std::move(observer)); }
-
+	void __add_asset_table(AssetTablePtr&& table) noexcept;
 
 	void load_trading_calendar(std::shared_ptr<TradingCalendar> c) { this->_calendar = c; }
 	std::shared_ptr<TradingCalendar> get_trading_calendar() const noexcept {return this->_calendar; }
@@ -240,6 +233,7 @@ private:
 	std::vector<std::unique_ptr<Order>> orders;
 	std::vector<std::unique_ptr<Order>> filled_orders;
 	std::vector<AssetPtr> assets;
+	ankerl::unordered_dense::map<std::string, std::shared_ptr<Agis::AssetTable>> asset_tables;
 	std::vector<std::shared_ptr<AssetObserver>> asset_observers;
 
 	ankerl::unordered_dense::map<std::string, size_t> headers;
@@ -320,13 +314,10 @@ public:
 	/// <returns>beta if it exists</returns>
 	AGIS_API AgisResult<double> get_asset_beta(size_t index) const;
 
-	/// <summary>
-	/// Get an asset by it's unique asset id 
-	/// </summary>
-	/// <param name="asset_id">id of the asset to search for</param>
-	/// <returns>shared pointer to asset if it is found</returns>
+
 	AGIS_API AgisResult<AssetPtr> get_asset(std::string const& asset_id) const;
 	AGIS_API AgisResult<AssetPtr> get_asset(size_t index) const;
+
 
 	/// <summary>
 	/// Remove an asset from the exchange map by asset id
@@ -528,7 +519,6 @@ private:
 	ankerl::unordered_dense::map<std::string, size_t> asset_map;
 	ankerl::unordered_dense::map<Frequency, AssetPtr> market_assets;
 	
-	ankerl::unordered_dense::map<std::string, AssetTablePtr> asset_tables;
 	std::vector<std::shared_ptr<Asset>> assets;
 	std::vector<std::shared_ptr<Asset>> assets_expired;
 

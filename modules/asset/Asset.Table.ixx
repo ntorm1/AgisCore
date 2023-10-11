@@ -23,6 +23,9 @@ export namespace Agis {
 class Asset;
 typedef std::shared_ptr<Asset> AssetPtr;
 
+std::expected<bool, AgisException> build_futures_tables(Exchange* exchange);
+std::expected<bool, AgisException> build_asset_tables(Exchange* exchange);
+
 
 class AssetTable {
 public:
@@ -31,6 +34,7 @@ public:
 	typedef veque::veque<AssetPtr>::iterator iterator;
 	typedef veque::veque<AssetPtr>::const_iterator const_iterator;
 
+	virtual std::string const& name() const = 0;
 	virtual std::expected<bool, AgisException> build() = 0;
 
     iterator begin() {
@@ -49,10 +53,14 @@ public:
 		return _tradeable.end();
 	}
 
-private:
+protected:
 	veque::veque<AssetPtr> _tradeable;
 	veque::veque<AssetPtr> _out_of_bounds;
 	Exchange* _exchange;
+
+private:
+
+
 };
 
 }

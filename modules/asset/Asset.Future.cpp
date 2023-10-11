@@ -78,6 +78,7 @@ FutureTable::FutureTable(
 std::expected<bool, AgisException>
 FutureTable::build()
 {
+    auto asset_ids = this->_exchange->get_asset_ids();
     return true;
 }
 

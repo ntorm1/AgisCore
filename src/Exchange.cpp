@@ -436,6 +436,14 @@ bool Exchange::asset_exists(std::string const& asset_id)
 
 
 //============================================================================
+std::optional<AssetTablePtr> Exchange::get_asset_table(std::string asset_id) noexcept
+{
+	if(this->asset_tables.contains(asset_id)) return this->asset_tables[asset_id];
+	return std::nullopt;
+}
+
+
+//============================================================================
 void Exchange::__goto(long long datetime)
 {
 	// goto date is beyond the datetime index
@@ -902,6 +910,13 @@ void Exchange::__set_volatility_lookback(size_t window_size)
 
 
 //============================================================================
+void Exchange::__add_asset_table(AssetTablePtr&& table) noexcept
+{
+	this->asset_tables.emplace(table->name(), std::move(table));
+}
+
+
+//============================================================================
 AGIS_API double Exchange::__get_market_price(size_t index, bool on_close) const
 {
 	auto const& asset = this->assets[index];
@@ -980,6 +995,11 @@ AgisResult<bool> ExchangeMap::restore_exchange(
 		auto market_asset_struct = exchange->__get_market_asset_struct();
 		market_asset_struct.value()->asset = *new_market_asset_ptr;
 		market_asset_struct.value()->market_index = (*new_market_asset_ptr)->get_asset_index();
+	}
+
+	// build any asset tables
+	if (exchange->get_asset_type()  == AssetType::US_FUTURE) {
+		auto res = build_asset_tables(exchange.get());
 	}
 	
 	UNLOCK_GUARD
