@@ -799,7 +799,7 @@ bool Exchange::__is_valid_order(std::unique_ptr<Order>& order) const
 }
 
 //============================================================================
-void Exchange::__place_order(std::unique_ptr<Order> order)
+void Exchange::__place_order(std::unique_ptr<Order> order) noexcept
 {
 	LOCK_GUARD;
 	order->set_order_create_time(this->exchange_time);
@@ -913,6 +913,14 @@ void Exchange::__set_volatility_lookback(size_t window_size)
 void Exchange::__add_asset_table(AssetTablePtr&& table) noexcept
 {
 	this->asset_tables.emplace(table->name(), std::move(table));
+}
+
+
+//============================================================================
+std::expected<bool, AgisException> Exchange::load_trading_calendar(std::string const& path)
+{
+	this->_calendar = std::make_shared<TradingCalendar>();
+	return this->_calendar->load_holiday_file(path);
 }
 
 

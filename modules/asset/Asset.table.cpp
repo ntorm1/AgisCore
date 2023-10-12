@@ -30,6 +30,11 @@ bool is_futures_valid_contract(const std::string& contract) {
 std::expected<bool, AgisException>
 build_futures_tables(Exchange* exchange)
 {
+	// to build futures table exchange must have trading calendar
+	if(!exchange->get_trading_calendar().has_value()) {
+		return std::unexpected<AgisException>("Exchange does not have trading calendar");
+	}
+
 	auto asset_ids = exchange->get_asset_ids();
 	// find all unique future contracts
 	std::set<std::string> start_codes;
