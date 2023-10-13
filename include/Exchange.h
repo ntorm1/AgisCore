@@ -186,8 +186,8 @@ public:
 
 	void __goto(long long datetime);
 	bool __is_valid_order(std::unique_ptr<Order>& order) const;
-	void __place_order(std::unique_ptr<Order> order);
-	void __process_orders(AgisRouter& router, bool on_close) noexcept;
+	void __place_order(std::unique_ptr<Order> order) noexcept;
+	void __process_orders(AgisRouter& router, bool on_close);
 	void __process_order(bool on_close, OrderPtr& order);
 	void __process_market_order(std::unique_ptr<Order>& order, bool on_close);
 	void __process_limit_order(std::unique_ptr<Order>& order, bool on_close);

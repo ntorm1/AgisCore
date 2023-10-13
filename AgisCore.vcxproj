@@ -135,6 +135,7 @@
       </AdditionalModuleDependencies>
       <EnableModules>true</EnableModules>
       <BuildStlModules>true</BuildStlModules>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -157,6 +158,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>$(SolutionDir)AgisCore\include;</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -169,7 +171,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="external\include\veque.hpp" />
     <ClInclude Include="include\AbstractAgisStrategy.h" />
     <ClInclude Include="include\AbstractStrategyTree.h" />
     <ClInclude Include="include\AgisAnalysis.h" />

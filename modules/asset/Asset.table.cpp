@@ -31,7 +31,7 @@ std::expected<bool, AgisException>
 build_futures_tables(Exchange* exchange)
 {
 	// to build futures table exchange must have trading calendar
-	if(!exchange->get_trading_calendar().has_value()) {
+	if(!exchange->get_trading_calendar()) {
 		return std::unexpected<AgisException>("Exchange does not have trading calendar");
 	}
 

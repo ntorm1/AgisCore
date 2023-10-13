@@ -10,7 +10,6 @@ module;
 #include <string>
 #include <memory>
 #include <expected>
-#include <veque.hpp>
 
 #include "AgisException.h"
 

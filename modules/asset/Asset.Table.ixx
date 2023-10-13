@@ -8,7 +8,7 @@ module;
 #endif
 #include <expected>
 #include <memory>
-#include <veque.hpp>
+#include <deque>
 
 #include "AgisException.h"
 
@@ -31,8 +31,8 @@ class AssetTable {
 public:
 	AssetTable(Exchange* exchange) : _exchange(exchange) {}
 
-	typedef veque::veque<AssetPtr>::iterator iterator;
-	typedef veque::veque<AssetPtr>::const_iterator const_iterator;
+	typedef std::deque<AssetPtr>::iterator iterator;
+	typedef std::deque<AssetPtr>::const_iterator const_iterator;
 
 	virtual std::string const& name() const = 0;
 	virtual std::expected<bool, AgisException> build() = 0;
@@ -54,8 +54,8 @@ public:
 	}
 
 protected:
-	veque::veque<AssetPtr> _tradeable;
-	veque::veque<AssetPtr> _out_of_bounds;
+	std::deque<AssetPtr> _tradeable;
+	std::deque<AssetPtr> _out_of_bounds;
 	Exchange* _exchange;
 
 private:

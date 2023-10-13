@@ -13,6 +13,7 @@
 #include "AgisFunctional.h"
 
 import Asset;
+import TradingCalendar;
 
 using namespace Agis;
 

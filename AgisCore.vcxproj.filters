@@ -93,9 +93,6 @@
     <ClInclude Include="include\AgisEnums.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="external\include\veque.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\dllmain.cpp">
