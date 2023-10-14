@@ -38,7 +38,7 @@ build_futures_tables(Exchange* exchange)
 	auto asset_ids = exchange->get_asset_ids();
 	// find all unique future contracts
 	std::set<std::string> start_codes;
-	for (auto asset_id : asset_ids)
+	for (auto const& asset_id : asset_ids)
 	{
 		start_codes.insert(asset_id.substr(0, 2));
 	}

@@ -16,7 +16,7 @@ namespace Agis
 std::expected<bool, AgisException> Future::set_future_code()
 {
 	char month_code = this->asset_id[2];
-	static const std::unordered_map<char, FutureMonthCode> monthCodeMap = {
+	static const std::unordered_map<char, FutureMonthCode> month_map = {
 		{'F', FutureMonthCode::F},
 		{'G', FutureMonthCode::G},
 		{'H', FutureMonthCode::H},
@@ -31,8 +31,8 @@ std::expected<bool, AgisException> Future::set_future_code()
 		{'Z', FutureMonthCode::Z}
 	};
 
-	auto it = monthCodeMap.find(month_code);
-	if (it != monthCodeMap.end()) {
+	auto it = month_map.find(month_code);
+	if (it != month_map.end()) {
 		this->_month_code = it->second;
 	}
 	else {
@@ -45,22 +45,21 @@ std::expected<bool, AgisException> Future::set_future_code()
 //============================================================================
 std::expected<bool, AgisException> Future::set_future_parent_contract()
 {
-	std::string contract_id = this->asset_id.substr(0, 2);
-	if (contract_id == "ES") {
-		this->_parent_contract = FutureParentContract::ES;
-	}
-	else if (contract_id == "CL") {
-		this->_parent_contract = FutureParentContract::CL;
-	}
-	else if (contract_id == "ZF") {
-		this->_parent_contract = FutureParentContract::ZF;
+	static std::map<std::string, FutureParentContract> contract_map = {
+		{"ES", FutureParentContract::ES},
+		{"CL", FutureParentContract::CL},
+		{"ZF", FutureParentContract::ZF}
+	};
+
+	auto it = contract_map.find(this->asset_id.substr(0, 2));
+	if (it != contract_map.end()) {
+		this->_parent_contract = it->second;
+		return true;
 	}
 	else {
 		return std::unexpected<AgisException>("Invalid future code");
 	}
-	return true;
 }
-
 
 //============================================================================
 [[nodiscard]] std::expected<bool, AgisException> Future::__build(Exchange const* exchange) noexcept
