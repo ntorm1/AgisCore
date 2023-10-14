@@ -7,8 +7,8 @@
 #include <expected>
 #include <memory>
 #include <deque>
-#define _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING
-#define _SILENCE_CXX23_DENORM_DEPRECATION_WARNING
+
+
 #include "AgisException.h"
 
 #include "Asset/Asset.Core.h"

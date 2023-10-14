@@ -101,6 +101,7 @@ public:
         std::string contract_id);
 	~FutureTable();
 
+    [[nodiscard]] AGIS_API std::expected<FuturePtr, AgisErrorCode> front_month();
     std::string const& name() const override { return this->_contract_id; }
 
 private:

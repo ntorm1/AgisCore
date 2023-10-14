@@ -6,7 +6,7 @@
 #include "Exchange.h"
 #include "Portfolio.h"
 
-import Broker;
+#include "Broker/Broker.Base.h"
 
 using namespace rapidjson;
 using namespace Agis;

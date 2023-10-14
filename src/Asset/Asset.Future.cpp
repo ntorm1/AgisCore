@@ -1,6 +1,6 @@
 #pragma once
-#define _SILENCE_CXX23_DENORM_DEPRECATION_WARNING
-#define _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING
+
+
 #include <string>
 #include <memory>
 #include <unordered_map>
@@ -119,6 +119,17 @@ struct FuturePrivate {
 FutureTable::~FutureTable()
 {
 	delete this->p;
+}
+
+
+//============================================================================
+std::expected<FuturePtr, AgisErrorCode> FutureTable::front_month()
+{
+	if (this->_tradeable.size() == 0) {
+		return std::unexpected<AgisErrorCode>(AgisErrorCode::OUT_OF_RANGE);
+	}
+	// return fron of table case as Future 
+	return std::dynamic_pointer_cast<Future>(this->_tradeable.front());
 }
 
 

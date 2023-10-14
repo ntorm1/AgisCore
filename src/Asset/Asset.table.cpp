@@ -1,5 +1,5 @@
 #pragma once
-#define _SILENCE_CXX23_DENORM_DEPRECATION_WARNING
+
 
 #include <string>
 #include <memory>
@@ -15,7 +15,7 @@ namespace Agis
 
 
 //============================================================================
-bool is_futures_valid_contract(const std::string& contract) {
+static bool is_futures_valid_contract(const std::string& contract) {
 	static const std::vector<std::string> valid_future_contracts = { "ZF", "CL", "ES" };
 	for (const std::string& valid : valid_future_contracts) {
 		if (contract == valid) {
@@ -27,7 +27,7 @@ bool is_futures_valid_contract(const std::string& contract) {
 
 
 //============================================================================
-std::expected<bool, AgisException>
+static std::expected<bool, AgisException>
 build_futures_tables(Exchange* exchange)
 {
 	// to build futures table exchange must have trading calendar

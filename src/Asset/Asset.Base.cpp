@@ -1,8 +1,8 @@
 #define ARROW_API_H
 #define H5_HAVE_H5CPP
 
-#define _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING
-#define _SILENCE_CXX23_DENORM_DEPRECATION_WARNING
+
+
 
 #include <optional>
 #include <fstream>

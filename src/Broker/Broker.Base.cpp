@@ -1,7 +1,4 @@
-module;
 #pragma once
-#define _SILENCE_CXX23_DENORM_DEPRECATION_WARNING
-#define _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING
 
 #include <fstream>
 #include <iterator>
@@ -13,15 +10,11 @@ module;
 #include "AgisException.h"
 #include "AgisStrategy.h"
 #include "Portfolio.h"
+#include "Order.h"
 #include "Asset/Asset.h"
 
-module Broker:Base;
 
-import <shared_mutex>;
-import <expected>;
-import <functional>;
-
-
+#include "Broker/Broker.Base.h"
 
 namespace fs = std::filesystem;
 

@@ -1,33 +1,32 @@
-module;
-
 #pragma once
 #ifdef AGISCORE_EXPORTS
 #define AGIS_API __declspec(dllexport)
 #else
 #define AGIS_API __declspec(dllimport)
 #endif
-#include "Order.h"
 #include "AgisException.h"
 #include <ankerl/unordered_dense.h>
 
-export module Broker:Base;
+#include <memory>
+#include <shared_mutex>
+#include <unordered_map>
+#include <filesystem>
+#include <expected>
+#include <functional>
 
-import <memory>;
-import <shared_mutex>;
-import <unordered_map>;
-import <filesystem>;
-import <expected>;
-import <functional>;
-
-typedef std::unique_ptr<Order> OrderPtr;
 
 namespace fs = std::filesystem;
 
-export class ExchangeMap;
-export class Portfolio;
-export class AgisRouter;
+class ExchangeMap;
+class AgisStrategy;
+class Portfolio;
+class AgisRouter;
+class Order;
 
-export namespace Agis 
+typedef std::unique_ptr<Order> OrderPtr;
+
+
+namespace Agis 
 {
 
 class Asset;

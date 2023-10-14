@@ -149,13 +149,10 @@
     <ClCompile Include="src\AbstractStrategyTree.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="modules\broker\Broker.ixx">
+    <ClCompile Include="include\Broker\Broker.Base.h">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="modules\broker\Broker.Base.ixx">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="modules\broker\Broker.Base.cpp">
+    <ClCompile Include="src\Broker\Broker.Base.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="include\Asset\Asset.h">

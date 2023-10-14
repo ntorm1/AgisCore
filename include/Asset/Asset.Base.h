@@ -5,8 +5,8 @@
 #define AGIS_API __declspec(dllimport)
 #endif
 
-#define _SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING
-#define _SILENCE_CXX23_DENORM_DEPRECATION_WARNING
+
+
 
 #include <string>
 #include <span>

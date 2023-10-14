@@ -10,7 +10,7 @@
 #include "Exchange.h"
 #include "Portfolio.h"
 
-import Broker;
+#include "Broker/Broker.Base.h"
 #include "Asset/Asset.h"
 
 using namespace Agis;
