@@ -10,30 +10,30 @@
 #include "AgisException.h"
 
 
-
-
 #include "Asset/Asset.Core.h"
 #include "Asset/Asset.Base.h"
 
 
 namespace Agis {
 
-class Asset;
-typedef std::shared_ptr<Asset> AssetPtr;
+class Derivative;
+typedef std::shared_ptr<Derivative> DerivativePtr;
 
 std::expected<bool, AgisException> build_futures_tables(Exchange* exchange);
 std::expected<bool, AgisException> build_asset_tables(Exchange* exchange);
 
 
 class AssetTable {
+	friend class Exchange;
 public:
 	AssetTable(Exchange* exchange) : _exchange(exchange) {}
 
-	typedef std::deque<AssetPtr>::iterator iterator;
-	typedef std::deque<AssetPtr>::const_iterator const_iterator;
+	typedef std::deque<DerivativePtr>::iterator iterator;
+	typedef std::deque<DerivativePtr>::const_iterator const_iterator;
 
 	virtual std::string const& name() const = 0;
-	virtual std::expected<bool, AgisException> build() = 0;
+
+	void sort_expirable(std::deque<DerivativePtr> &table) noexcept;
 
     iterator begin() {
         return _tradeable.begin();
@@ -52,8 +52,12 @@ public:
 	}
 
 protected:
-	std::deque<AssetPtr> _tradeable;
-	std::deque<AssetPtr> _out_of_bounds;
+	std::expected<bool, AgisException> build();
+	void next();
+	void reset();
+
+	std::deque<DerivativePtr> _tradeable;
+	std::deque<DerivativePtr> _out_of_bounds;
 	Exchange* _exchange;
 
 private:

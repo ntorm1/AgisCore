@@ -78,7 +78,7 @@ public:
 	/// Build the hydra instance using the currently loaded objects
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API [[nodiscard]] AgisResult<bool> build();
+	AGIS_API [[nodiscard]] std::expected<bool, AgisException> build();
 	
 	/// <summary>
 	/// Reset the hydra instance to it's original state before any steps forward in time
@@ -90,7 +90,7 @@ public:
 	 * @brief on the completion of a run cleanup nessecary settings
 	 * @return whether the cleanup was successful
 	*/
-	AGIS_API AgisResult<bool> __cleanup();
+	AGIS_API std::expected<bool, AgisException> __cleanup();
 
 	/// <summary>
 	/// Save the current state of Hydra instance to json
@@ -109,7 +109,7 @@ public:
 	/// Run a complete Hydra simulation
 	/// </summary>
 	/// <returns></returns>
-	AGIS_API [[nodiscard]] AgisResult<bool> __run();
+	AGIS_API [[nodiscard]] std::expected<bool, AgisException> __run();
 
 	AGIS_API void __run_to(long long datetime);
 

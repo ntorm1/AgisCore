@@ -52,10 +52,24 @@ enum class FutureParentContract : uint8_t {
     ZF = 3
 };
 
+class Derivative : public Asset {
+public:
+    template<typename... Args>
+    Derivative(
+		Args&&... args
+	) : Asset(std::forward<Args>(args)...) {}
+    
+    virtual std::expected<bool, AgisException> set_last_trade_date(std::shared_ptr<TradingCalendar> calendar) = 0;
+    std::optional<long long> get_last_trade_date() const noexcept { return this->_last_trade_date; }
+    bool expirable() const noexcept { return this->_last_trade_date.has_value(); }
+
+private:
+    std::optional<long long> _last_trade_date;
+};
 
 
 //============================================================================
-class Future : public Asset {
+class Future : public Derivative {
 
 public:
     AGIS_API Future(
@@ -64,14 +78,14 @@ public:
         std::optional<size_t> warmup = std::nullopt,
         Frequency freq = Frequency::Day1,
         std::string time_zone = "America/New_York"
-    ): Asset(AssetType::US_FUTURE, asset_id, exchange_id, warmup, freq, time_zone) {}
+    ): Derivative(AssetType::US_FUTURE, asset_id, exchange_id, warmup, freq, time_zone) {}
 
 
 private:
-    [[nodiscard]] std::expected<bool, AgisException> __build() noexcept override;
+    [[nodiscard]] std::expected<bool, AgisException> __build(Exchange const* exchange) noexcept override;
     std::expected<bool, AgisException> set_future_code();
     std::expected<bool, AgisException> set_future_parent_contract();
-    std::expected<bool, AgisException> set_last_trade_date(std::shared_ptr<TradingCalendar> calendar);
+    std::expected<bool, AgisException> set_last_trade_date(std::shared_ptr<TradingCalendar> calendar) override;
     FutureMonthCode _month_code;
     FutureParentContract _parent_contract;
     long long _last_trade_date;
@@ -90,7 +104,6 @@ public:
 	~FutureTable();
 
     std::string const& name() const override { return this->_contract_id; }
-    std::expected<bool, AgisException> build() override;
 
 private:
 	std::string _contract_id;

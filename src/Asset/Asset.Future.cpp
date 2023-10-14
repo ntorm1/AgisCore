@@ -63,14 +63,16 @@ std::expected<bool, AgisException> Future::set_future_parent_contract()
 
 
 //============================================================================
-[[nodiscard]] std::expected<bool, AgisException> Future::__build() noexcept
+[[nodiscard]] std::expected<bool, AgisException> Future::__build(Exchange const* exchange) noexcept
 {
 	if (this->asset_id.length() != 7)
 	{
 		return std::unexpected<AgisException>("invalid futures contract: " + this->asset_id);
 	}
 	return this->set_future_code()
-		.and_then([&](bool const& b) {return this->set_future_parent_contract(); });
+		.and_then([&](bool const& b) {return this->set_future_parent_contract(); })
+		.and_then([&](bool const& b) {return this->set_last_trade_date(exchange->get_trading_calendar()); }
+	);
 }
 
 
@@ -85,10 +87,13 @@ Future::set_last_trade_date(std::shared_ptr<TradingCalendar> calendar)
 	switch (this->_parent_contract) {
 	case FutureParentContract::ES:
 		res = calendar->es_future_contract_to_expiry(this->asset_id);
+		break;
 	case FutureParentContract::CL:
 		res = calendar->cl_future_contract_to_expiry(this->asset_id);
+		break;
 	case FutureParentContract::ZF:
 		res = calendar->zf_futures_contract_to_first_intention(this->asset_id);
+		break;
 	default:
 		return std::unexpected<AgisException>(AGIS_EXCEP("Invalid future code"));
 	}
@@ -124,15 +129,6 @@ FutureTable::FutureTable(
     std::string contract_id) : AssetTable(exchange)
 {
     this->p = new FuturePrivate(exchange);
-}
-
-
-//============================================================================
-std::expected<bool, AgisException>
-FutureTable::build()
-{
-    auto asset_ids = this->_exchange->get_asset_ids();
-    return true;
 }
 
 } // namespace Agis

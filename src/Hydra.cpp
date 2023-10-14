@@ -84,11 +84,12 @@ void Hydra::__step()
 
 
 //============================================================================
-AGIS_API AgisResult<bool> Hydra::__run()
+AGIS_API std::expected<bool, AgisException> Hydra::__run()
 {
     if (!this->is_built) 
     {
-        AGIS_DO_OR_RETURN(this->build(), bool);
+        auto res = this->build();
+        if (!res.has_value()) return res;
         this->is_built = true; 
     }
     
@@ -96,7 +97,7 @@ AGIS_API AgisResult<bool> Hydra::__run()
         this->__reset();
     }
     catch (std::exception& e) {
-		return AgisResult<bool>(AGIS_EXCEP(e.what()));
+		return std::unexpected<AgisException>(AGIS_EXCEP(e.what()));
 	}
     
     auto index = this->p->exchanges.__get_dt_index(false);
@@ -384,10 +385,11 @@ void Hydra::clear()
 
 
 //============================================================================
-AGIS_API AgisResult<bool> Hydra::build()
+AGIS_API std::expected<bool, AgisException> Hydra::build()
 {
     size_t n = this->p->exchanges.__get_dt_index(false).size();
-    this->p->exchanges.__build();
+    auto res = this->p->exchanges.__build();
+    if (!res.has_value()) return res;
     this->p->portfolios.__build(n);
 
     // register the strategies to the portfolio after they have all been added to prevent
@@ -399,9 +401,10 @@ AGIS_API AgisResult<bool> Hydra::build()
         auto strat_ref = std::ref(strat.second);
         this->p->portfolios.__register_strategy(strat_ref);
     }
-    AGIS_DO_OR_RETURN(this->strategies.build(), bool);
+    auto res_s = this->strategies.build();
+    if (res_s.is_exception()) return std::unexpected<AgisException>(res_s.get_exception());
     this->p->exchanges.__clean_up();
-    return AgisResult<bool>(true);
+    return true;
 }
 
 
@@ -420,7 +423,7 @@ void Hydra::__reset()
 
 
 //============================================================================
-AgisResult<bool> Hydra::__cleanup()
+std::expected<bool, AgisException> Hydra::__cleanup()
 {
     auto& strategies = this->strategies.__get_strategies_mut();
     std::vector<std::string> disabled_strategies;
@@ -443,9 +446,9 @@ AgisResult<bool> Hydra::__cleanup()
 		}
 		error_msg.pop_back();
 		error_msg.pop_back();
-		return AgisResult<bool>(AGIS_EXCEP(error_msg));
+		return std::unexpected<AgisException>(AGIS_EXCEP(error_msg));
 	}
-    return AgisResult<bool>(true);
+    return true;
 }
 
 

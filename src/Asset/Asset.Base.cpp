@@ -662,7 +662,7 @@ void Asset::__goto(long long datetime)
 
 
 //============================================================================
-void Asset::__reset()
+void Asset::__reset(long long t0)
 {
     if (this->observers.size()) {
         for (auto& observer : observers) {
@@ -673,7 +673,6 @@ void Asset::__reset()
     // move datetime index and data pointer back to start
     this->current_index = 0;
     this->__is_expired = false;
-    if (!__is_aligned) this->__is_streaming = false;
     this->close = (this->data + (this->rows) * this->close_index);
     this->open = (this->data + (this->rows) * this->open_index);
 
@@ -681,6 +680,20 @@ void Asset::__reset()
     for (int i = 0; i < this->warmup; i++)
     {
         this->__step();
+    }
+
+    // set the current streaming flag based on the first timestep after warmup
+    if (!__is_aligned) {
+        auto asset_dt_index = this->__get_dt_index(true);
+        if (asset_dt_index.size() && asset_dt_index[0] == t0) {
+            this->__is_streaming = true;
+        }
+        else {
+            this->__is_streaming = false;
+        }
+    }
+    else {
+        this->__is_streaming = true;
     }
 }
 

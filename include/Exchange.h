@@ -196,12 +196,12 @@ public:
 	void __add_asset_observer(AssetObserverPtr observer) { this->asset_observers.push_back(std::move(observer)); }
 	void __add_asset_table(AssetTablePtr&& table) noexcept;
 
-	std::expected<bool, AgisException> load_trading_calendar(std::string const& path);
+	AGIS_API std::expected<bool, AgisException> load_trading_calendar(std::string const& path);
 	std::shared_ptr<TradingCalendar> get_trading_calendar() const noexcept {return this->_calendar; }
 
 	AgisResult<bool> validate();
 	void reset();
-	void build(size_t exchange_offset);
+	std::expected<bool, AgisException> build(size_t exchange_offset);
 	bool step(ThreadSafeVector<size_t>& expired_assets);
 	bool __took_step = false;
 
@@ -259,7 +259,7 @@ public:
 	AGIS_API ExchangeMap();
 	AGIS_API ~ExchangeMap();
 
-	AGIS_API void __build();
+	AGIS_API std::expected<bool, AgisException> __build();
 	AGIS_API bool step();
 	void __clean_up();
 	void __clear();

@@ -134,7 +134,6 @@ public:
     AGIS_API const std::span<double const> get_beta_column() const;
     AGIS_API const std::span<double const> get_volatility_column() const;
 
-    AGIS_API bool __get_is_valid_next_time() const { return __is_valid_next_time; }
     AGIS_API bool __is_last_row() const { return this->current_index == this->rows + 1; }
     AGIS_API double __get(std::string col, size_t row) const;
     AGIS_API inline long long __get_dt(size_t row) const { return *(this->dt_index + row); };
@@ -179,11 +178,6 @@ public:
     /// </summary>
     bool __in_exchange_view = true;
 
-    /// <summary>
-    /// Is the current time step of the asset that last available time step.
-    /// </summary>
-    bool __is_valid_next_time = true;
-
     /**
      * @brief returns true if current time step is the last time step on the day.
     */
@@ -222,7 +216,7 @@ protected:
 #endif
 
     void __goto(long long datetime);
-    void __reset();
+    void __reset(long long t0);
     void __step();
 
     AGIS_API inline void __set_alignment(bool is_aligned_) { this->__is_aligned = is_aligned_; }
@@ -237,7 +231,6 @@ protected:
     */
     bool __is_market_asset = false;
 
-    bool __is_last_view() const { return this->current_index - 1 == this->rows; }
     bool __in_warmup() const {
         if (this->current_index == 0) return true;
         return (this->current_index - 1) < this->warmup;
@@ -295,7 +288,8 @@ private:
     [[nodiscard]] AgisResult<bool> load_csv();
     const arrow::Status load_parquet();
 
-    virtual [[nodiscard]] std::expected<bool, AgisException> __build() noexcept { return true; };
+    virtual [[nodiscard]] std::expected<bool, AgisException> __build(Exchange const* exchange) noexcept { return true; };
+    virtual [[nodiscard]] bool __is_last_view(long long t) const { return this->current_index - 1 == this->rows; }
 
 };
 

@@ -498,15 +498,23 @@ AgisResult<bool> Exchange::validate()
 	return AgisResult<bool>(true);
 }
 
+
 //============================================================================
 void Exchange::reset()
 {
 	this->current_index = 0;
+	for(auto& asset : this->assets)
+	{
+		asset->__reset(this->dt_index[0]);
+	}
+	for(auto& table : this->asset_tables){
+		table.second->reset();
+	}
 }
 
 
 //============================================================================
-void Exchange::build(size_t exchange_offset_)
+std::expected<bool, AgisException> Exchange::build(size_t exchange_offset_)
 {
 	if (this->is_built)
 	{
@@ -526,29 +534,26 @@ void Exchange::build(size_t exchange_offset_)
 			return obj->get_size();
 		});
 	this->dt_index = get<0>(datetime_index_);
+	auto t0 = this->dt_index[0];
 	this->dt_index_size = get<1>(datetime_index_);
 	this->candles = 0;
 
 	for (auto& asset : this->assets) {
 		// test to see if asset is alligned with the exchage's datetime index
 		// makes updating market view faster
-		asset->__reset();
-		asset->__build();
-		if (asset->get_rows() == this->dt_index_size) 
-		{
-			asset->__set_alignment(true);
-			asset->__is_streaming = true;
-		}
-		else
-		{
-			asset->__set_alignment(false);
-		}
-
+		asset->__set_alignment(asset->get_rows() == this->dt_index_size);
+		asset->__reset(t0);
+		auto res = asset->__build(this);
+		if (!res.has_value()) return res;
 
 		//set the asset's exchange offset so indexing into the exchange's asset vector works
 		asset->__set_exchange_offset(exchange_offset_);
-
 		this->candles += asset->get_rows();
+	}
+
+	// build any asset tables
+	for (auto& table : this->asset_tables) {
+		table.second->build();
 	}
 
 	// disable all observers, force strategy to re-init them
@@ -558,6 +563,7 @@ void Exchange::build(size_t exchange_offset_)
 
 	this->exchange_offset = exchange_offset_;
 	this->is_built = true;
+	return true;
 }
 
 
@@ -612,7 +618,7 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 		}
 
 		// test to see if this is the last row of data for the asset
-		if (asset->__is_last_view()) {
+		if (asset->__is_last_view(this->exchange_time)) {
 			auto index = asset->__get_index(true);
 			expired_assets.push_back(index);
 			asset->__is_expired = true;
@@ -631,20 +637,9 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 		{
 			asset->__is_streaming = false;
 		}
-
-		// check to see if the asset's next time step is the same as the exchagnes
-		if (this->current_index < this->dt_index_size)
-		{
-			if (asset->__get_asset_time() !=
-				this->dt_index[this->current_index + 1])
-			{
-				asset->__is_valid_next_time = false;
-			}
-			else asset->__is_valid_next_time = true;
-		}
 	};
 
-	tbb::parallel_for_each(
+	std::for_each(
 		this->assets.begin(),
 		this->assets.end(),
 		process_asset);
@@ -1006,11 +1001,6 @@ AgisResult<bool> ExchangeMap::restore_exchange(
 		market_asset_struct.value()->asset = *new_market_asset_ptr;
 		market_asset_struct.value()->market_index = (*new_market_asset_ptr)->get_asset_index();
 	}
-
-	// build any asset tables
-	if (exchange->get_asset_type()  == AssetType::US_FUTURE) {
-		auto res = build_asset_tables(exchange.get());
-	}
 	
 	UNLOCK_GUARD
 	return AgisResult<bool>(true);
@@ -1306,7 +1296,6 @@ void ExchangeMap::__reset()
 	// reset assets that were expired and bring them back in to view
 	for (auto& asset : this->assets)
 	{
-		asset->__reset();
 		this->__set_asset(asset->__get_index(), asset);
 	}
 	
@@ -1402,13 +1391,14 @@ TimePoint ExchangeMap::epoch_to_tp(long long epoch)
 
 
 //============================================================================
-AGIS_API void ExchangeMap::__build()
+AGIS_API std::expected<bool, AgisException> ExchangeMap::__build()
 {
-	if (this->assets.size() == 0) return;
+	if (this->assets.size() == 0) return true;
 	size_t exchange_offset = 0;
 	for (auto& exchange_pair : this->exchanges)
 	{
-		exchange_pair.second->build(exchange_offset);
+		auto res = exchange_pair.second->build(exchange_offset);
+		if (!res.has_value()) return res;
 		exchange_offset += exchange_pair.second->get_assets().size();
 	}
 
@@ -1432,6 +1422,7 @@ AGIS_API void ExchangeMap::__build()
 	// empty vector to contain expired assets
 	this->assets_expired.resize(this->assets.size());
 	std::fill(assets_expired.begin(), assets_expired.end(), nullptr);
+	return true;
 }
 
 void ExchangeMap::__clean_up()
