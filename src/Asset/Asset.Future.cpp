@@ -126,7 +126,7 @@ FutureTable::~FutureTable()
 //============================================================================
 FutureTable::FutureTable(
     Exchange* exchange,
-    std::string contract_id) : AssetTable(exchange)
+    std::string contract_id) : AssetTable(exchange), _contract_id(contract_id)
 {
     this->p = new FuturePrivate(exchange);
 }

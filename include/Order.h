@@ -104,7 +104,7 @@ public:
     void set_cash_impact(double cash_impact) noexcept { this->cash_impact = cash_impact; }
     void set_margin_impact(double margin_impact) noexcept { this->margin_impact = margin_impact; }
 
-[[nodiscard]] double get_margin_impact() const noexcept { return this->margin_impact; }
+    [[nodiscard]] double get_margin_impact() const noexcept { return this->margin_impact; }
     [[nodiscard]] double get_cash_impact() const noexcept { return this->cash_impact; }
     [[nodiscard]] double get_average_price() const noexcept { return this->avg_price; }
     [[nodiscard]] double get_units() const noexcept { return this->units; }

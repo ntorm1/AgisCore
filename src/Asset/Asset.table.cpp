@@ -14,6 +14,7 @@ namespace Agis
 {
 
 
+//============================================================================
 bool is_futures_valid_contract(const std::string& contract) {
 	static const std::vector<std::string> valid_future_contracts = { "ZF", "CL", "ES" };
 	for (const std::string& valid : valid_future_contracts) {
@@ -24,12 +25,13 @@ bool is_futures_valid_contract(const std::string& contract) {
 	return false;
 }
 
+
 //============================================================================
 std::expected<bool, AgisException>
 build_futures_tables(Exchange* exchange)
 {
 	// to build futures table exchange must have trading calendar
-	if(!exchange->get_trading_calendar()) {
+	if (!exchange->get_trading_calendar()) {
 		return std::unexpected<AgisException>("Exchange does not have trading calendar");
 	}
 
@@ -45,8 +47,8 @@ build_futures_tables(Exchange* exchange)
 		if (!is_futures_valid_contract(contract_parent)) {
 			return std::unexpected<AgisException>("Invalid contract parent");
 		}
-		if (exchange->get_asset_table(contract_parent).has_value()) {
-			continue;
+		if (exchange->get_asset_table<FutureTable>(contract_parent).has_value()) {
+			return std::unexpected<AgisException>("Futures contract exists");
 		}
 		auto table = std::make_shared<FutureTable>(exchange, contract_parent);
 		exchange->__add_asset_table(std::move(table));
@@ -62,6 +64,8 @@ build_asset_tables(Exchange* exchange)
 {
 	switch (exchange->get_asset_type())
 	{
+	case(AssetType::US_EQUITY):
+		return true;
 	case(AssetType::US_FUTURE):
 		return build_futures_tables(exchange);
 	default:

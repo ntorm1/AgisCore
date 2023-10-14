@@ -99,6 +99,7 @@ void ExchangeMap::restore(rapidjson::Document const& j)
 
 		this->restore_exchange(exchange_id_, std::nullopt, market_asset);
 
+
 		// set volatility lookback
 		auto exchange_ptr = this->get_exchange(exchange_id_);
 		size_t volatility_lookback = exchange_json["volatility_lookback"].GetUint64();
@@ -437,14 +438,6 @@ bool Exchange::asset_exists(std::string const& asset_id)
 
 
 //============================================================================
-std::optional<AssetTablePtr> Exchange::get_asset_table(std::string asset_id) noexcept
-{
-	if(this->asset_tables.contains(asset_id)) return this->asset_tables[asset_id];
-	return std::nullopt;
-}
-
-
-//============================================================================
 void Exchange::__goto(long long datetime)
 {
 	// goto date is beyond the datetime index
@@ -520,6 +513,10 @@ std::expected<bool, AgisException> Exchange::build(size_t exchange_offset_)
 	{
 		delete[] this->dt_index;
 	}
+
+	// build asset tables
+	auto res = build_asset_tables(this);
+	if (!res.has_value()) return res;
 
 	// Generate date time index as sorted union of each asset's datetime index
 	auto datetime_index_ = vector_sorted_union(
@@ -1001,7 +998,7 @@ AgisResult<bool> ExchangeMap::restore_exchange(
 		market_asset_struct.value()->asset = *new_market_asset_ptr;
 		market_asset_struct.value()->market_index = (*new_market_asset_ptr)->get_asset_index();
 	}
-	
+
 	UNLOCK_GUARD
 	return AgisResult<bool>(true);
 }

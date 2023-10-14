@@ -113,7 +113,6 @@ public:
 
 	AGIS_API bool asset_exists(std::string const& asset_id);
 	std::vector<std::shared_ptr<Asset>> const& get_assets() const { return this->assets; }
-	std::optional<AssetTablePtr> get_asset_table(std::string asset_id) noexcept;
 
 
 	/// <summary>

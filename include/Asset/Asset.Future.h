@@ -94,7 +94,6 @@ private:
 //============================================================================
 class FutureTable : public AssetTable {
 public:
-    using AssetTable::iterator;
     using AssetTable::const_iterator;
 
     FutureTable(
