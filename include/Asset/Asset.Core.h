@@ -1,5 +1,3 @@
-module;
-
 #pragma once
 #ifdef AGISCORE_EXPORTS
 #define AGIS_API __declspec(dllexport)
@@ -11,14 +9,11 @@ module;
 #include "AgisEnums.h"
 #include <expected>
 
-export module Asset:Core;
 
-
-
-export namespace Agis
+namespace Agis
 {
 
-std::expected <AssetType, AgisException> AssetTypeFromString(std::string asset_type_str) {
+inline std::expected <AssetType, AgisException> AssetTypeFromString(std::string asset_type_str) {
 	if (asset_type_str == "US_EQUITY") {
 		return AssetType::US_EQUITY;
 	}

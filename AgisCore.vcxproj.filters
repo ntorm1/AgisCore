@@ -158,43 +158,43 @@
     <ClCompile Include="modules\broker\Broker.Base.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="modules\asset\Asset.ixx">
+    <ClCompile Include="include\Asset\Asset.h">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="modules\asset\Asset.Base.ixx">
+    <ClCompile Include="include\Asset\Asset.Base.h">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="modules\asset\Asset.Base.cpp">
+    <ClCompile Include="src\Asset\Asset.Base.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="modules\asset\Asset.Observer.ixx">
+    <ClCompile Include="include\Asset\Asset.Observer.h">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="modules\asset\Asset.Observer.cpp">
+    <ClCompile Include="src\Asset\Asset.Observer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="modules\asset\Asset.Core.ixx">
+    <ClCompile Include="include\Asset\Asset.Core.h">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="modules\asset\Asset.Future.ixx">
+    <ClCompile Include="include\Asset\Asset.Future.h">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="modules\asset\Asset.Future.cpp">
+    <ClCompile Include="src\Asset\Asset.Future.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="modules\time\TradingCalender.ixx">
+    <ClCompile Include="include\Time\TradingCalendar.h">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="modules\time\TradingCalender.cpp">
+    <ClCompile Include="src\Time\TradingCalender.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="modules\asset\Asset.Table.ixx">
+    <ClCompile Include="include\Asset\Asset.Table.h">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="modules\asset\Asset.Equity.ixx">
+    <ClCompile Include="include\Asset\Asset.Equity.h">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="modules\asset\Asset.table.cpp">
+    <ClCompile Include="src\Asset\Asset.table.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

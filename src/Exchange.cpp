@@ -12,8 +12,8 @@
 #include "AgisRisk.h"
 #include "AgisFunctional.h"
 
-import Asset;
-import TradingCalendar;
+#include "Asset/Asset.h"
+#include "Time/TradingCalendar.h"
 
 using namespace Agis;
 
@@ -533,6 +533,7 @@ void Exchange::build(size_t exchange_offset_)
 		// test to see if asset is alligned with the exchage's datetime index
 		// makes updating market view faster
 		asset->__reset();
+		asset->__build();
 		if (asset->get_rows() == this->dt_index_size) 
 		{
 			asset->__set_alignment(true);

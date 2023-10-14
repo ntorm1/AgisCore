@@ -1,5 +1,3 @@
-module;
-
 #pragma once
 #ifdef AGISCORE_EXPORTS
 #define AGIS_API __declspec(dllexport)
@@ -13,11 +11,10 @@ module;
 
 #include <boost/date_time.hpp>
 
-export module TradingCalendar;
 
 using namespace boost::gregorian;
 
-export namespace Agis
+namespace Agis
 {
 
 class TradingCalendar {

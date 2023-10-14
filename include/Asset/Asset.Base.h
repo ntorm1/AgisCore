@@ -1,5 +1,3 @@
-module;
-
 #pragma once
 #ifdef AGISCORE_EXPORTS
 #define AGIS_API __declspec(dllexport)
@@ -32,15 +30,13 @@ module;
 #include "AgisPointers.h"
 #include <ankerl/unordered_dense.h>
 
-export module Asset:Base;
+class Exchange;
+class ExchangeMap;
 
-export class Exchange;
-export class ExchangeMap;
-
-import :Core;
+#include "Asset/Asset.Core.h"
 
 
-export namespace Agis
+namespace Agis
 {
 
 class Asset;
@@ -201,7 +197,7 @@ protected:
     /// <param name="dt_fmt">the format of the datetime index</param>
     /// <param name="window">a range of valid times to load, in the form of seconds since midnight</param>
     /// <returns></returns>
-    AGIS_API [[nodiscard]] AgisResult<bool> load(
+    [[nodiscard]] AgisResult<bool> load(
         std::string source,
         std::string dt_fmt,
         std::optional<std::pair<long long, long long>> window = std::nullopt
@@ -216,7 +212,7 @@ protected:
     /// <param name="datasetIndex">H5 dataset for the asset index</param>
     /// <param name="dataspaceIndex">H5 dataspace for the asset index</param>
     /// <returns></returns>
-    AGIS_API [[nodiscard]] AgisResult<bool> load(
+    [[nodiscard]] AgisResult<bool> load(
         H5::DataSet& dataset,
         H5::DataSpace& dataspace,
         H5::DataSet& datasetIndex,
@@ -298,6 +294,8 @@ private:
     [[nodiscard]] AgisResult<bool> load_headers();
     [[nodiscard]] AgisResult<bool> load_csv();
     const arrow::Status load_parquet();
+
+    virtual [[nodiscard]] std::expected<bool, AgisException> __build() noexcept { return true; };
 
 };
 

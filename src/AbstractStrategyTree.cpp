@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "AbstractStrategyTree.h"
 
-import Asset;
+#include "Asset/Asset.h"
 
 using namespace Agis;
 

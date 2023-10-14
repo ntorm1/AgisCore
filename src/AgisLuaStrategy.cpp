@@ -5,7 +5,7 @@
 #include "AgisLuaStrategy.h"
 #include "AgisFunctional.h"
 
-import Asset;
+#include "Asset/Asset.h"
 
 using namespace Agis;
 

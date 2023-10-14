@@ -1,4 +1,3 @@
-module;
 #pragma once
 #define _SILENCE_CXX23_DENORM_DEPRECATION_WARNING
 
@@ -7,10 +6,9 @@ module;
 #include <set>
 #include "Exchange.h"
 
-module Asset:Future;
 
-import :Base;
-import TradingCalendar;
+#include "Time/TradingCalendar.h"
+#include "Asset/Asset.Future.h"
 
 namespace Agis
 {

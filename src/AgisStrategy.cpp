@@ -11,7 +11,7 @@
 #include "Portfolio.h"
 
 import Broker;
-import Asset;
+#include "Asset/Asset.h"
 
 using namespace Agis;
 using namespace rapidjson;

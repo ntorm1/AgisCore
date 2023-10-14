@@ -1,5 +1,3 @@
-module;
-
 #pragma once
 #ifdef AGISCORE_EXPORTS
 #define AGIS_API __declspec(dllexport)
@@ -9,12 +7,10 @@ module;
 
 #include <string>
 
-export module Asset:Equity;
+#include "Asset/Asset.Core.h"
+#include "Asset/Asset.Base.h"
 
-import :Core;
-import :Base;
-
-export namespace Agis {
+namespace Agis {
 
 class Equity : public Asset {
 public:

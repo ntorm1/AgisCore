@@ -1,4 +1,3 @@
-module;
 #include <string>
 #include <cstdint>
 #include <fstream>
@@ -12,8 +11,7 @@ module;
 
 #include "AgisException.h"
 
-
-module TradingCalendar;
+#include "Time/TradingCalendar.h"
 
 using namespace std::chrono;
 using namespace boost::gregorian;

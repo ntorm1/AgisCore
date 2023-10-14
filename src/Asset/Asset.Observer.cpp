@@ -1,4 +1,3 @@
-module;
 
 #pragma once
 #include <cmath>
@@ -6,9 +5,8 @@ module;
 #include <stdexcept>
 #include "AgisException.h"
 
-module Asset:Observer;
-
-import :Base;
+#include "Asset/Asset.Base.h"
+#include "Asset/Asset.Observer.h"
 
 #define AGIS_EXCEP(msg) \
     AgisException(std::string(__FILE__) + ":" + std::to_string(__LINE__) + " - " + msg)
@@ -26,6 +24,23 @@ void AssetObserver::add_observer() {
 //============================================================================
 void AssetObserver::remove_observer() {
     this->asset->remove_observer(this);
+}
+
+
+//============================================================================
+std::string AssetObserverTypeToString(AssetObserverType type)
+{
+    
+    switch (type) {
+    case AssetObserverType::COL_ROL_MEAN:
+        return "COL_ROL_MEAN";
+    case AssetObserverType::COL_ROL_VAR:
+        return "COL_ROL_VAR";
+    case AssetObserverType::COL_ROL_ZSCORE:
+        return "COL_ROL_ZSCORE";
+    default:
+        return "Unknown"; // Return a default value for unknown enums
+    }
 }
 
 

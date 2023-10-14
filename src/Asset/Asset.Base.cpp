@@ -1,5 +1,3 @@
-module;
-
 #define ARROW_API_H
 #define H5_HAVE_H5CPP
 
@@ -26,10 +24,9 @@ module;
 #include "AgisRisk.h"
 #include "Utils.h"
 
-module Asset:Base;
-
-import :Observer;
-import :Core;
+#include "Asset/Asset.Observer.h"
+#include "Asset/Asset.Core.h"
+#include "Asset/Asset.Base.h"
 
 namespace Agis
 {
@@ -124,7 +121,7 @@ AgisResult<bool> Asset::load(
 
 //============================================================================
 #ifdef H5_HAVE_H5CPP
-AGIS_API AgisResult<bool> Asset::load(
+AgisResult<bool> Asset::load(
     H5::DataSet& dataset,
     H5::DataSpace& dataspace,
     H5::DataSet& datasetIndex,

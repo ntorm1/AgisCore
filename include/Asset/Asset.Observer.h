@@ -1,4 +1,3 @@
-module;
 
 #pragma once
 #ifdef AGISCORE_EXPORTS
@@ -15,11 +14,10 @@ module;
 #include "AgisPointers.h"
 #include "AgisException.h"
 
-export module Asset:Observer;
 
 struct AgisCovarianceMatrix;
 
-export namespace Agis
+namespace Agis
 {
 
 class Asset;
@@ -36,18 +34,7 @@ enum class AGIS_API AssetObserverType {
 };
 
 
-std::string AssetObserverTypeToString(AssetObserverType type) {
-	switch (type) {
-	case AssetObserverType::COL_ROL_MEAN:
-		return "COL_ROL_MEAN";
-	case AssetObserverType::COL_ROL_VAR:
-		return "COL_ROL_VAR";
-	case AssetObserverType::COL_ROL_ZSCORE:
-		return "COL_ROL_ZSCORE";
-	default:
-		return "Unknown"; // Return a default value for unknown enums
-	}
-}
+std::string AssetObserverTypeToString(AssetObserverType type);
 
 
 //============================================================================

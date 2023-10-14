@@ -1,5 +1,3 @@
-module;
-
 #pragma once
 #ifdef AGISCORE_EXPORTS
 #define AGIS_API __declspec(dllexport)
@@ -9,16 +7,16 @@ module;
 #include <expected>
 #include <memory>
 #include <deque>
-
 #include "AgisException.h"
 
-export module Asset:Table;
-
-import :Core;
-import :Base;
 
 
-export namespace Agis {
+
+#include "Asset/Asset.Core.h"
+#include "Asset/Asset.Base.h"
+
+
+namespace Agis {
 
 class Asset;
 typedef std::shared_ptr<Asset> AssetPtr;
