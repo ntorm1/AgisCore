@@ -63,7 +63,7 @@ public:
     std::optional<long long> get_last_trade_date() const noexcept { return this->_last_trade_date; }
     bool expirable() const noexcept { return this->_last_trade_date.has_value(); }
 
-private:
+protected:
     std::optional<long long> _last_trade_date;
 };
 
@@ -88,7 +88,6 @@ private:
     std::expected<bool, AgisException> set_last_trade_date(std::shared_ptr<TradingCalendar> calendar) override;
     FutureMonthCode _month_code;
     FutureParentContract _parent_contract;
-    long long _last_trade_date;
 };
 
 

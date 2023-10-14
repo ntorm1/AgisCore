@@ -155,11 +155,28 @@ public:
 	/// <returns></returns>
 	AgisResult<AssetPtr> __remove_asset(size_t asset_index);
 
-	/// <summary>
-	/// Get an asset from the exchange by its unique id
-	/// </summary>
-	/// <param name="index"></param>
-	/// <returns></returns>
+	/**
+	 * @brief Get an asset table from the exchange 
+	 * @tparam T Type of asset table to cast too
+	 * @param table_name name of the table to get
+	 * @return asset table if it exists
+	*/
+	template <typename T>
+	typename std::enable_if<std::is_base_of<AssetTable, T>::value, std::expected<std::shared_ptr<T>, AgisException>>::type
+	get_asset_table(std::string const& table_name) const noexcept
+	{
+		auto it = this->asset_tables.find(table_name);
+		if (it == this->asset_tables.end()) {
+			return std::unexpected<AgisException>(AGIS_EXCEP("table does not exist"));
+		}
+		auto& table = it->second;
+		auto derived_table = std::dynamic_pointer_cast<T>(table);
+		if (!derived_table) {
+			return std::unexpected<AgisException>(AGIS_EXCEP("table is not of type"));
+		}
+		return derived_table;
+	}
+
 	AGIS_API AgisResult<AssetPtr> get_asset(size_t index) const;
 	AGIS_API AgisResult<double> get_asset_beta(size_t index) const;
 	AGIS_API AgisResult<size_t> get_column_index(std::string const& col) const;

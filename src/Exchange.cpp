@@ -399,7 +399,7 @@ AGIS_API AgisResult<bool> ExchangeMap::set_covariance_matrix_state(bool enabled)
 }
 
 //============================================================================
-AGIS_API AgisResult<std::shared_ptr<AgisCovarianceMatrix>> ExchangeMap::get_covariance_matrix() const
+AgisResult<std::shared_ptr<AgisCovarianceMatrix>> ExchangeMap::get_covariance_matrix() const
 {
 	if(!this->covariance_matrix) return AgisResult<std::shared_ptr<AgisCovarianceMatrix>>(AGIS_EXCEP("covariance matrix not initialized"));
 	return AgisResult<std::shared_ptr<AgisCovarianceMatrix>>(this->covariance_matrix);
