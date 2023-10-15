@@ -28,6 +28,35 @@ AbstractAssetLambdaLogical::AbstractAssetLambdaLogical(
 
 
 //============================================================================
+AbstractFutureTableNode::AbstractFutureTableNode(
+	std::shared_ptr<AbstractExchangeNode> exchange_node_,
+	std::string contract_id,
+	TableExtractMethod extract_method_) :
+	contract_id(contract_id),
+	extract_method(extract_method_)
+{
+	this->exchange = exchange_node_->evaluate();
+	auto res = this->exchange->get_asset_table<FutureTable>(contract_id);
+	if (!res.has_value()) throw std::runtime_error(res.error().what());
+	this->table = res.value();
+}
+
+
+//============================================================================
+std::expected<FuturePtr, AgisErrorCode>
+AbstractFutureTableNode::evaluate() const
+{
+	switch (extract_method)
+	{
+	case TableExtractMethod::FRONT:
+		return this->table->front_month();
+	default:
+		return std::unexpected<AgisErrorCode>(AgisErrorCode::NOT_IMPLEMENTED);
+	}
+}
+
+
+//============================================================================
 std::expected<double, AgisErrorCode>
 AbstractAssetLambdaLogical::execute(std::shared_ptr<const Asset> const& asset) const {
 	// execute left node to get value
@@ -259,3 +288,64 @@ AGIS_API std::unique_ptr<AbstractStrategyAllocationNode> create_strategy_alloc_n
 		alloc_type_
 	);
 }
+
+
+//============================================================================
+std::expected<bool, AgisErrorCode> AbstractTableViewNode::add_asset_table(NonNullSharedPtr<AbstractFutureTableNode> table_node)
+{
+	// all asset tables must have same base exchange
+	auto& table = this->table_nodes.front();
+	if (table->get_exchange() != table_node->get_exchange()) {
+		return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
+	}
+	this->table_nodes.push_back(table_node);
+	return true;
+}
+
+
+//============================================================================
+std::expected<bool, AgisErrorCode>
+AbstractTableViewNode::evaluate_asset(FuturePtr const& asset, ExchangeView& v) const noexcept
+{
+	if ((!asset || !asset->__in_exchange_view) ||
+		(!asset->__is_streaming) ||
+		(asset->get_current_index() < this->warmup)) {
+		return true;
+	}
+	auto val = this->asset_lambda_op->execute(asset);
+	// forward any exceptions
+	if (!val.has_value()) {
+		return std::unexpected<AgisErrorCode>(val.error());
+	}
+	// skip if nan
+	if (std::isnan(val.value())) {
+		return true;
+	}
+	auto alloc = val.value();
+	ExchangeViewAllocation a(
+		asset->get_asset_index(),
+		alloc,
+		true
+	);
+	v.view.emplace_back(std::move(a));
+	return true;
+}
+
+
+//============================================================================
+std::expected<ExchangeView, AgisErrorCode> AbstractTableViewNode::execute()
+{
+	ExchangeView view;
+	view.exchange = this->table_nodes.front()->get_exchange();
+	for (const auto& table : this->table_nodes) {
+		auto res = table->evaluate()
+			.and_then([&](FuturePtr const& asset) {
+				return this->evaluate_asset(asset, view);
+			});
+		if (!res.has_value()) {
+			return std::unexpected<AgisErrorCode>(res.error());
+		}
+	}
+	return std::move(view);
+}
+

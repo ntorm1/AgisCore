@@ -13,6 +13,8 @@
 
 namespace Agis {
 	class Asset;
+	class Future;
+	class FutureTable;
 }
 
 
@@ -25,6 +27,8 @@ class AbstractAssetLambdaChain;
 class AbstractSortNode;
 
 typedef NonNullSharedPtr<Asset> NonNullAssetPtr;
+typedef std::shared_ptr<FutureTable> FutureTablePtr;
+typedef std::shared_ptr<Future> FuturePtr;
 
 //============================================================================
 class ASTNode {
@@ -333,12 +337,83 @@ public:
 
 	//============================================================================
 	~AbstractExchangeNode() {}
+
+	//============================================================================
 	const Exchange* evaluate() const override {
 		return this->exchange;
 	}
 
 private:
-	const Exchange* exchange; // Store a const pointer to Exchange
+	const Exchange* exchange;
+};
+
+
+enum class TableExtractMethod : uint16_t {
+	FRONT = 0
+};
+
+
+//============================================================================
+class AbstractFutureTableNode : public ExpressionNode<std::expected<FuturePtr, AgisErrorCode>> {
+public:
+	//============================================================================
+	AbstractFutureTableNode(
+		std::shared_ptr<AbstractExchangeNode> exchange_node_,
+		std::string contract_id,
+		TableExtractMethod extract_method_
+	);
+
+
+	//============================================================================
+	std::expected<FuturePtr,AgisErrorCode> evaluate() const override;
+
+
+	//============================================================================
+	const Exchange* get_exchange() const {
+		return this->exchange;
+	}
+
+private:
+	FutureTablePtr table;
+	const Exchange* exchange;
+	std::string contract_id;
+	TableExtractMethod extract_method;
+};
+
+
+//============================================================================
+class AbstractTableViewNode : public ValueReturningStatementNode<std::expected<ExchangeView, AgisErrorCode>> {
+
+public:
+	//============================================================================
+	AbstractTableViewNode(
+		NonNullSharedPtr<AbstractFutureTableNode> table_node,
+		NonNullUniquePtr<AbstractAssetLambdaOpp> asset_lambda_op_) :
+		asset_lambda_op(std::move(asset_lambda_op_))
+	{
+		this->table_nodes.push_back(table_node);
+		this->warmup = this->asset_lambda_op->get_warmup();
+	}
+
+	//============================================================================
+	[[nodiscard]] std::expected<bool, AgisErrorCode> add_asset_table(NonNullSharedPtr<AbstractFutureTableNode> table_node);
+
+
+	//============================================================================
+	std::expected<ExchangeView, AgisErrorCode> execute() override;
+
+	//============================================================================
+	std::expected<bool, AgisErrorCode> evaluate_asset(FuturePtr const& asset, ExchangeView& view) const noexcept;
+
+	//============================================================================
+	size_t get_warmup() {
+		return this->warmup;
+	}
+
+private:
+	std::vector<NonNullSharedPtr<AbstractFutureTableNode>> table_nodes;
+	NonNullUniquePtr<AbstractAssetLambdaOpp> asset_lambda_op;
+	size_t warmup = 0;
 };
 
 
@@ -348,7 +423,7 @@ class AbstractExchangeViewNode : public ValueReturningStatementNode<std::expecte
 public:
 	//============================================================================
 	AbstractExchangeViewNode(
-		std::unique_ptr<AbstractExchangeNode> exchange_node_,
+		std::shared_ptr<AbstractExchangeNode> exchange_node_,
 		std::unique_ptr<AbstractAssetLambdaOpp> asset_lambda_op_) :
 		exchange_node(std::move(exchange_node_)),
 		asset_lambda_op(std::move(asset_lambda_op_))
@@ -407,7 +482,7 @@ private:
 	ExchangeView exchange_view;
 	const Exchange* exchange;
 	std::vector<AssetPtr> assets;
-	NonNullUniquePtr<AbstractExchangeNode> exchange_node;
+	NonNullSharedPtr<AbstractExchangeNode> exchange_node;
 	NonNullUniquePtr<AbstractAssetLambdaOpp> asset_lambda_op;
 	size_t warmup = 0;
 };

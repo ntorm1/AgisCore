@@ -60,9 +60,10 @@ AGIS_API std::string ev_query_type(ExchangeQueryType ev_query);
 
 struct ExchangeViewAllocation {
 	ExchangeViewAllocation() = default;
-	ExchangeViewAllocation(size_t asset_index_, double allocation_amount_) {
+	ExchangeViewAllocation(size_t asset_index_, double allocation_amount_, bool live_ = false) {
 		this->asset_index = asset_index_;
 		this->allocation_amount = allocation_amount_;
+		this->live = live_;
 	}
 	/**
 	 * @brief unique if if of the asset

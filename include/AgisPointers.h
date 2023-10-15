@@ -319,6 +319,7 @@ private:
     std::unique_ptr<T> ptr;
 };
 
+
 template <typename T>
 class NonNullRawPtr {
 public:
