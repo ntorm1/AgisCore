@@ -377,7 +377,7 @@ std::expected<bool, AgisException> Exchange::build(size_t exchange_offset_)
 	// Generate date time index as sorted union of each asset's datetime index
 	auto datetime_index_ = vector_sorted_union(
 		this->assets,
-		[](std::shared_ptr<Asset> const obj) -> long long*
+		[](std::shared_ptr<Asset> const obj) -> long long const*
 		{ 
 			if (obj->get_rows() < obj->get_warmup()) return nullptr; // exclude invlaid assets
 			return obj->__get_dt_index(true).data();

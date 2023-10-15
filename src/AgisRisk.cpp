@@ -128,7 +128,7 @@ std::vector<double> rolling_beta(const std::vector<double>& stock_returns, const
 
 
 //============================================================================
-std::vector<double> rolling_volatility(std::span<double> const prices, size_t window_size)
+std::vector<double> rolling_volatility(std::span<const double> const prices, size_t window_size)
 {
     std::vector<double> rolling_volatility; // Initialize with zeros
 

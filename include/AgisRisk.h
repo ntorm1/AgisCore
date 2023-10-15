@@ -115,7 +115,7 @@ std::vector<double> rolling_beta(
  * @return the rolling volatility
 */
 AGIS_API std::vector<double> rolling_volatility(
-	std::span<double> const returns,
+	std::span<const double> const returns,
 	size_t windowSize
 );
 

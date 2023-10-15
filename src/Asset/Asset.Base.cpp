@@ -54,11 +54,6 @@ Asset::Asset(
 //============================================================================
 Asset::~Asset()
 {
-    if (this->is_loaded)
-    {
-        delete[] this->data;
-        delete[] this->dt_index;
-    }
 }
 
 
@@ -113,8 +108,8 @@ AgisResult<bool> Asset::load(
         return AgisResult<bool>(AGIS_EXCEP("file type not supported"));
     }
 
-    this->close = this->data + (this->rows) * this->close_index;
-    this->open = this->data + (this->rows) * this->open_index;
+    this->close = this->data.data() + (this->rows) * this->close_index;
+    this->open = this->data.data() + (this->rows) * this->open_index;
     return AgisResult<bool>(true);
 }
 
@@ -159,12 +154,12 @@ AgisResult<bool> Asset::load(
     this->columns = dims[1];
 
     // Allocate memory for the column-major array
-    this->data = new double[this->rows * this->columns];
+    this->data.resize(this->rows * this->columns,0);
 
     // Read the dataset into the column-major array
     //hsize_t memDims[2] = { this->columns, this->rows }; // Swap rows and columns for column-major
     //H5::DataSpace memspace(2, memDims);
-    dataset.read(this->data, H5::PredType::NATIVE_DOUBLE, dataspace);
+    dataset.read(this->data.data(), H5::PredType::NATIVE_DOUBLE, dataspace);
 
     // HDF5 stored in row major. Swap elements to get to col major. Maybe better way to do this
     double* columnMajorData = new double[rows * columns];
@@ -174,17 +169,22 @@ AgisResult<bool> Asset::load(
             columnMajorData[j * rows + i] = data[i * columns + j];
         }
     }
-    std::swap(this->data, columnMajorData);
+    // copy the column major data back to the vector
+    std::copy(
+        columnMajorData,
+        columnMajorData + (rows * columns),
+        this->data.begin()
+    );
     delete columnMajorData;
 
     // Allocate memory for the array to hold the data
-    this->dt_index = new long long[this->rows];
+    this->dt_index.resize(this->rows, 0);
 
     // Read the 1D datetime index from the dataset
-    datasetIndex.read(this->dt_index, H5::PredType::NATIVE_INT64, dataspaceIndex);
+    datasetIndex.read(this->dt_index.data(), H5::PredType::NATIVE_INT64, dataspaceIndex);
 
-    this->close = this->data + (this->rows) * this->close_index;
-    this->open = this->data + (this->rows) * this->open_index;
+    this->close = this->data.data() + (this->rows) * this->close_index;
+    this->open = this->data.data() + (this->rows) * this->open_index;
     this->is_loaded = true;
     return AgisResult<bool>(true);
 }
@@ -222,11 +222,15 @@ AgisResult<size_t> Asset::encloses_index(AssetPtr asset_b)
     auto asset_b_start = asset_b_index[0];
 
     // find the index location of asset_b_start in this->dt_index if it exists
-    auto it = std::find(this->dt_index, this->dt_index + this->rows, asset_b_start);
-    if (it == this->dt_index + this->rows) {
+    auto it = std::find(
+        this->dt_index.begin(),
+        this->dt_index.end(),
+        asset_b_start
+    );
+    if (it == this->dt_index.end()) {
         return AgisResult<size_t>(AGIS_EXCEP("asset_b_start not found in this->dt_index"));
     }
-    auto asset_b_start_index = static_cast<size_t>(std::distance(this->dt_index, it));
+    auto asset_b_start_index = static_cast<size_t>(std::distance(this->dt_index.begin(), it));
     return AgisResult<size_t>(asset_b_start_index);
 }
 
@@ -336,8 +340,8 @@ AgisResult<bool> Asset::load_csv()
     this->columns = this->headers.size();
 
     // Load in the actual data
-    this->data = new double[this->rows * this->columns];
-    this->dt_index = new long long[this->rows];
+    this->data.resize(this->rows * this->columns,0);
+    this->dt_index.resize(this->rows);
 
     size_t row_counter = 0;
     while (std::getline(file, line))
@@ -393,8 +397,8 @@ const arrow::Status Asset::load_parquet()
     this->rows = table->num_rows();
     this->columns = table->num_columns();
 
-    this->data = new double[this->rows * this->columns];
-    this->dt_index = new long long[this->rows];
+    this->data.resize(this->rows * this->columns, 0);
+    this->dt_index.resize(this->rows);
 
     // get datetime index
     std::shared_ptr<arrow::Int64Array> index = std::static_pointer_cast<arrow::Int64Array>(table->column(0)->chunk(0));
@@ -455,28 +459,29 @@ const arrow::Status Asset::load_parquet()
 }
 #endif
 
-std::span<double> const Asset::__get_column(size_t column_index) const
+std::span<const double> const Asset::__get_column(size_t column_index) const
 {
-    return std::span<double>(this->data + (column_index * this->rows), this->rows);
+    return std::span<const double>(this->data.data() + (column_index * this->rows), this->rows);
 }
 
 //============================================================================
-std::span<double> const Asset::__get_column(std::string const& column_name) const
+std::span<const double> const Asset::__get_column(std::string const& column_name) const
 {
     auto col_offset = this->headers.at(column_name);
-    return std::span<double>(this->data + (col_offset * this->rows), this->rows);
+    return std::span<const double>(this->data.data() + (col_offset * this->rows), this->rows);
 }
 
 
 //============================================================================
-std::span<long long> const Asset::__get_dt_index(bool adjust_for_warmup) const
+std::span<const long long> const Asset::__get_dt_index(bool adjust_for_warmup) const
 {
     // return the dt index without the warmup period moving the pointer 
     // forward so that the final union index will be adjusted to all warmups
     if (adjust_for_warmup)
-        return std::span(this->dt_index + this->warmup, this->rows - this->warmup);
+        return std::span(this->dt_index.data() + this->warmup, this->rows - this->warmup);
     else
-        return std::span(this->dt_index, this->rows);
+        // return dt_index as span
+        return std::span<const long long>(this->dt_index);
 }
 
 
@@ -497,8 +502,8 @@ std::vector<std::string> Asset::__get_dt_index_str(bool adjust_for_warmup) const
 bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
 {
     auto market_close_col_index = market_asset->__get_close_index();
-    std::span<double> market_close_col = market_asset->__get_column(market_close_col_index);
-    std::span<double> close_column = this->__get_column(this->close_index);
+    auto market_close_col = market_asset->__get_column(market_close_col_index);
+    auto close_column = this->__get_column(this->close_index);
 
     if (lookback >= close_column.size())
     {
@@ -508,8 +513,8 @@ bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
     // adjust the warmup to account for the lookback period
     this->__set_warmup(lookback);
 
-    std::span<long long> market_datetime_index = market_asset->__get_dt_index(false);
-    std::span<long long> datetime_index = this->__get_dt_index(false);
+    auto market_datetime_index = market_asset->__get_dt_index(false);
+    auto datetime_index = this->__get_dt_index(false);
     long long first_datetime = datetime_index[0];
 
     // find the first datetime in the market asset that is equal to the first datetime in this asset
@@ -673,8 +678,8 @@ void Asset::__reset(long long t0)
     // move datetime index and data pointer back to start
     this->current_index = 0;
     this->__is_expired = false;
-    this->close = (this->data + (this->rows) * this->close_index);
-    this->open = (this->data + (this->rows) * this->open_index);
+    this->close = (this->data.data() + (this->rows) * this->close_index);
+    this->open = (this->data.data() + (this->rows) * this->open_index);
 
     // step forward untill warmup is reached
     for (int i = 0; i < this->warmup; i++)
@@ -707,9 +712,9 @@ AGIS_API double Asset::__get_market_price(bool on_close) const
 
 
 //============================================================================
-AgisMatrix<double> const Asset::__get__data() const
+AgisMatrix<const double> Asset::__get__data() const
 {
-    return AgisMatrix(this->data, this->rows, this->columns);
+    return AgisMatrix(this->data.data(), this->rows, this->columns);
 }
 
 
@@ -751,7 +756,7 @@ std::expected<double, AgisErrorCode> Asset::get_asset_feature(std::string const&
 
     size_t col_offset = this->headers.at(col) * this->rows;
     size_t row_offset = this->current_index + index - 1;
-    return *(this->data + row_offset + col_offset);
+    return this->data[row_offset + col_offset];
 }
 
 
@@ -771,7 +776,7 @@ std::expected<double, AgisErrorCode> Asset::get_asset_feature(size_t col, int in
 
     size_t col_offset = col * this->rows;
     size_t row_offset = this->current_index + index - 1;
-    return *(this->data + row_offset + col_offset);
+    return this->data[row_offset + col_offset];
 }
 
 
@@ -815,7 +820,7 @@ void Asset::assign_asset_feature(size_t col, int index, AgisResult<double>& res)
 #endif
     size_t col_offset = col * this->rows;
     size_t row_offset = this->current_index + index - 1;
-    res.set_value(*(this->data + row_offset + col_offset));
+    res.set_value(this->data[row_offset + col_offset]);
 }
 
 
@@ -823,9 +828,15 @@ void Asset::assign_asset_feature(size_t col, int index, AgisResult<double>& res)
 double Asset::__get(std::string col, size_t row) const
 {
     auto col_offset = this->headers.at(col) * this->rows;
-    return *(this->data + row + col_offset);
+    return this->data[row + col_offset];
 }
 
 
+//============================================================================
+bool
+Asset::__is_last_view(long long t) const
+{
+    return this->current_index == this->rows;
+}
 
 }

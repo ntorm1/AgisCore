@@ -136,15 +136,15 @@ public:
 
     AGIS_API bool __is_last_row() const { return this->current_index == this->rows + 1; }
     AGIS_API double __get(std::string col, size_t row) const;
-    AGIS_API inline long long __get_dt(size_t row) const { return *(this->dt_index + row); };
+    AGIS_API inline long long __get_dt(size_t row) const { return *(this->dt_index.data() + row); };
     AGIS_API inline size_t __get_open_index() const { return this->open_index; }
     AGIS_API inline size_t __get_close_index() const { return this->close_index; }
 
     AGIS_API double __get_market_price(bool on_close) const;
-    AGIS_API AgisMatrix<double> const __get__data() const;
-    AGIS_API std::span<double> const __get_column(size_t column_index) const;
-    AGIS_API std::span<double> const __get_column(std::string const& column_name) const;
-    AGIS_API std::span<long long> const __get_dt_index(bool adjust_for_warmup = true) const;
+    AGIS_API AgisMatrix<const double> __get__data() const;
+    AGIS_API std::span<const double> const __get_column(size_t column_index) const;
+    AGIS_API std::span<const double> const __get_column(std::string const& column_name) const;
+    AGIS_API std::span<const long long> const __get_dt_index(bool adjust_for_warmup = true) const;
     AGIS_API std::vector<std::string> __get_dt_index_str(bool adjust_for_warmup = true) const;
     size_t __get_index(bool offset = true) const { return offset ? this->asset_index : this->asset_index - this->exchange_offset; }
     bool __get_is_aligned() const { return this->__is_aligned; }
@@ -258,8 +258,8 @@ private:
     size_t current_index = 0;
     size_t open_index;
     size_t close_index;
-    long long* dt_index = nullptr;
-    double* data = nullptr;
+    std::vector<long long> dt_index;
+    std::vector<double> data;
     double* close = nullptr;
     double* open = nullptr;
 
@@ -289,7 +289,7 @@ private:
     const arrow::Status load_parquet();
 
     virtual [[nodiscard]] std::expected<bool, AgisException> __build(Exchange const* exchange) noexcept { return true; };
-    virtual [[nodiscard]] bool __is_last_view(long long t) const { return this->current_index - 1 == this->rows; }
+    virtual [[nodiscard]] bool __is_last_view(long long t) const;
 
 };
 
