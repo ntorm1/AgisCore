@@ -13,16 +13,9 @@
 namespace Agis
 {
 
-inline std::expected <AssetType, AgisException> AssetTypeFromString(std::string asset_type_str) {
-	if (asset_type_str == "US_EQUITY") {
-		return AssetType::US_EQUITY;
-	}
-	else if (asset_type_str == "US_FUTURE") {
-		return AssetType::US_FUTURE;
-	}
-	else {
-		return std::unexpected<AgisException>("Invalid asset type string: " + asset_type_str);
-	}
-}
+AGIS_API std::expected <AssetType, AgisException> AssetTypeFromString(std::string asset_type_str);
+AGIS_API Frequency StringToFrequency(const std::string& valueStr);
+AGIS_API const char* FrequencyToString(Frequency value);
+AGIS_API AssetType StringToAssetType(const std::string& valueStr);
 
 }

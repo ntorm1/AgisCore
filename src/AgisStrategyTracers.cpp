@@ -3,6 +3,7 @@
 
 #include "AgisStrategyTracers.h"
 #include "AgisStrategy.h"
+#include "AgisRisk.h"
 
 
 //============================================================================
@@ -76,7 +77,7 @@ AgisStrategyTracers::get_portfolio_volatility()
 	if (this->strategy->get_strategy_type() == AgisStrategyType::BENCHMARK) {
 		return this->get_benchmark_volatility();
 	}
-	auto cov_matrix = this->strategy->exchange_map->get_covariance_matrix();
+	auto cov_matrix = this->strategy->get_covariance_matrix();
 	if (cov_matrix.is_exception()) {
 		return std::unexpected<AgisException>(AGIS_FORWARD_EXCEP(cov_matrix.get_exception()));
 	}
@@ -104,7 +105,7 @@ AgisStrategyTracers::get_benchmark_volatility()
 	// override the portfolio volatility calculation to use the benchmark asset's variance 
 	// to shortcut the valculation of portfolio volatility. This relies on the fact the benchmark
 	// strategy invests all funds into the benchmark asset at t0 and does nothing after.
-	auto cov_matrix = this->strategy->exchange_map->get_covariance_matrix();
+	auto cov_matrix = this->strategy->get_covariance_matrix();
 	if (cov_matrix.is_exception()) {
 		return std::unexpected<AgisException>(AGIS_FORWARD_EXCEP(cov_matrix.get_exception()));
 	}

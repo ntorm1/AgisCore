@@ -54,7 +54,7 @@ public:
 
     //============================================================================
     template <typename T>
-    void build(T* owner, size_t n)
+    void build(T* owner, size_t n, size_t asset_count)
     {
         if (this->has(Tracer::BETA)) this->beta_history.reserve(n);
 
@@ -63,7 +63,6 @@ public:
         if (this->has(Tracer::VOLATILITY)) {
             // init eigen vector of portfolio weights
             this->portfolio_volatility_history.reserve(n);
-            auto asset_count = owner->exchange_map->get_asset_count();
             this->portfolio_weights.resize(asset_count);
             this->portfolio_weights.setZero();
         }

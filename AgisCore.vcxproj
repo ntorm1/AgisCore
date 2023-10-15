@@ -188,6 +188,7 @@
     <ClInclude Include="include\AgisStrategyRegistry.h" />
     <ClInclude Include="include\AgisStrategyTracers.h" />
     <ClInclude Include="include\Exchange.h" />
+    <ClInclude Include="include\ExchangeMap.h" />
     <ClInclude Include="include\ExchangeView.h" />
     <ClInclude Include="include\framework.h" />
     <ClInclude Include="include\Portfolio.h" />
@@ -205,6 +206,7 @@
     <ClCompile Include="include\Asset\Asset.Base.h" />
     <ClCompile Include="include\Asset\Asset.Core.h" />
     <ClCompile Include="include\Asset\Asset.Equity.h" />
+    <ClCompile Include="src\Asset\Asset.Core.cpp" />
     <ClCompile Include="src\Asset\Asset.Future.cpp" />
     <ClCompile Include="include\Asset\Asset.Future.h" />
     <ClCompile Include="include\Asset\Asset.h" />
@@ -214,6 +216,7 @@
     <ClCompile Include="include\Asset\Asset.Table.h" />
     <ClCompile Include="src\Broker\Broker.Base.cpp" />
     <ClCompile Include="include\Broker\Broker.Base.h" />
+    <ClCompile Include="src\ExchangeMap.cpp" />
     <ClCompile Include="src\Time\TradingCalender.cpp" />
     <ClCompile Include="include\Time\TradingCalendar.h" />
     <ClCompile Include="src\AbstractAgisStrategy.cpp" />

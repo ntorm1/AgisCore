@@ -93,6 +93,9 @@
     <ClInclude Include="include\AgisEnums.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\ExchangeMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\dllmain.cpp">
@@ -195,6 +198,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\AgisException.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ExchangeMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Asset\Asset.Core.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

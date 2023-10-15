@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "AgisRisk.h"
 #include "Order.h"
-#include "Exchange.h"
+#include "ExchangeMap.h"
 #include "AgisStrategy.h"
 
 #include "Asset/Asset.h"

@@ -206,7 +206,7 @@ std::unordered_map<std::string, TradeExitType> trade_exit_type_map = {
 
 
 //============================================================================
-std::string alloc_to_str(AllocType alloc_type)
+std::string AllocToString(AllocType alloc_type)
 {
 	static const std::unordered_map<AllocType, std::string> typeStrings = {
 		{AllocType::UNITS, "UNITS"},
@@ -238,22 +238,6 @@ AgisResult<ExchangeViewOpp> str_to_ev_opp(const std::string& ev_opp_type) {
 
 	// Handle the case when the input string is not found in the map
 	return AgisResult<ExchangeViewOpp>(AGIS_EXCEP("Invalid ExchangeViewOpp value: " + ev_opp_type));
-}
-
-
-//============================================================================
-AGIS_API const char* FrequencyToString(Frequency value) {
-	switch (value) {
-	case Frequency::Tick: return "Tick";
-	case Frequency::Min1: return "Min1";
-	case Frequency::Min5: return "Min5";
-	case Frequency::Min15: return "Min15";
-	case Frequency::Min30: return "Min30";
-	case Frequency::Hour1: return "Hour1";
-	case Frequency::Hour4: return "Hour4";
-	case Frequency::Day1: return "Day1";
-	default: return nullptr; // Handle unknown values if needed
-	}
 }
 
 
@@ -314,51 +298,5 @@ AgisStrategyType StringToAgisStrategyType(const std::string& typeStr) {
 	}
 	else {
 		throw std::invalid_argument("Unknown AgisStrategyType string: " + typeStr);
-	}
-}
-
-AssetType StringToAssetType(const std::string& valueStr)
-{
-	if (valueStr == "US_EQUITY") {
-		return AssetType::US_EQUITY;
-	}
-	else if (valueStr == "US_FUTURE") {
-		return AssetType::US_FUTURE;
-	}
-	else {
-		// Handle unknown values if needed
-		throw std::invalid_argument("Unknown asset type string: " + valueStr);
-	}
-}
-
-
-Frequency StringToFrequency(const std::string& valueStr) {
-	if (valueStr == "Tick") {
-		return Frequency::Tick;
-	}
-	else if (valueStr == "Min1") {
-		return Frequency::Min1;
-	}
-	else if (valueStr == "Min5") {
-		return Frequency::Min5;
-	}
-	else if (valueStr == "Min15") {
-		return Frequency::Min15;
-	}
-	else if (valueStr == "Min30") {
-		return Frequency::Min30;
-	}
-	else if (valueStr == "Hour1") {
-		return Frequency::Hour1;
-	}
-	else if (valueStr == "Hour4") {
-		return Frequency::Hour4;
-	}
-	else if (valueStr == "Day1") {
-		return Frequency::Day1;
-	}
-	else {
-		// Handle unknown values if needed
-		throw std::invalid_argument("Unknown frequency string: " + valueStr);
 	}
 }

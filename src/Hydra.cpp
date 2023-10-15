@@ -3,7 +3,7 @@
 
 #include "Utils.h"
 #include "Hydra.h"
-#include "Exchange.h"
+#include "ExchangeMap.h"
 #include "Portfolio.h"
 
 #include "Broker/Broker.Base.h"

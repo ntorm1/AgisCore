@@ -11,6 +11,7 @@
 #include "AgisStrategy.h"
 #include "Portfolio.h"
 #include "Order.h"
+#include "ExchangeMap.h"
 #include "Asset/Asset.h"
 
 

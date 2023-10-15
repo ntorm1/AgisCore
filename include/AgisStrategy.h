@@ -206,7 +206,7 @@ public:
 	std::string const& get_strategy_id() const { return this->strategy_id; }
 	std::string get_portfolio_id() const noexcept;
 	Frequency get_frequency() const { return this->frequency; }
-
+	AgisResult<std::shared_ptr<AgisCovarianceMatrix>> get_covariance_matrix() const noexcept;
 
 	AGIS_API void zero_out_tracers() { this->tracers.zero_out_tracers(); }
 

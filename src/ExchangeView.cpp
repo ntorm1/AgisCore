@@ -1,10 +1,10 @@
 #include "pch.h"
-#include "ExchangeView.h"
 #include "Exchange.h"
+#include "ExchangeMap.h"
+#include "ExchangeView.h"
 #include "Trade.h"
 #include "AgisRisk.h"
-
-#include "Asset/Asset.h"
+#include "Asset/Asset.Base.h"
 
 using namespace Agis;
 

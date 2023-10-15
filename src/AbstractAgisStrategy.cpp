@@ -260,10 +260,10 @@ private:
 )";
 			auto pos = lambda_mid.find("{OPP}");
 			auto& asset_operation = pair.get_asset_operation_struct();
-			lambda_mid.replace(pos, 5, opp_to_str(pair.get_agis_operation()));
+			lambda_mid.replace(pos, 5, OppToString(pair.get_agis_operation()));
 
 			str_replace_all(lambda_mid, "{COL}", asset_operation.column);
-			str_replace_all(lambda_mid, "{OPP}", opp_to_str(pair.get_agis_operation()));
+			str_replace_all(lambda_mid, "{OPP}", OppToString(pair.get_agis_operation()));
 			str_replace_all(lambda_mid, "{INDEX}", std::to_string(asset_operation.row));
 		}
 		else {
@@ -324,7 +324,7 @@ private:
 
 	// Strategy allocation type
 	pos = next_method.find("{ALLOC_TYPE}");
-	next_method.replace(pos, 12, alloc_to_str(strat_alloc_struct.alloc_type));
+	next_method.replace(pos, 12, AllocToString(strat_alloc_struct.alloc_type));
 
 	// Replace ev transform
 	auto target_leverage = std::to_string(strat_alloc_ref.target);

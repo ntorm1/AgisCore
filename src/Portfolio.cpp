@@ -6,6 +6,7 @@
 #include "Exchange.h"
 #include "AgisStrategy.h"
 
+#include "ExchangeMap.h"
 #include "Asset/Asset.h"
 
 using namespace Agis;
@@ -259,7 +260,8 @@ void PortfolioMap::__build(size_t size)
     for (auto& portfolio_pair : this->portfolios)
     {
         auto& portfolio = portfolio_pair.second;
-        portfolio->tracers.build<Portfolio>(portfolio.get(), size);
+        auto asset_count = portfolio->exchange_map->get_asset_count();
+        portfolio->tracers.build<Portfolio>(portfolio.get(), size, asset_count);
     }
 }
 

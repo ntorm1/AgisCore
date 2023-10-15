@@ -78,24 +78,8 @@ AGIS_API extern const AgisOperation agis_multiply;
 */
 AGIS_API extern const AgisOperation agis_divide;
 
-/**
- * @brief Takes an agis operation and returns a string representation of it
- * @param func ref to an agis operation
- * @return string representation of the agis operation
-*/
-AGIS_API std::string opp_to_str(const AgisOperation& func);
-
-
-/**
- * @brief Takes in a alloc type and returns string rep of it
- * @param alloc_type portfolio allocation type
- * @return string rep of it
-*/
-AGIS_API std::string alloc_to_str(AllocType alloc_type);
-
-AGIS_API AssetType StringToAssetType(const std::string& valueStr);
-AGIS_API Frequency StringToFrequency(const std::string& valueStr);
-AGIS_API const char* FrequencyToString(Frequency value);
+AGIS_API std::string OppToString(const AgisOperation& func);
+AGIS_API std::string AllocToString(AllocType alloc_type);
 AGIS_API const char* OrderStateToString(OrderState value);
 AGIS_API const char* OrderTypeToString(OrderType value);
 AGIS_API const char* AgisStrategyTypeToString(AgisStrategyType value);

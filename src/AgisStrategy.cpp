@@ -7,7 +7,7 @@
 #include "AgisErrors.h"
 #include "AgisStrategy.h"
 #include "AgisRouter.h"
-#include "Exchange.h"
+#include "ExchangeMap.h"
 #include "Portfolio.h"
 
 #include "Broker/Broker.Base.h"
@@ -65,7 +65,8 @@ void AgisStrategy::__build(
 
 	// init required tracing and limit values
 	auto n = exchange_map->__get_dt_index().size();
-	this->tracers.build(this, n);
+	auto asset_count = exchange_map->get_asset_count();
+	this->tracers.build(this, n, asset_count);
 	this->limits.__build(this);
 }
 
@@ -633,7 +634,7 @@ std::vector<std::string> AgisStrategyMap::__get_strategy_ids() const
 
 
 //============================================================================
-std::string opp_to_str(const AgisOperation& func)
+std::string OppToString(const AgisOperation& func)
 {
 	int a = 1; int b = 2;
 	if (func(a,b) == agis_init(a,b)) {
@@ -865,6 +866,13 @@ size_t AgisStrategy::get_portfolio_index() const noexcept
 std::string AgisStrategy::get_portfolio_id() const noexcept
 {
 	return this->portfolio->__get_portfolio_id(); 
+}
+
+
+//============================================================================
+AgisResult<std::shared_ptr<AgisCovarianceMatrix>> AgisStrategy::get_covariance_matrix() const noexcept
+{
+	return this->exchange_map->get_covariance_matrix();
 }
 
 

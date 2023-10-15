@@ -169,3 +169,32 @@ struct AgisRiskStruct
 	*/
 	std::vector<double> asset_holdings;
 };
+
+
+/// <summary>
+/// Struct representing a point in time using eastern time.
+/// </summary>
+struct TimePoint {
+	int hour;
+	int minute;
+
+	bool operator<(TimePoint const& rhs) const {
+		if (this->hour < rhs.hour)
+			return true;
+		else if (this->hour == rhs.hour)
+			return this->minute < rhs.minute;
+		return false;
+	}
+	bool operator>(TimePoint const& rhs) const {
+		if (this->hour > rhs.hour)
+			return true;
+		else if (this->hour == rhs.hour)
+			return this->minute > rhs.minute;
+		return false;
+	}
+	bool operator==(TimePoint const& rhs) const {
+		if (this->hour == rhs.hour && this->minute == rhs.minute)
+			return true;
+		return false;
+	}
+};
