@@ -140,7 +140,7 @@ public:
 	/// <param name="N">Number of assets to return</param>
 	/// <returns></returns>
 	AGIS_API ExchangeView get_exchange_view(
-		const std::function<AgisResult<double>(std::shared_ptr<Asset> const&)>& func,
+		const std::function<std::expected<double,AgisErrorCode>(std::shared_ptr<Asset> const&)>& func,
 		ExchangeQueryType query_type = ExchangeQueryType::Default,
 		int N = -1,
 		bool panic = false,

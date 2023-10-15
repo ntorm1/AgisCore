@@ -194,5 +194,8 @@
     <ClCompile Include="src\Asset\Asset.table.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\AgisException.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

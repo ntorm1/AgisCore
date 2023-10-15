@@ -96,7 +96,7 @@ std::unordered_map<std::string, TradingWindow> agis_trading_window_map = {
 
 
 //============================================================================
-const std::function<AgisResult<double>(
+const std::function<std::expected<double, AgisErrorCode>(
 	const std::shared_ptr<Asset>&,
 	const std::vector<AssetLambdaScruct>& operations)> asset_feature_lambda_chain = [](
 		const std::shared_ptr<Asset>& asset,
@@ -105,7 +105,7 @@ const std::function<AgisResult<double>(
 {
 	// loop through the asset lambda structs and apply the operations
 	double result = 0;
-	AgisResult<double> asset_lambda_res;
+	std::expected<double, AgisErrorCode> asset_lambda_res;
 	for (const auto& asset_lambda : operations) {
 
 		// apply the lambda function to the asset and extract the value
@@ -113,27 +113,33 @@ const std::function<AgisResult<double>(
 		{
 			auto& asset_opperation = asset_lambda.get_asset_operation();
 			asset_lambda_res = asset_opperation(asset);
-			if (asset_lambda_res.is_exception()) return asset_lambda_res;
+			if (!asset_lambda_res.has_value()) return asset_lambda_res;
 		}
 		else {
 			auto& asset_filter = asset_lambda.get_asset_filter();
 			auto res = asset_filter(result);
-			if (!res) return AgisResult<double>(AGIS_NAN);
+			if (!res) {
+				asset_lambda_res = AGIS_NAN;
+				return asset_lambda_res;
+			}
 			continue;
 		}
 		// if operation is filter then also check for Nan results meaning to exclude the asset
-		auto x = asset_lambda_res.unwrap();
-		if(std::isnan(x)) return AgisResult<double>(AGIS_NAN);
-		result = asset_lambda.get_agis_operation()(result, asset_lambda_res.unwrap());
+		auto x = asset_lambda_res.value();
+		if (std::isnan(x)) {
+			asset_lambda_res = x;
+			return asset_lambda_res;
+		};
+		result = asset_lambda.get_agis_operation()(result, asset_lambda_res.value());
 
 	}
-	asset_lambda_res.set_value(result);
+	asset_lambda_res = result;
 	return asset_lambda_res;
 };
 
 
 //============================================================================
-const std::function<AgisResult<double>(
+const std::function<std::expected<double, AgisErrorCode>(
 	const std::shared_ptr<Asset>&,
 	const std::vector<AssetLambda>& operations)> concrete_lambda_chain = [](
 		const std::shared_ptr<Asset>& asset,
@@ -144,15 +150,15 @@ const std::function<AgisResult<double>(
 	for (const auto& lambda : operations) {
 		const auto& op = lambda.first;
 		const auto& assetFeatureLambda = lambda.second;
-		AgisResult<double> val = assetFeatureLambda(asset);
+		auto val = assetFeatureLambda(asset);
 		// test to see if the lambda returned an exception
-		if (val.is_exception()) return val;
+		if (!val.has_value()) return val;
 		// test to see if the lambda returned NaN
-		auto x = val.unwrap();
+		auto x = val.value();
 		if (std::isnan(x)) return val;
 		result = op(result, x);
 	}
-	return AgisResult<double>(result);
+	return std::expected<double, AgisErrorCode>(result);
 };
 
 

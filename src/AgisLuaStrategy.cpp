@@ -4,7 +4,6 @@
 #include "AbstractStrategyTree.h"
 #include "AgisLuaStrategy.h"
 #include "AgisFunctional.h"
-
 #include "Asset/Asset.h"
 
 using namespace Agis;
@@ -279,8 +278,9 @@ void AgisLuaStrategy::call_lua(const std::string& function_name) {
 void AgisLuaStrategy::next() {
 	if (this->allocation_node) {
 		auto res = this->allocation_node->execute();
-		if (res.is_exception()) {
-			throw res.get_exception();
+		if (!res.has_value()) {
+			const char* errorCodeString = AgisErrorCodeStrings[static_cast<int>(res.error())]; 
+			throw std::runtime_error(errorCodeString);
 		}
 	}
 	else {

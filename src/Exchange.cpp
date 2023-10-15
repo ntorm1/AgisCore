@@ -205,11 +205,11 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 			continue;
 		}
 		auto val = asset->get_asset_feature(col, row);
-		if (val.is_exception()){
-			if(!panic) continue;
-			else throw val.get_exception();
+		if (!val.has_value()){
+			if (!panic) continue;
+			else AGIS_THROW("exchange view faileed");
 		}
-		auto v = val.unwrap();
+		auto v = val.value();
 		if (std::isnan(v)) continue;
 		view.emplace_back( asset->get_asset_index(), v );
 		view.back().live = true;
@@ -222,7 +222,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 
 //============================================================================
 AGIS_API ExchangeView Exchange::get_exchange_view(
-	const std::function<AgisResult<double>(std::shared_ptr<Asset>const&)>& func,
+	const std::function<std::expected<double, AgisErrorCode>(std::shared_ptr<Asset>const&)>& func,
 	ExchangeQueryType query_type, 
 	int N,
 	bool panic,
@@ -231,17 +231,17 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 	auto number_assets = (N == -1) ? this->assets.size() : static_cast<size_t>(N);
 	ExchangeView exchange_view(this, number_assets);
 	auto& view = exchange_view.view;
-	AgisResult<double> val;
+	std::expected<double, AgisErrorCode> val;
 	for (auto const& asset : this->assets)
 	{
 		if (!asset || !asset->__in_exchange_view) continue;	// asset not in view, or disabled
 		if (!asset->__is_streaming) continue;				// asset is not streaming
 		val = func(asset);
-		if (val.is_exception()) {
-			if (panic) throw val.get_exception();
+		if (!val.has_value()) {
+			if (panic) AGIS_THROW("exchange view failed");
 			else continue;
 		}
-		auto x = val.unwrap();			
+		auto x = val.value();			
 		// check if x is nan (asset filter operations will cause this)
 		if(std::isnan(x)) continue;
 		view.emplace_back(asset->get_asset_index(), x);
@@ -648,8 +648,8 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 }
 
 
-
-AGIS_API AgisResult<bool> Exchange::restore_h5(std::optional<std::vector<std::string>> asset_ids)
+//============================================================================
+AgisResult<bool> Exchange::restore_h5(std::optional<std::vector<std::string>> asset_ids)
 {
 	H5::H5File file(this->source_dir, H5F_ACC_RDONLY);
 	int numObjects = file.getNumObjs();

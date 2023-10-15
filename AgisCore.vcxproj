@@ -200,6 +200,7 @@
     <ClInclude Include="include\utils_array.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\AgisException.cpp" />
     <ClCompile Include="src\Asset\Asset.Base.cpp" />
     <ClCompile Include="include\Asset\Asset.Base.h" />
     <ClCompile Include="include\Asset\Asset.Core.h" />

@@ -567,15 +567,15 @@ bool Asset::__set_beta(std::vector<double> beta_column)
 
 
 //============================================================================
-AGIS_API AgisResult<double> Asset::get_volatility() const
+AGIS_API std::expected<double, AgisErrorCode> Asset::get_volatility() const
 {
     if (this->volatility_vector.size() && !this->__in_warmup())
     {
-        return AgisResult<double>(this->volatility_vector[this->current_index - 1]);
+        return this->volatility_vector[this->current_index - 1];
     }
     else
     {
-        return AgisResult<double>(AGIS_EXCEP("volatility not available"));
+        return std::unexpected<AgisErrorCode>(AgisErrorCode::OUT_OF_RANGE);
     }
 }
 
@@ -720,7 +720,7 @@ AGIS_API size_t Asset::get_current_index() const
 }
 
 //============================================================================
-AGIS_API std::vector<std::string> Asset::get_column_names() const
+std::vector<std::string> Asset::get_column_names() const
 {
     std::vector<std::string> keys;
     for (const auto& pair : this->headers) {
@@ -731,59 +731,60 @@ AGIS_API std::vector<std::string> Asset::get_column_names() const
 
 
 //============================================================================
-AgisResult<double> Asset::get_asset_feature(std::string const& col, int index) const
+std::expected<double, AgisErrorCode> Asset::get_asset_feature(std::string const& col, int index) const
 {
 #ifdef _DEBUG
 
     if (abs(index) > static_cast<int>(current_index - 1) || index > 0)
     {
-        return AgisResult<double>(AGIS_EXCEP("Invalid row index: " + std::to_string(index)));
+        return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
     }
     if (!__is_streaming)
     {
-        return AgisResult<double>(AGIS_EXCEP("Asset is not streaming"));
+        return std::unexpected<AgisErrorCode>(AgisErrorCode::OUT_OF_RANGE);
     }
     if (!this->headers.contains(col))
     {
-        return AgisResult<double>(AGIS_EXCEP("Column does not exist: " + col));
+        return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
     }
 #endif
 
     size_t col_offset = this->headers.at(col) * this->rows;
     size_t row_offset = this->current_index + index - 1;
-    return AgisResult<double>(*(this->data + row_offset + col_offset));
+    return *(this->data + row_offset + col_offset);
 }
 
 
 //============================================================================
-AgisResult<double> Asset::get_asset_feature(size_t col, int index) const
+std::expected<double, AgisErrorCode> Asset::get_asset_feature(size_t col, int index) const
 {
 #ifdef _DEBUG
     if (abs(index) > static_cast<int>(current_index - 1) || index > 0)
     {
-        return AgisResult<double>(AGIS_EXCEP("Invalid row index: " + std::to_string(index)));
+        return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
     }
     if (!__is_streaming)
     {
-        return AgisResult<double>(AGIS_EXCEP("Asset is not streaming"));
+        return std::unexpected<AgisErrorCode>(AgisErrorCode::OUT_OF_RANGE);
     }
 #endif
 
     size_t col_offset = col * this->rows;
     size_t row_offset = this->current_index + index - 1;
-    return AgisResult<double>(*(this->data + row_offset + col_offset));
+    return *(this->data + row_offset + col_offset);
 }
 
 
 //============================================================================
-AgisResult<double> Asset::get_asset_observer_result(std::string const& observer_name) const noexcept
+std::expected<double, AgisErrorCode>
+Asset::get_asset_observer_result(std::string const& observer_name) const noexcept
 {
     auto it = this->observers.find(observer_name);
     if (it == this->observers.end())
     {
-        return AgisResult<double>(AGIS_EXCEP("Observer does not exist: " + observer_name));
+        return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
     }
-    return AgisResult<double>((*it).second->get_result());
+    return (*it).second->get_result();
 }
 
 

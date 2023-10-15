@@ -206,7 +206,7 @@ private:
 };
 
 
-AGIS_API typedef std::function<AgisResult<double>(const std::shared_ptr<Asset>&)> AssetOpperation;
+AGIS_API typedef std::function<std::expected<double,AgisErrorCode>(const std::shared_ptr<Asset>&)> AssetOpperation;
 AGIS_API typedef std::function<bool(double)> AssetFilter;
 
 

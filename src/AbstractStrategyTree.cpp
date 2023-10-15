@@ -28,37 +28,37 @@ AbstractAssetLambdaLogical::AbstractAssetLambdaLogical(
 
 
 //============================================================================
-AgisResult<double>
+std::expected<double, AgisErrorCode>
 AbstractAssetLambdaLogical::execute(std::shared_ptr<const Asset> const& asset) const {
 	// execute left node to get value
-	AgisResult<double> res = left_node->execute();
+	auto res = left_node->execute();
 	bool res_bool = false;
-	if (res.is_exception() || res.is_nan()) return res;
+	if (!res.has_value() || std::isnan(res.value())) return res;
 
 	// pass the result of the left node to the logical opperation with the right node
 	// that is either a scaler double or another asset lambda node
 	if (std::holds_alternative<double>(this->right_node)) {
 		auto right_val_double = std::get<double>(this->right_node);
-		res_bool = this->logical_compare(res.unwrap(), right_val_double);
-		if (!res_bool && !this->numeric_cast) res.set_value(AGIS_NAN);
+		res_bool = this->logical_compare(res.value(), right_val_double);
+		if (!res_bool && !this->numeric_cast) res = AGIS_NAN;
 	}
 	else {
 		auto& right_val_node = std::get<std::unique_ptr<AbstractAssetLambdaNode>>(this->right_node);
 		auto right_res = right_val_node->execute();
-		if (right_res.is_exception() || right_res.is_nan()) return right_res;
-		res_bool = this->logical_compare(res.unwrap(), right_res.unwrap());
-		if (!res_bool && !this->numeric_cast) res.set_value(AGIS_NAN);
+		if (!right_res.has_value() || std::isnan(res.value())) return right_res;
+		res_bool = this->logical_compare(res.value(), right_res.value());
+		if (!res_bool && !this->numeric_cast) res = AGIS_NAN;
 	}
 
 	// if numeric cast, take the boolean result of the logical opperation and cast to double
 	// i.e. if the logical opperation is true, return 1.0, else return 0.0
-	if (this->numeric_cast)	res.set_value(static_cast<double>(res_bool));
+	if (this->numeric_cast)	res = static_cast<double>(res_bool);
 	return res;
 }
 
 
 //============================================================================
-AgisResult<double>
+std::expected<double, AgisErrorCode>
 AbstractAssetObserve::execute(std::shared_ptr<const Asset> const& asset) const {
 	return asset->get_asset_observer_result(this->observer_name);
 };
@@ -67,7 +67,7 @@ AbstractAssetObserve::execute(std::shared_ptr<const Asset> const& asset) const {
 //============================================================================
 void
 AbstractAssetLambdaRead::set_col_index_lambda(size_t col_index) {
-	auto l = [=](std::shared_ptr<const Asset> const& asset) -> AgisResult<double> {
+	auto l = [=](std::shared_ptr<const Asset> const& asset) {
 		return asset->get_asset_feature(col_index, index.value());
 		};
 	this->func = l;
@@ -93,7 +93,8 @@ AgisResult<bool> AbstractAssetObserve::set_warmup(const Exchange* exchange)
 
 
 //============================================================================
-AgisResult<bool> AbstractExchangeViewNode::execute() {
+std::expected<bool, AgisErrorCode>
+AbstractExchangeViewNode::execute() {
 	auto& view = exchange_view.view;
 
 	size_t i = 0;
@@ -108,20 +109,20 @@ AgisResult<bool> AbstractExchangeViewNode::execute() {
 		}
 		auto val = this->asset_lambda_op->execute(asset);
 		// forward any exceptions
-		if (val.is_exception()) {
-			return AgisResult<bool>(val.get_exception());
+		if (!val.has_value()) {
+			return std::unexpected<AgisErrorCode>(val.error());
 		}
 		// disable asset if nan
-		if (val.is_nan()) {
+		if (std::isnan(val.value())) {
 			view[i].live = false;
 			continue;
 		}
-		auto v = val.unwrap();
+		auto v = val.value();
 		view[i].allocation_amount = v;
 		view[i].live = true;
 		i++;
 	}
-	return AgisResult<bool>(true);
+	return true;
 }
 
 

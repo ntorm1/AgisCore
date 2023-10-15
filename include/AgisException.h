@@ -5,17 +5,21 @@
 
 
 enum class AgisErrorCode : uint16_t {
-    OUT_OF_RANGE = 1,
-    INVALID_ARGUMENT = 2,
-    NOT_IMPLEMENTED = 3,
-    INVALID_STATE = 4,
-    INVALID_OPERATION = 5,
-    INVALID_FORMAT = 6,
-    INVALID_DATA = 7,
-    INVALID_CONFIGURATION = 8,
-    INVALID_ENVIRONMENT = 9,
-    INVALID_PATH = 10,
+    OUT_OF_RANGE = 0,
+    INVALID_ARGUMENT = 1,
+    NOT_IMPLEMENTED = 2,
+    INVALID_STATE = 3,
+    INVALID_OPERATION = 4,
+    INVALID_FORMAT = 5,
+    INVALID_DATA = 6,
+    INVALID_CONFIGURATION = 7,
+    INVALID_ENVIRONMENT = 8,
+    INVALID_PATH = 9,
 };
+
+extern const char* AgisErrorCodeStrings[];
+
+#define AGIS_NOT_IMPL return std::unexpected<AgisErrorCode>(AgisErrorCode::NOT_IMPLEMENTED);
 
 class AgisException : public std::exception {
 private:

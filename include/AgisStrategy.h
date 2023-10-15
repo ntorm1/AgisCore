@@ -44,10 +44,10 @@ AGIS_API typedef std::function<double(
 	double a,
 	double b
 	)> Operation;
-extern AGIS_API const std::function<AgisResult<double>(
+extern AGIS_API const std::function<std::expected<double, AgisErrorCode>(
 	const std::shared_ptr<Asset>&,
 	const std::vector<AssetLambdaScruct>& operations)> asset_feature_lambda_chain;
-extern AGIS_API const std::function<AgisResult<double>(
+extern AGIS_API const std::function<std::expected<double, AgisErrorCode>(
 	const std::shared_ptr<Asset>&,
 	const std::vector<AssetLambda>& operations)> concrete_lambda_chain;
 
