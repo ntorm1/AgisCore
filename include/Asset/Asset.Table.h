@@ -29,8 +29,9 @@ public:
 	typedef std::deque<DerivativePtr>::const_iterator const_iterator;
 
 	AssetTable(Exchange* exchange) : _exchange(exchange) {}
+	
 	virtual std::string const& name() const = 0;
-
+	std::vector<AssetPtr> all_assets() const noexcept;
 	void sort_expirable(std::deque<DerivativePtr> &table) noexcept;
 
 	const_iterator begin() const {

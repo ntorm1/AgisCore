@@ -133,6 +133,20 @@ void AssetTable::reset()
 
 
 //============================================================================
+std::vector<AssetPtr> AssetTable::all_assets() const noexcept
+{
+	std::vector<AssetPtr> assets;
+	assets.reserve(this->_tradeable.size() + this->_out_of_bounds.size());
+	for (auto const& asset : this->_tradeable) {
+		assets.push_back(asset);
+	}
+	for (auto const& asset : this->_out_of_bounds) {
+		assets.push_back(asset);
+	}
+	return assets;
+}
+
+//============================================================================
 void AssetTable::sort_expirable(std::deque<DerivativePtr>& table) noexcept
 {
 	std::sort(

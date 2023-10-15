@@ -377,10 +377,12 @@ AGIS_API AgisResult<AssetPtr> ExchangeMap::remove_asset(std::string const& asset
 
 
 //============================================================================
-std::optional<ExchangePtr const> ExchangeMap::get_exchange(std::string const& exchange_id_) const
+std::expected<ExchangePtr, AgisException> ExchangeMap::get_exchange(std::string const& exchange_id_) const
 {
 	auto it = this->exchanges.find(exchange_id_);
-	if (it == this->exchanges.end()) return std::nullopt;
+	if (it == this->exchanges.end()) {
+		return std::unexpected<AgisException>(AGIS_EXCEP("missing exchange: " + exchange_id_));
+	}
 	return it->second;
 }
 

@@ -25,38 +25,79 @@ namespace Agis
 {
 
 
+struct BrokerPrivate
+{
+	ExchangeMap* _exchange_map;
+	std::unordered_map<size_t, std::mutex> strategy_locks;					///< Locks for each strategy
+	ankerl::unordered_dense::map<size_t, AgisStrategy*> strategies;			///< Strategies subscribed to the broker
+	ankerl::unordered_dense::map<size_t, TradeableAsset> tradeable_assets;	///< Tradeable assets												///< Open trades held by the broker
+	AgisRouter* _router;													///< Router for sending orders to the exchange
+};
+
+
 //============================================================================
 Broker::Broker(
 	std::string broker_id,
 	AgisRouter* router,
 	ExchangeMap* exchange_map
-) : _exchange_map(exchange_map), _broker_id(broker_id), _router(router)
-{}
+) :
+	_broker_id(broker_id)
+{
+	this->p = new BrokerPrivate();
+	p->_exchange_map = exchange_map;
+	p->_router = router;
+}
+
+
+//============================================================================
+Broker::~Broker() {
+	delete this->p;
+}
 
 
 //============================================================================
 std::expected<bool, AgisException>
 Broker::load_tradeable_assets(
-	TradeableAsset tradeable_asset,
+	TradeableAsset* tradeable_asset,
 	std::vector<size_t> const& asset_indecies
 ) noexcept
 {
 	for (auto asset_index : asset_indecies) {
-		auto asset = this->_exchange_map->get_asset(asset_index);
+		auto asset = this->p->_exchange_map->get_asset(asset_index);
 		if (asset.is_exception()) {
 			return std::unexpected<AgisException>(asset.get_exception());
 		}
 		// copy the tradeable asset and set the asset pointer to the asset
-		TradeableAsset tradeable_asset_new = tradeable_asset;
+		TradeableAsset tradeable_asset_new = *tradeable_asset;
 		tradeable_asset_new.asset = asset.unwrap().get();
 		size_t exsisting_multiplier = tradeable_asset_new.asset->get_unit_multiplier();
 		if (exsisting_multiplier && exsisting_multiplier != tradeable_asset_new.unit_multiplier) {
 			return std::unexpected<AgisException>("Asset already has a unit multiplier of " + std::to_string(exsisting_multiplier));
 		}
 		tradeable_asset_new.asset->__set_unit_multiplier(tradeable_asset_new.unit_multiplier);
-		this->tradeable_assets.insert({ asset_index, std::move(tradeable_asset_new) });
+		this->p->tradeable_assets.insert({ asset_index, std::move(tradeable_asset_new) });
 	}
 	return true;
+}
+
+
+//============================================================================
+std::expected<bool, AgisException> Broker::load_table_tradeable_assets(const rapidjson::Value* j_ptr)
+{
+	// get the asset_id as a string or return an error
+	if (!j_ptr->HasMember("exchange_id")) {
+		return std::unexpected<AgisException>("Found asset table that does not contain key \"exchange_id\"");
+	}
+
+	auto& j = *j_ptr;
+	auto contract_id = j["contract_id"].GetString();
+	auto exchange_id = j["exchange_id"].GetString();
+	auto assets = this->p->_exchange_map->get_exchange(exchange_id)
+		.and_then([&](ExchangePtr const& exchange) { return exchange->get_asset_table<AssetTable>(contract_id); })
+		.and_then([&](AssetTablePtr const& table) -> std::expected<std::vector<AssetPtr>,AgisException> { return table->all_assets(); });
+	if (!assets.has_value()) {
+		return std::unexpected<AgisException>(assets.error());
+	}
 }
 
 //============================================================================
@@ -85,6 +126,13 @@ Broker::load_tradeable_assets(std::string const& json_string) noexcept
 			return std::unexpected<AgisException>("found element in array is not a json object");
 		}
 
+		if (it.HasMember("contract_id")) {
+			auto res =  this->load_table_tradeable_assets(&it);
+			if (!res.has_value()) {
+				return std::unexpected<AgisException>(res.error());
+			}
+		}
+
 		// get the asset_id as a string or return an error
 		if (!it.HasMember("asset_id")) {
 			return std::unexpected<AgisException>("Found element that does not contain key \"asset_id\"");
@@ -93,7 +141,7 @@ Broker::load_tradeable_assets(std::string const& json_string) noexcept
 
 		// get the asset id as string, make sure it exists
 		std::string asset_id = it["asset_id"].GetString();
-		auto asset = this->_exchange_map->get_asset(asset_id);
+		auto asset = this->p->_exchange_map->get_asset(asset_id);
 		if (asset.is_exception()) {
 			return std::unexpected<AgisException>(asset.get_exception());
 		}
@@ -103,7 +151,7 @@ Broker::load_tradeable_assets(std::string const& json_string) noexcept
 		tradeable_asset.asset = asset.unwrap().get();
 
 		auto asset_index = tradeable_asset.asset->get_asset_index();
-		if (this->tradeable_assets.contains(asset_index)) {
+		if (this->p->tradeable_assets.contains(asset_index)) {
 			return std::unexpected<AgisException>("Asset with id " + asset_id + " already exists");
 		}
 
@@ -131,7 +179,7 @@ Broker::load_tradeable_assets(std::string const& json_string) noexcept
 			tradeable_asset.overnight_maintenance_margin = it["overnight_maintenance_margin"].GetDouble();
 			tradeable_asset.short_overnight_initial_margin = it["short_overnight_initial_margin"].GetDouble();
 			tradeable_asset.short_overnight_maintenance_margin = it["short_overnight_maintenance_margin"].GetDouble();
-			this->tradeable_assets.insert({ asset_index, std::move(tradeable_asset) });
+			this->p->tradeable_assets.insert({ asset_index, std::move(tradeable_asset) });
 		}
 		else {
 			return std::unexpected<AgisException>("Asset with id " + asset_id + " must specify all margin requirement");
@@ -163,12 +211,13 @@ Broker::load_tradeable_assets(fs::path p) noexcept
 }
 
 
+
 //============================================================================
 std::expected<double, AgisException>
 Broker::get_margin_requirement(size_t asset_index, MarginType margin_type) noexcept
 {
-	auto it = this->tradeable_assets.find(asset_index);
-	if (it == this->tradeable_assets.end()) {
+	auto it = this->p->tradeable_assets.find(asset_index);
+	if (it == this->p->tradeable_assets.end()) {
 		return std::unexpected<AgisException>("Asset with index " + std::to_string(asset_index) + " does not exist");
 	}
 	switch (margin_type)
@@ -195,8 +244,8 @@ Broker::get_margin_requirement(size_t asset_index, MarginType margin_type) noexc
 AGIS_API bool Broker::trade_exists(size_t asset_index, size_t strategy_index) noexcept
 {
 	std::shared_lock<std::shared_mutex> broker_lock(_broker_mutex);
-	auto it = this->strategies.find(strategy_index);
-	if (it == this->strategies.end()) {
+	auto it = this->p->strategies.find(strategy_index);
+	if (it == this->p->strategies.end()) {
 		return false;
 	}
 	else {
@@ -211,14 +260,14 @@ Broker::strategy_subscribe(AgisStrategy* strategy) noexcept
 {
 	std::unique_lock<std::shared_mutex> broker_lock(_broker_mutex);
 	auto index = strategy->get_strategy_index();
-	std::mutex& strategy_mutex = this->strategy_locks[index];
+	std::mutex& strategy_mutex = this->p->strategy_locks[index];
 	std::lock_guard<std::mutex> lock(strategy_mutex);
-	auto it = this->strategies.find(index);
-	if (it != this->strategies.end()) {
+	auto it = this->p->strategies.find(index);
+	if (it != this->p->strategies.end()) {
 		return std::unexpected<AgisException>("Strategy with id " + strategy->get_strategy_id() + " already subscribed");
 	}
 	else {
-		this->strategies.insert({index,strategy});
+		this->p->strategies.insert({index,strategy});
 		return true;
 	}
 }
@@ -270,7 +319,7 @@ void Broker::set_order_impacts(std::reference_wrapper<OrderPtr> new_order_ref) n
 	// set the cash impact of the order on a strategies balance. Set the initial margin amount for any 
 	// strategy opening a position to initial margin requirement instead of maintenance margin requirement.
 	auto& new_order = new_order_ref.get();
-	auto strategy = this->strategies.at(new_order->get_strategy_index());
+	auto strategy = this->p->strategies.at(new_order->get_strategy_index());
 	PortfolioPtr const portfolio = strategy->get_portfolio();
 	auto asset_index = new_order.get()->get_asset_index();
 
@@ -351,15 +400,15 @@ Broker::__validate_order(std::reference_wrapper<OrderPtr> new_order_ref) noexcep
 	// test if order's underlying asset is tradeable in this broker instance
 	auto& new_order = new_order_ref.get();
 	auto asset_index = new_order->get_asset_index();
-	if (asset_index >= this->tradeable_assets.size() || !this->tradeable_assets.contains(asset_index)) {
+	if (asset_index >= this->p->tradeable_assets.size() || !this->p->tradeable_assets.contains(asset_index)) {
 		new_order->reject(0);
 		return;
 	}
 
 	// if an order will reverse a positions direction, split the order into two pieces.
 	// one piece will close the existing position, the other will open a new position
-	auto it = this->strategies.find(new_order->get_strategy_index());
-	if (it == this->strategies.end()) {
+	auto it = this->p->strategies.find(new_order->get_strategy_index());
+	if (it == this->p->strategies.end()) {
 		new_order.get()->reject(0);
 		return;
 	}
@@ -378,7 +427,7 @@ Broker::__validate_order(std::reference_wrapper<OrderPtr> new_order_ref) noexcep
 
 			// take the original order and move it into the inverse order
 			inverse_order->insert_child_order(std::move(new_order));
-			this->_router->place_order(std::move(inverse_order));	
+			this->p->_router->place_order(std::move(inverse_order));	
 
 			// replace the order in the reference wrapper with a nullptr 
 			new_order = nullptr;
