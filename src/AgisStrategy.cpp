@@ -134,11 +134,12 @@ std::expected<rapidjson::Document, AgisException> AgisStrategy::to_json() const
 //============================================================================
 AgisResult<bool> AgisStrategy::exchange_subscribe(std::string const& exchange_id)
 {
-	if (!this->exchange_map->exchange_exists(exchange_id))
+	auto exchange_op = this->exchange_map->get_exchange(exchange_id);
+	if (!exchange_op.has_value())
 	{
 		return AgisResult<bool>(AGIS_EXCEP("Invalid exchange id: " + exchange_id));
 	}
-	this->exchange = this->exchange_map->get_exchange(exchange_id);
+	this->exchange = exchange_op.value();
 	this->exchange_subsrciption = exchange_id;
 	this->__exchange_step = &exchange->__took_step;
 	return AgisResult<bool>(true);

@@ -118,11 +118,21 @@ AgisResult<bool> Hydra::new_exchange(
     Frequency freq_,
     std::string dt_format_,
     std::optional<std::vector<std::string>> asset_ids,
-    std::optional<std::shared_ptr<MarketAsset>> market_asset_)
+    std::optional<std::shared_ptr<MarketAsset>> market_asset_,
+    std::optional<std::string> holiday_file)
 {
+    // create the new exchange instance
     this->is_built = false;
     auto res = this->p->exchanges.new_exchange(asset_type_, exchange_id_, source_dir_, freq_, dt_format_);
     if (res.is_exception()) return AgisResult<bool>(res.get_exception());
+    
+    // load in holiday file if needed
+    if (holiday_file.has_value()) {
+        auto exchange = this->get_exchanges().get_exchange(exchange_id_);
+        exchange.value()->load_trading_calendar(holiday_file.value());
+    }
+    
+    // restore the exchange by loading in the asset data
     return this->p->exchanges.restore_exchange(exchange_id_, asset_ids, market_asset_);
 }
 

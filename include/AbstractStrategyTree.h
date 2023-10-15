@@ -354,7 +354,7 @@ enum class TableExtractMethod : uint16_t {
 
 
 //============================================================================
-class AbstractFutureTableNode : public ExpressionNode<std::expected<FuturePtr, AgisErrorCode>> {
+class AbstractFutureTableNode : public ExpressionNode<std::expected<AssetPtr, AgisErrorCode>> {
 public:
 	//============================================================================
 	AbstractFutureTableNode(
@@ -365,7 +365,7 @@ public:
 
 
 	//============================================================================
-	std::expected<FuturePtr,AgisErrorCode> evaluate() const override;
+	std::expected<AssetPtr,AgisErrorCode> evaluate() const override;
 
 
 	//============================================================================
@@ -403,7 +403,7 @@ public:
 	std::expected<ExchangeView, AgisErrorCode> execute() override;
 
 	//============================================================================
-	std::expected<bool, AgisErrorCode> evaluate_asset(FuturePtr const& asset, ExchangeView& view) const noexcept;
+	std::expected<bool, AgisErrorCode> evaluate_asset(AssetPtr const& asset, ExchangeView& view) const noexcept;
 
 	//============================================================================
 	size_t get_warmup() {

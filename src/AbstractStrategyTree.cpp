@@ -43,7 +43,7 @@ AbstractFutureTableNode::AbstractFutureTableNode(
 
 
 //============================================================================
-std::expected<FuturePtr, AgisErrorCode>
+std::expected<AssetPtr, AgisErrorCode>
 AbstractFutureTableNode::evaluate() const
 {
 	switch (extract_method)
@@ -305,7 +305,7 @@ std::expected<bool, AgisErrorCode> AbstractTableViewNode::add_asset_table(NonNul
 
 //============================================================================
 std::expected<bool, AgisErrorCode>
-AbstractTableViewNode::evaluate_asset(FuturePtr const& asset, ExchangeView& v) const noexcept
+AbstractTableViewNode::evaluate_asset(AssetPtr const& asset, ExchangeView& v) const noexcept
 {
 	if ((!asset || !asset->__in_exchange_view) ||
 		(!asset->__is_streaming) ||
@@ -339,7 +339,7 @@ std::expected<ExchangeView, AgisErrorCode> AbstractTableViewNode::execute()
 	view.exchange = this->table_nodes.front()->get_exchange();
 	for (const auto& table : this->table_nodes) {
 		auto res = table->evaluate()
-			.and_then([&](FuturePtr const& asset) {
+			.and_then([&](AssetPtr const& asset) {
 				return this->evaluate_asset(asset, view);
 			});
 		if (!res.has_value()) {

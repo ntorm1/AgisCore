@@ -284,7 +284,7 @@ AGIS_API const char* OrderTypeToString(OrderType value) {
 
 
 //============================================================================
-AGIS_API const char* AgisStrategyTypeToString(AgisStrategyType value) {
+const char* AgisStrategyTypeToString(AgisStrategyType value) {
 	switch (value) {
 	case AgisStrategyType::CPP: return "CPP";
 	case AgisStrategyType::FLOW: return "FLOW";
@@ -296,7 +296,7 @@ AGIS_API const char* AgisStrategyTypeToString(AgisStrategyType value) {
 }
 
 //============================================================================
-AGIS_API AgisStrategyType StringToAgisStrategyType(const std::string& typeStr) {
+AgisStrategyType StringToAgisStrategyType(const std::string& typeStr) {
 	if (typeStr == "CPP") {
 		return AgisStrategyType::CPP;
 	}
@@ -316,6 +316,21 @@ AGIS_API AgisStrategyType StringToAgisStrategyType(const std::string& typeStr) {
 		throw std::invalid_argument("Unknown AgisStrategyType string: " + typeStr);
 	}
 }
+
+AssetType StringToAssetType(const std::string& valueStr)
+{
+	if (valueStr == "US_EQUITY") {
+		return AssetType::US_EQUITY;
+	}
+	else if (valueStr == "US_FUTURE") {
+		return AssetType::US_FUTURE;
+	}
+	else {
+		// Handle unknown values if needed
+		throw std::invalid_argument("Unknown asset type string: " + valueStr);
+	}
+}
+
 
 Frequency StringToFrequency(const std::string& valueStr) {
 	if (valueStr == "Tick") {

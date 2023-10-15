@@ -93,6 +93,7 @@ AGIS_API std::string opp_to_str(const AgisOperation& func);
 */
 AGIS_API std::string alloc_to_str(AllocType alloc_type);
 
+AGIS_API AssetType StringToAssetType(const std::string& valueStr);
 AGIS_API Frequency StringToFrequency(const std::string& valueStr);
 AGIS_API const char* FrequencyToString(Frequency value);
 AGIS_API const char* OrderStateToString(OrderState value);

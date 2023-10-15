@@ -90,7 +90,8 @@ void ExchangeMap::restore(rapidjson::Document const& j)
 		auto const& source_dir_ = exchange_json["source_dir"].GetString();
 		auto const& dt_format_ = exchange_json["dt_format"].GetString();
 		auto freq_ = StringToFrequency(exchange_json["freq"].GetString());
-		this->new_exchange(AssetType::US_EQUITY, exchange_id_, source_dir_, freq_, dt_format_);
+		auto asset_type_ = StringToAssetType(exchange_json["asset_type"].GetString());
+		this->new_exchange(asset_type_, exchange_id_, source_dir_, freq_, dt_format_);
 
 		// set market asset if needed
 		auto market_asset = std::make_shared<MarketAsset>(
@@ -101,7 +102,7 @@ void ExchangeMap::restore(rapidjson::Document const& j)
 
 
 		// set volatility lookback
-		auto exchange_ptr = this->get_exchange(exchange_id_);
+		auto exchange_ptr = this->get_exchange(exchange_id_).value();
 		size_t volatility_lookback = exchange_json["volatility_lookback"].GetUint64();
 		exchange_ptr->__set_volatility_lookback(volatility_lookback);
 	});
@@ -514,10 +515,6 @@ std::expected<bool, AgisException> Exchange::build(size_t exchange_offset_)
 		delete[] this->dt_index;
 	}
 
-	// build asset tables
-	auto res = build_asset_tables(this);
-	if (!res.has_value()) return res;
-
 	// Generate date time index as sorted union of each asset's datetime index
 	auto datetime_index_ = vector_sorted_union(
 		this->assets,
@@ -846,6 +843,7 @@ void Exchange::__process_order(bool on_close, OrderPtr& order) {
 		break;
 	case OrderType::LIMIT_ORDER:
 		this->__process_limit_order(order, on_close);
+		break;
 	case OrderType::STOP_LOSS_ORDER:
 		break;
 	case OrderType::TAKE_PROFIT_ORDER:
@@ -919,7 +917,7 @@ std::expected<bool, AgisException> Exchange::load_trading_calendar(std::string c
 
 
 //============================================================================
-AGIS_API double Exchange::__get_market_price(size_t index, bool on_close) const
+double Exchange::__get_market_price(size_t index, bool on_close) const
 {
 	auto const& asset = this->assets[index];
 	if (!asset) return 0.0f;
@@ -998,6 +996,10 @@ AgisResult<bool> ExchangeMap::restore_exchange(
 		market_asset_struct.value()->asset = *new_market_asset_ptr;
 		market_asset_struct.value()->market_index = (*new_market_asset_ptr)->get_asset_index();
 	}
+
+	// build asset tables
+	auto res = build_asset_tables(exchange.get());
+	if (!res.has_value()) AgisResult<bool>(res.error());
 
 	UNLOCK_GUARD
 	return AgisResult<bool>(true);
@@ -1155,9 +1157,11 @@ AGIS_API AgisResult<AssetPtr> ExchangeMap::remove_asset(std::string const& asset
 
 
 //============================================================================
-AGIS_API ExchangePtr const ExchangeMap::get_exchange(std::string const & exchange_id_) const 
+ std::optional<ExchangePtr const> ExchangeMap::get_exchange(std::string const & exchange_id_) const
 {
-	return this->exchanges.at(exchange_id_);
+	auto it = this->exchanges.find(exchange_id_);
+	if (it == this->exchanges.end()) return std::nullopt;
+	return it->second;
 }
 
 
@@ -1171,7 +1175,7 @@ bool ExchangeMap::asset_exists(std::string const&  asset_id) const
 	return false;
 }
 
-AGIS_API std::vector<std::string> ExchangeMap::get_exchange_ids() const
+std::vector<std::string> ExchangeMap::get_exchange_ids() const
 {
 	std::vector<std::string> keys;
 	keys.reserve(this->exchanges.size()); 

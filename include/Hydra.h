@@ -129,7 +129,8 @@ public:
 		Frequency freq_,
 		std::string dt_format,
 		std::optional<std::vector<std::string>> asset_ids = std::nullopt,
-		std::optional<std::shared_ptr<MarketAsset>> market_asset_ = std::nullopt
+		std::optional<std::shared_ptr<MarketAsset>> market_asset_ = std::nullopt,
+		std::optional<std::string> holiday_file = std::nullopt
 	);
 
 	/// <summary>

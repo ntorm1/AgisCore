@@ -361,7 +361,7 @@ public:
 	/// </summary>
 	/// <param name="exchange_id">Unique id of the exchange to get</param>
 	/// <returns></returns>
-	AGIS_API ExchangePtr const get_exchange(const std::string& exchange_id) const;
+	AGIS_API std::optional<ExchangePtr const> get_exchange(const std::string& exchange_id) const;
 
 
 	AGIS_API auto const& get_assets() const noexcept {return this->assets;}
