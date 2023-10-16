@@ -235,6 +235,11 @@ protected:
         return (this->current_index - 1) < this->warmup;
     }
 
+    //==== Asset Virtual Methods ====//
+    virtual std::expected<bool, AgisException> __build(Exchange const* exchange) noexcept { return true; };
+    virtual bool __is_last_view(long long t) const noexcept;
+    virtual std::expected<bool, AgisException> __set_volatility(size_t lookback);
+
     std::string asset_id;
     std::vector<double> volatility_vector;
 
@@ -281,10 +286,6 @@ private:
     [[nodiscard]] AgisResult<bool> load_headers();
     [[nodiscard]] AgisResult<bool> load_csv();
     const arrow::Status load_parquet();
-
-    virtual std::expected<bool, AgisException> __build(Exchange const* exchange) noexcept { return true; };
-    virtual bool __is_last_view(long long t) const;
-    virtual std::expected<bool, AgisException> __set_volatility(size_t lookback);
 };
 
 struct MarketAsset

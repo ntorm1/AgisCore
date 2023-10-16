@@ -839,7 +839,7 @@ double Asset::__get(std::string col, size_t row) const
 
 //============================================================================
 bool
-Asset::__is_last_view(long long t) const
+Asset::__is_last_view(long long t) const noexcept
 {
     return this->current_index == this->rows;
 }

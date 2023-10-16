@@ -109,6 +109,19 @@ Future::__build(Exchange const* exchange) noexcept
 }
 
 
+//============================================================================
+bool Future::__is_last_view(long long t) const noexcept
+{
+	// if on last row force last view return true
+	if (Asset::__is_last_view(t)) return true;
+	// if this is the last trade date for the future return true
+	if (this->_last_trade_date.has_value()) {
+		return this->_last_trade_date == t;
+	}
+	// ele allow last view to be true
+	return false;
+}
+
 
 //============================================================================
 std::expected<bool, AgisException>
@@ -228,6 +241,7 @@ std::expected<bool, AgisException> FutureTable::__build()
 				for (auto& close : _continous_close_vec) {
 					close -= adjustemnt;
 				}
+				current_asset = front;
 			}
 			_continous_close_vec.push_back(front->__get_market_price(true));
 			_continous_dt_vec.push_back(exchange_dt_index[i]);

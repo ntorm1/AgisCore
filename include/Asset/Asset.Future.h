@@ -84,6 +84,7 @@ public:
 
 
 private:
+    bool __is_last_view(long long t) const noexcept override;
     [[nodiscard]] std::expected<bool, AgisException> __set_volatility(size_t lookback) override;
     [[nodiscard]] std::expected<bool, AgisException> __build(Exchange const* exchange) noexcept override;
     std::expected<bool, AgisException> set_future_code();
