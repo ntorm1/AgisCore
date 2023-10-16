@@ -116,7 +116,10 @@ bool Future::__is_last_view(long long t) const noexcept
 	if (Asset::__is_last_view(t)) return true;
 	// if this is the last trade date for the future return true
 	if (this->_last_trade_date.has_value()) {
-		return this->_last_trade_date == t;
+		// less then or equals prevents the case when the underlying data of an asset
+		// exceedes the last trade date of the future. I.e. a future contract with a Dec 2018
+		// expiry somehow has a datapoint in 2019. With strict equality this will never hit.
+		return this->_last_trade_date <= t;
 	}
 	// ele allow last view to be true
 	return false;
@@ -183,8 +186,9 @@ std::expected<FuturePtr, AgisErrorCode> FutureTable::front_month()
 //============================================================================
 FutureTable::FutureTable(
     Exchange* exchange,
-    std::string contract_id) : AssetTable(exchange), _contract_id(contract_id)
+    std::string contract_id) : AssetTable(exchange)
 {
+	this->_contract_id = contract_id;
     this->p = new FuturePrivate(exchange);
 }
 
@@ -212,7 +216,7 @@ std::expected<bool, AgisException> FutureTable::__build()
 	if (!res.has_value()) {
 		return std::unexpected<AgisException>(res.error());
 	}
-	if (this->_continous_close_vec.size()) return true; // already built
+	// set the asset table pointers for each child asset
 	this->__set_child_ptrs();
 
 	auto exchange_lock = this->_exchange->__write_lock();
@@ -227,14 +231,13 @@ std::expected<bool, AgisException> FutureTable::__build()
 		this->_exchange->step(expired_assets);
 		if (this->_tradeable.size()) {
 			FuturePtr front = this->front_month().value();
-			// first time send
 			if (!current_asset) {
 				current_asset = front;
 			}
 			// front month rolled to new contract
 			else if (front != current_asset) {
 				auto idx = current_asset->__get_close_index();
-				double prev_close = *current_asset->__get_column(idx).end();
+				double prev_close = current_asset->__get_column(idx).back();
 				double current_close = front->__get_market_price(true);
 				double adjustemnt = current_close - prev_close;
 				// subtract all values in close_vec by adjustment
@@ -250,6 +253,5 @@ std::expected<bool, AgisException> FutureTable::__build()
 	this->_exchange->reset();
 	return true;
 }
-
 
 } // namespace Agis

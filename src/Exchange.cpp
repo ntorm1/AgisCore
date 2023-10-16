@@ -361,7 +361,8 @@ void Exchange::reset()
 		asset->__reset(this->dt_index[0]);
 	}
 	for(auto& table : this->asset_tables){
-		table.second->reset();
+		table.second->__sort_expitable();
+		table.second->__reset();
 	}
 }
 
@@ -476,6 +477,7 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 			auto index = asset->__get_index(true);
 			expired_assets.push_back(index);
 			asset->__is_expired = true;
+			asset->__is_streaming = false;
 			return;
 		}
 
@@ -495,7 +497,15 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 	std::for_each(
 		this->assets.begin(),
 		this->assets.end(),
-		process_asset);
+		process_asset
+	);
+	std::for_each(
+		this->asset_tables.begin(),
+		this->asset_tables.end(),
+		[&](auto& table) {
+			table.second->step();
+		}
+	);
 
 	// move to next datetime and return true showing the market contains at least one
 	// asset that is not done streaming

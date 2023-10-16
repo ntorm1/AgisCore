@@ -116,7 +116,6 @@ public:
     void __set_child_ptrs() const noexcept;
 
 private:
-	std::string _contract_id;
     std::vector<double> _continous_close_vec;
     std::vector<long long> _continous_dt_vec;
     FuturePrivate* p = nullptr;

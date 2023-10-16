@@ -75,19 +75,59 @@ build_asset_tables(Exchange* exchange)
 
 
 //============================================================================
+bool AssetTable::__is_valid_memeber(FuturePtr asset) const noexcept
+{
+	// if the first datetime of the asset is greater than the last trade date
+	// it will prevent the table from stepping through time so it is excluded
+	auto dt_index = asset->__get_dt_index();
+	auto last_trade_data = asset->get_last_trade_date();
+	if (last_trade_data.has_value() &&
+		last_trade_data.value() <= dt_index.front()) {
+		return false;
+	}
+	return true;
+}
+
+//============================================================================
+void AssetTable::__sort_expitable() noexcept
+{
+	// if expirable sort the two deques based on their expiry date
+	if (this->_expirable) {
+		this->sort_expirable(this->_tradeable);
+		this->sort_expirable(this->_out_of_bounds);
+	}
+}
+
+//============================================================================
 std::expected<bool, AgisException> AssetTable::__build()
 {
 	auto asset_ids = this->_exchange->get_asset_indices();
-	bool expirable = false;
 	for (auto const& asset_id : asset_ids) {
 		auto asset = this->_exchange->get_asset(asset_id).unwrap();
+
+		// find asset with matching contract id
+		std::string id = asset->get_asset_id();
+		if (id.size() < 2) {
+			continue;
+		}
+		if (id.substr(0,2) != this->_contract_id) {
+			continue;
+		}
+
 		auto future = std::dynamic_pointer_cast<Future>(asset);
 		if (!future) {
 			return std::unexpected<AgisException>("Invalid asset type");
 		}
-		if (future->expirable()) {
-			expirable = true;
+		// validate it is valid memeber of a table 
+		if (!this->__is_valid_memeber(future)) {
+			continue;
 		}
+		// set expirable flag if any asset is expirable
+		if (future->expirable()) {
+			this->_expirable = true;
+		}
+		// if asset is currently streaming add it to the tradeable table else push to 
+		// out of bounds table to be pulled in when it starts streaming
 		if (asset->__is_streaming) {
 			this->_tradeable.push_back(future);
 		}
@@ -95,18 +135,13 @@ std::expected<bool, AgisException> AssetTable::__build()
 			this->_out_of_bounds.push_back(future);
 		}
 	}
-
-	if (expirable){
-		this->sort_expirable(this->_tradeable);
-		this->sort_expirable(this->_out_of_bounds);
-	}
-
+	this->__sort_expitable();
 	return true;
 }
 
 
 //============================================================================
-void AssetTable::next()
+void AssetTable::step()
 {
 	// pop expired assets off the front of the table
 	while (!this->_tradeable.empty() && !this->_tradeable.front()->__is_streaming) {
@@ -115,12 +150,12 @@ void AssetTable::next()
 		this->_out_of_bounds.push_back(asset);
 	}
 	// move new assets from the out of bounds table into the tradeable table
-	this->reset();
+	this->__reset();
 }
 
 
 //============================================================================
-void AssetTable::reset()
+void AssetTable::__reset()
 {
 	// assets are reset before tables so loop through the out of bounds assets and 
 	// move them back into the tradeable table if they are streaming
