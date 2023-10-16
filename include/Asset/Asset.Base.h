@@ -141,7 +141,7 @@ public:
     AGIS_API inline size_t __get_close_index() const { return this->close_index; }
 
     AGIS_API double __get_market_price(bool on_close) const;
-    AGIS_API AgisMatrix<const double> __get__data() const;
+    AGIS_API std::vector<double> const& __get__data() const noexcept;
     AGIS_API std::span<const double> const __get_column(size_t column_index) const;
     AGIS_API std::span<const double> const __get_column(std::string const& column_name) const;
     AGIS_API std::span<const long long> const __get_dt_index(bool adjust_for_warmup = true) const;

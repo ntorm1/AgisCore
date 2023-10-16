@@ -204,7 +204,7 @@ public:
 	size_t get_broker_index() const;
 	AGIS_API [[nodiscard]] PortfolioPtr const get_portfolio() const { return this->portfolio; }
 	std::string const& get_strategy_id() const { return this->strategy_id; }
-	std::string get_portfolio_id() const noexcept;
+	AGIS_API std::string get_portfolio_id() const noexcept;
 	Frequency get_frequency() const { return this->frequency; }
 	AgisResult<std::shared_ptr<AgisCovarianceMatrix>> get_covariance_matrix() const noexcept;
 

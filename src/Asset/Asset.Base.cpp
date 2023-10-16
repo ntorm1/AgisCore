@@ -717,20 +717,23 @@ double Asset::__get_market_price(bool on_close) const
 
 
 //============================================================================
-AgisMatrix<const double> Asset::__get__data() const
-{
-    return AgisMatrix(this->data.data(), this->rows, this->columns);
+std::vector<double> const&
+Asset::__get__data() const noexcept {
+    return this->data;
 }
 
 
-AGIS_API size_t Asset::get_current_index() const
+//============================================================================
+size_t
+Asset::get_current_index() const
 {
     if (this->current_index == 0) return 0;
     return this->current_index - 1;
 }
 
 //============================================================================
-std::vector<std::string> Asset::get_column_names() const
+std::vector<std::string>
+Asset::get_column_names() const
 {
     std::vector<std::string> keys;
     for (const auto& pair : this->headers) {
