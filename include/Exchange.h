@@ -182,6 +182,7 @@ public:
 	void __add_asset_observer(AssetObserverPtr&& observer) {this->asset_observers.push_back(std::move(observer));}
 	void __add_asset_observer(AssetObserverPtr observer) { this->asset_observers.push_back(std::move(observer)); }
 	void __add_asset_table(AssetTablePtr&& table) noexcept;
+	std::unique_lock<std::mutex> __write_lock() { return std::unique_lock<std::mutex>(this->_mutex); }
 
 	AGIS_API std::expected<bool, AgisException> load_trading_calendar(std::string const& path);
 	std::shared_ptr<TradingCalendar> get_trading_calendar() const noexcept {return this->_calendar; }

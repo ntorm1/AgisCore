@@ -30,6 +30,8 @@ class TradingCalendar;
 typedef std::shared_ptr<Asset> AssetPtr;
 typedef std::shared_ptr<Future> FuturePtr;
 
+class FutureTable;
+
 
 enum class FutureMonthCode : uint8_t {
 	F = 1,
@@ -70,7 +72,7 @@ protected:
 
 //============================================================================
 class Future : public Derivative {
-
+    friend class FutureTable;
 public:
     AGIS_API Future(
         std::string asset_id,
@@ -82,12 +84,14 @@ public:
 
 
 private:
+    [[nodiscard]] std::expected<bool, AgisException> __set_volatility(size_t lookback) override;
     [[nodiscard]] std::expected<bool, AgisException> __build(Exchange const* exchange) noexcept override;
     std::expected<bool, AgisException> set_future_code();
     std::expected<bool, AgisException> set_future_parent_contract();
     std::expected<bool, AgisException> set_last_trade_date(std::shared_ptr<TradingCalendar> calendar) override;
     FutureMonthCode _month_code;
     FutureParentContract _parent_contract;
+    FutureTable const* _table = nullptr;
 };
 
 
@@ -103,10 +107,17 @@ public:
 
     [[nodiscard]] AGIS_API std::expected<FuturePtr, AgisErrorCode> front_month();
     std::string const& name() const override { return this->_contract_id; }
+    [[nodiscard]] std::expected<bool, AgisException> __build() override; 
+    
+    std::vector<double> const& get_continous_close_vec() const noexcept { return this->_continous_close_vec; }
+    std::vector<long long> const& get_continous_dt_vec() const noexcept { return this->_continous_dt_vec; }
+
+    void __set_child_ptrs() const noexcept;
 
 private:
 	std::string _contract_id;
-
+    std::vector<double> _continous_close_vec;
+    std::vector<long long> _continous_dt_vec;
     FuturePrivate* p = nullptr;
 };
 

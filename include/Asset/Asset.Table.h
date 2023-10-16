@@ -43,7 +43,7 @@ public:
 	}
 
 protected:
-	std::expected<bool, AgisException> build();
+	virtual std::expected<bool, AgisException> __build();
 	void next();
 	void reset();
 

@@ -406,7 +406,7 @@ std::expected<bool, AgisException> Exchange::build(size_t exchange_offset_)
 
 	// build any asset tables
 	for (auto& table : this->asset_tables) {
-		table.second->build();
+		table.second->__build();
 	}
 
 	// disable all observers, force strategy to re-init them
@@ -475,7 +475,6 @@ bool Exchange::step(ThreadSafeVector<size_t>& expired_assets)
 			auto index = asset->__get_index(true);
 			expired_assets.push_back(index);
 			asset->__is_expired = true;
-			this->assets[index] = nullptr;
 			return;
 		}
 

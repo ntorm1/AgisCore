@@ -221,7 +221,6 @@ protected:
 
     AGIS_API inline void __set_alignment(bool is_aligned_) { this->__is_aligned = is_aligned_; }
     bool __set_beta(AssetPtr market_asset, size_t lookback);
-    void __set_volatility(size_t lookback);
     bool __set_beta(std::vector<double> beta_column);
     void __set_index(size_t index_) { this->asset_index = index_; }
     void __set_exchange_offset(size_t offset) { this->exchange_offset = offset; }
@@ -237,6 +236,7 @@ protected:
     }
 
     std::string asset_id;
+    std::vector<double> volatility_vector;
 
 private:
     bool is_loaded = false;
@@ -264,12 +264,6 @@ private:
     double* open = nullptr;
 
     /**
-     * @brief vector of rolling annualized volatility defined by some lookback N. Set via
-     * and exchange's set_volatility() method.
-    */
-    std::vector<double> volatility_vector;
-
-    /**
      * @brief vector of rolling beta defined by some lookback N. Set via and exchanges set_market_asset
      * function call.
     */
@@ -288,9 +282,9 @@ private:
     [[nodiscard]] AgisResult<bool> load_csv();
     const arrow::Status load_parquet();
 
-    virtual [[nodiscard]] std::expected<bool, AgisException> __build(Exchange const* exchange) noexcept { return true; };
-    virtual [[nodiscard]] bool __is_last_view(long long t) const;
-
+    virtual std::expected<bool, AgisException> __build(Exchange const* exchange) noexcept { return true; };
+    virtual bool __is_last_view(long long t) const;
+    virtual std::expected<bool, AgisException> __set_volatility(size_t lookback);
 };
 
 struct MarketAsset

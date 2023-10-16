@@ -550,14 +550,19 @@ bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
 
 
 //============================================================================
-void Asset::__set_volatility(size_t lookback)
+std::expected<bool, AgisException> Asset::__set_volatility(size_t lookback)
 {
     // adjust the warmup to account for the lookback period
     this->__set_warmup(lookback);
     // calculate volatility using closing prices
     auto close_span = this->__get_column(this->close_index);
+
+    if (close_span.size() <= lookback) {
+        return std::unexpected<AgisException>(AGIS_EXCEP("lookback period too large"));
+    }
     this->volatility_vector = rolling_volatility(close_span, lookback);
     assert(this->volatility_vector.size() == this->rows);
+    return true;
 }
 
 

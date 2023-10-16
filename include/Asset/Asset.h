@@ -1,5 +1,5 @@
-
-
+#pragma warning(disable : 4251)
+#pragma warning(disable : 5260)
 
 #include "Asset/Asset.Core.h"
 #include "Asset/Asset.Base.h"
