@@ -709,7 +709,7 @@ void Asset::__reset(long long t0)
 
 
 //============================================================================
-AGIS_API double Asset::__get_market_price(bool on_close) const
+double Asset::__get_market_price(bool on_close) const
 {
     if (on_close) return *(this->close - 1);
     else return *(this->open - 1);

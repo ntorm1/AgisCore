@@ -361,8 +361,9 @@ void Exchange::reset()
 		asset->__reset(this->dt_index[0]);
 	}
 	for(auto& table : this->asset_tables){
-		table.second->__sort_expitable();
+		table.second->__sort_table();
 		table.second->__reset();
+		table.second->__sort_table();
 	}
 }
 

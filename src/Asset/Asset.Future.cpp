@@ -229,6 +229,7 @@ std::expected<bool, AgisException> FutureTable::__build()
 	// TODO: make all futures table update at once instead of one at a time
 	for (size_t i = 0; i < exchange_dt_index.size(); ++i) {
 		this->_exchange->step(expired_assets);
+		auto current_time = this->_exchange->__get_market_time();
 		if (this->_tradeable.size()) {
 			FuturePtr front = this->front_month().value();
 			if (!current_asset) {
@@ -247,7 +248,7 @@ std::expected<bool, AgisException> FutureTable::__build()
 				current_asset = front;
 			}
 			_continous_close_vec.push_back(front->__get_market_price(true));
-			_continous_dt_vec.push_back(exchange_dt_index[i]);
+			_continous_dt_vec.push_back(current_time);
 		}
 	}
 	this->_exchange->reset();

@@ -487,27 +487,12 @@ AgisResult<std::string> ExchangeMap::get_asset_id(size_t index) const
 //============================================================================
 void ExchangeMap::__goto(long long datetime)
 {
-	for (auto& exchange_pair : this->exchanges)
-	{
-		exchange_pair.second->__goto(datetime);
-	}
-
-	// move the indivual asssets forward in time
-	for (auto& asset : this->assets)
-	{
-		asset->__goto(datetime);
-	}
-
-	// move the exchanges dt index to the correct position
-	for (size_t i = this->current_index; i < this->dt_index_size; i++)
-	{
-		if (this->dt_index[i] >= datetime)
-		{
-			this->current_index = i;
+	while (true) {
+		this->step();
+		if (this->__get_market_time() >= datetime) {
 			break;
 		}
 	}
-	this->step();
 }
 
 

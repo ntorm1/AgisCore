@@ -189,6 +189,13 @@ ExchangeMap const& Hydra::get_exchanges() const noexcept
 
 
 //============================================================================
+ExchangeMap& Hydra::__get_exchanges() noexcept
+{
+    return this->p->exchanges;
+}
+
+
+//============================================================================
 PortfolioMap const& Hydra::get_portfolios() const noexcept
 {
     return this->p->portfolios;

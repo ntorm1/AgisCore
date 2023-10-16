@@ -45,7 +45,7 @@ public:
 	}
 
 protected:
-	void __sort_expitable() noexcept;
+	void __sort_table() noexcept;
 	virtual std::expected<bool, AgisException> __build();
 	virtual bool __is_valid_memeber(FuturePtr asset) const noexcept;
 	void step();

@@ -89,7 +89,7 @@ bool AssetTable::__is_valid_memeber(FuturePtr asset) const noexcept
 }
 
 //============================================================================
-void AssetTable::__sort_expitable() noexcept
+void AssetTable::__sort_table() noexcept
 {
 	// if expirable sort the two deques based on their expiry date
 	if (this->_expirable) {
@@ -135,7 +135,7 @@ std::expected<bool, AgisException> AssetTable::__build()
 			this->_out_of_bounds.push_back(future);
 		}
 	}
-	this->__sort_expitable();
+	this->__sort_table();
 	return true;
 }
 
@@ -144,19 +144,16 @@ std::expected<bool, AgisException> AssetTable::__build()
 void AssetTable::step()
 {
 	// pop expired assets off the front of the table
-	while (!this->_tradeable.empty() && !this->_tradeable.front()->__is_streaming) {
+	while (
+		!this->_tradeable.empty()
+		&&
+		this->_tradeable.front()->__is_expired
+		) 
+	{
 		DerivativePtr asset = this->_tradeable.front();
 		this->_tradeable.pop_front();
 		this->_out_of_bounds.push_back(asset);
 	}
-	// move new assets from the out of bounds table into the tradeable table
-	this->__reset();
-}
-
-
-//============================================================================
-void AssetTable::__reset()
-{
 	// assets are reset before tables so loop through the out of bounds assets and 
 	// move them back into the tradeable table if they are streaming
 	while (!this->_out_of_bounds.empty() && this->_out_of_bounds.front()->__is_streaming) {
@@ -164,6 +161,30 @@ void AssetTable::__reset()
 		this->_out_of_bounds.pop_front();
 		this->_tradeable.push_back(asset);
 	}
+}
+
+
+//============================================================================
+void AssetTable::__reset()
+{
+	// reset the table by clearing all assets and readding them. 
+	// TODO: this is not very efficient
+	std::vector<DerivativePtr> assets;
+	// take all asset from bothe deques
+	assets.reserve(this->_tradeable.size() + this->_out_of_bounds.size());
+	assets.insert(assets.end(), this->_tradeable.begin(), this->_tradeable.end());
+	assets.insert(assets.end(), this->_out_of_bounds.begin(), this->_out_of_bounds.end());
+	this->_tradeable.clear();
+	this->_out_of_bounds.clear();
+	for (auto const& asset : assets) {
+		if (asset->__is_streaming) {
+			this->_tradeable.push_back(asset);
+		}
+		else {
+			this->_out_of_bounds.push_back(asset);
+		}
+	}
+	this->__sort_table();
 }
 
 

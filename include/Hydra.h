@@ -157,6 +157,7 @@ public:
 
 	AGIS_API BrokerMap* __get_brokers() const noexcept;
 	AGIS_API AgisRouter* __get_router() noexcept;
+	AGIS_API ExchangeMap& __get_exchanges() noexcept;
 	AGIS_API ExchangeMap const& get_exchanges() const noexcept;
 	AGIS_API PortfolioMap const& get_portfolios() const noexcept;
 
