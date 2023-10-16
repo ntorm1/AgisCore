@@ -74,6 +74,7 @@ public:
 protected:
 	std::expected<bool, AgisException> strategy_subscribe(AgisStrategy* strategy) noexcept;
 	void set_broker_index(size_t broker_index) noexcept { _broker_index = broker_index; };
+	std::expected<bool, AgisException> set_tradeable_asset(std::string const& asset_id, TradeableAsset* tradeable_asset) noexcept;
 
 private:
 	friend class BrokerMap;

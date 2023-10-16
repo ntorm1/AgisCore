@@ -406,7 +406,8 @@ std::expected<bool, AgisException> Exchange::build(size_t exchange_offset_)
 
 	// build any asset tables
 	for (auto& table : this->asset_tables) {
-		table.second->__build();
+		auto res = table.second->__build();
+		if (!res.has_value()) return res;
 	}
 
 	// disable all observers, force strategy to re-init them

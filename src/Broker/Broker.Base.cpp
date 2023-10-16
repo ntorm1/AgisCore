@@ -81,23 +81,65 @@ Broker::load_tradeable_assets(
 }
 
 
+std::expected<bool, AgisException> Broker::set_tradeable_asset(std::string const& asset_id, TradeableAsset* t) noexcept
+{
+	// find the asset pointer
+	auto asset = this->p->_exchange_map->get_asset(asset_id);
+	if (asset.is_exception()) {
+		return std::unexpected<AgisException>(asset.get_exception());
+	}
+	t->asset = asset.unwrap().get();
+
+	// asset's unit multiplier must be the same across all brokers. I.e. a CL oil futures contract
+	size_t exsisting_multiplier = t->asset->get_unit_multiplier();
+	if (exsisting_multiplier && exsisting_multiplier != t->unit_multiplier) {
+		return std::unexpected<AgisException>("Asset with id " + asset_id + " already has a unit multiplier of " + std::to_string(exsisting_multiplier));
+	}
+	
+	// verify the asset is not already tradeable
+	auto asset_index = t->asset->get_asset_index();
+	if (this->p->tradeable_assets.contains(asset_index)) {
+		return std::unexpected<AgisException>("Asset with id " + asset_id + " already exists");
+	}
+	t->asset->__set_unit_multiplier(t->unit_multiplier);
+	return true;
+}
+
 //============================================================================
 std::expected<bool, AgisException> Broker::load_table_tradeable_assets(const rapidjson::Value* j_ptr)
 {
 	// get the asset_id as a string or return an error
 	if (!j_ptr->HasMember("exchange_id")) {
-		return std::unexpected<AgisException>("Found asset table that does not contain key \"exchange_id\"");
+		return std::unexpected<AgisException>(AGIS_EXCEP("Found asset table that does not contain key \"exchange_id\""));
 	}
 
-	auto& j = *j_ptr;
-	auto contract_id = j["contract_id"].GetString();
-	auto exchange_id = j["exchange_id"].GetString();
-	auto assets = this->p->_exchange_map->get_exchange(exchange_id)
+	auto& it = *j_ptr;
+	auto contract_id = it["contract_id"].GetString();
+	auto exchange_id = it["exchange_id"].GetString();
+	auto assets_opt = this->p->_exchange_map->get_exchange(exchange_id)
 		.and_then([&](ExchangePtr const& exchange) { return exchange->get_asset_table<AssetTable>(contract_id); })
 		.and_then([&](AssetTablePtr const& table) -> std::expected<std::vector<AssetPtr>,AgisException> { return table->all_assets(); });
-	if (!assets.has_value()) {
-		return std::unexpected<AgisException>(assets.error());
+	if (!assets_opt.has_value()) {
+		return std::unexpected<AgisException>(assets_opt.error());
 	}
+	TradeableAsset tradeable_asset;
+	tradeable_asset.unit_multiplier = it["unit_multiplier"].GetUint();
+	tradeable_asset.intraday_initial_margin = it["intraday_initial_margin"].GetDouble();
+	tradeable_asset.intraday_maintenance_margin = it["intraday_maintenance_margin"].GetDouble();
+	tradeable_asset.overnight_initial_margin = it["overnight_initial_margin"].GetDouble();
+	tradeable_asset.overnight_maintenance_margin = it["overnight_maintenance_margin"].GetDouble();
+	tradeable_asset.short_overnight_initial_margin = it["short_overnight_initial_margin"].GetDouble();
+	tradeable_asset.short_overnight_maintenance_margin = it["short_overnight_maintenance_margin"].GetDouble();
+	auto& assets = assets_opt.value();
+	auto exchange_opt = this->p->_exchange_map->get_exchange(exchange_id);
+	auto& exchange = exchange_opt.value();
+	for (auto const& asset_id : assets) {
+		auto t = tradeable_asset;
+		auto res = this->set_tradeable_asset(it["asset_id"].GetString(), &t);
+		if (!res.has_value()) return res;
+	}
+
+	return true;
 }
 
 //============================================================================
@@ -126,11 +168,13 @@ Broker::load_tradeable_assets(std::string const& json_string) noexcept
 			return std::unexpected<AgisException>("found element in array is not a json object");
 		}
 
+		// if contract_id is specified, load the all futures associated with table given be the contract id
 		if (it.HasMember("contract_id")) {
 			auto res =  this->load_table_tradeable_assets(&it);
 			if (!res.has_value()) {
 				return std::unexpected<AgisException>(res.error());
 			}
+			continue;
 		}
 
 		// get the asset_id as a string or return an error
@@ -138,30 +182,7 @@ Broker::load_tradeable_assets(std::string const& json_string) noexcept
 			return std::unexpected<AgisException>("Found element that does not contain key \"asset_id\"");
 		}
 
-
-		// get the asset id as string, make sure it exists
 		std::string asset_id = it["asset_id"].GetString();
-		auto asset = this->p->_exchange_map->get_asset(asset_id);
-		if (asset.is_exception()) {
-			return std::unexpected<AgisException>(asset.get_exception());
-		}
-		
-		// not allowed to overwrite existing tradeable asset
-		TradeableAsset tradeable_asset;
-		tradeable_asset.asset = asset.unwrap().get();
-
-		auto asset_index = tradeable_asset.asset->get_asset_index();
-		if (this->p->tradeable_assets.contains(asset_index)) {
-			return std::unexpected<AgisException>("Asset with id " + asset_id + " already exists");
-		}
-
-		// asset's unit multiplier must be the same across all brokers. I.e. a CL oil futures contract
-		// allways represents 1000 barrels of oil. If the unit multiplier is different, return an error
-		size_t exsisting_multiplier = tradeable_asset.asset->get_unit_multiplier();
-		if (it.HasMember("unit_multiplier") && exsisting_multiplier && exsisting_multiplier != it["unit_multiplier"].GetUint()) {
-			return std::unexpected<AgisException>("Asset with id " + asset_id + " already has a unit multiplier of " + std::to_string(exsisting_multiplier));
-		}
-
 		if (it.HasMember("unit_multiplier") &&
 			it.HasMember("intraday_initial_margin") &&
 			it.HasMember("intraday_maintenance_margin") &&
@@ -170,16 +191,19 @@ Broker::load_tradeable_assets(std::string const& json_string) noexcept
 			it.HasMember("short_overnight_initial_margin") &&
 			it.HasMember("short_overnight_maintenance_margin")) {
 
-			// All members exist, populate the struct
+			// All members exist, populate the struct. Set unit mult first so it cant be sent
+			// to the underlying asset as needed
+			TradeableAsset tradeable_asset;
 			tradeable_asset.unit_multiplier = it["unit_multiplier"].GetUint();
-			tradeable_asset.asset->__set_unit_multiplier(tradeable_asset.unit_multiplier);
+			set_tradeable_asset(asset_id, &tradeable_asset);
+
 			tradeable_asset.intraday_initial_margin = it["intraday_initial_margin"].GetDouble();
 			tradeable_asset.intraday_maintenance_margin = it["intraday_maintenance_margin"].GetDouble();
 			tradeable_asset.overnight_initial_margin = it["overnight_initial_margin"].GetDouble();
 			tradeable_asset.overnight_maintenance_margin = it["overnight_maintenance_margin"].GetDouble();
 			tradeable_asset.short_overnight_initial_margin = it["short_overnight_initial_margin"].GetDouble();
 			tradeable_asset.short_overnight_maintenance_margin = it["short_overnight_maintenance_margin"].GetDouble();
-			this->p->tradeable_assets.insert({ asset_index, std::move(tradeable_asset) });
+			this->p->tradeable_assets.insert({ tradeable_asset.asset->get_asset_index(), std::move(tradeable_asset) });
 		}
 		else {
 			return std::unexpected<AgisException>("Asset with id " + asset_id + " must specify all margin requirement");

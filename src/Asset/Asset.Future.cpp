@@ -28,7 +28,7 @@ std::expected<bool, AgisException> Future::set_future_code()
 		{'U', FutureMonthCode::U},
 		{'V', FutureMonthCode::V},
 		{'X', FutureMonthCode::X},
-		{'Z', FutureMonthCode::Z}
+		{'Z', FutureMonthCode::Z} 
 	};
 
 	auto it = month_map.find(month_code);
@@ -36,7 +36,7 @@ std::expected<bool, AgisException> Future::set_future_code()
 		this->_month_code = it->second;
 	}
 	else {
-		return std::unexpected<AgisException>("Invalid month code");
+		return std::unexpected<AgisException>(AGIS_EXCEP("Invalid month code: " + month_code));
 	}
 	return true;
 }
@@ -89,6 +89,8 @@ Future::__set_volatility(size_t lookback)
 		return std::unexpected<AgisException>(AGIS_EXCEP("lookback period too large"));
 	}
 	this->volatility_vector = rolling_volatility(close_span, lookback);
+	assert(this->volatility_vector.size() == this->get_rows());
+	return true;
 }
 
 
@@ -192,11 +194,13 @@ void FutureTable::__set_child_ptrs() const noexcept
 //============================================================================
 std::expected<bool, AgisException> FutureTable::__build()
 {
-	this->__set_child_ptrs();
+	// build the deque tables 
 	auto res = AssetTable::__build();
 	if (!res.has_value()) {
 		return std::unexpected<AgisException>(res.error());
 	}
+	if (this->_continous_close_vec.size()) return true; // already built
+	this->__set_child_ptrs();
 
 	auto exchange_lock = this->_exchange->__write_lock();
 	auto exchange_dt_index = this->_exchange->__get_dt_index();
@@ -205,7 +209,7 @@ std::expected<bool, AgisException> FutureTable::__build()
 	
 	_continous_close_vec.clear();
 	_continous_dt_vec.clear();
-
+	// TODO: make all futures table update at once instead of one at a time
 	for (size_t i = 0; i < exchange_dt_index.size(); ++i) {
 		this->_exchange->step(expired_assets);
 		if (this->_tradeable.size()) {
