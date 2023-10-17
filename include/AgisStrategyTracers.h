@@ -96,6 +96,7 @@ protected:
 
 private:
     std::expected<double, AgisException> get_portfolio_volatility();
+    std::expected<double, AgisException> get_portfolio_volatility_fast();
     std::expected<double, AgisException> get_benchmark_volatility();
 
     std::atomic<double> net_beta = 0;

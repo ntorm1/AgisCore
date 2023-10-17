@@ -3,6 +3,7 @@
 
 #include "AgisStrategyTracers.h"
 #include "AgisStrategy.h"
+#include "Asset/Asset.h"
 #include "AgisRisk.h"
 
 
@@ -70,6 +71,21 @@ void AgisStrategyTracers::reset_history()
 
 
 //============================================================================
+std::expected<double, AgisException> AgisStrategyTracers::get_portfolio_volatility_fast()
+{
+	auto trade_pair = this->strategy->trades.begin();
+	auto asset_index = trade_pair->first;
+	auto trade = trade_pair->second;
+	
+	auto vol_opt = trade->__asset->get_volatility();
+	if (!vol_opt.has_value()) return std::unexpected<AgisException>(AGIS_EXCEP("invalid vol"));
+	auto vol = vol_opt.value() * trade->__asset->get_unit_multiplier();
+	vol *= (this->portfolio_weights(asset_index) /= this->nlv);
+	this->portfolio_volatility.store(vol);
+	return vol;
+}
+
+//============================================================================
 std::expected<double, AgisException>
 AgisStrategyTracers::get_portfolio_volatility()
 {
@@ -77,6 +93,16 @@ AgisStrategyTracers::get_portfolio_volatility()
 	if (this->strategy->get_strategy_type() == AgisStrategyType::BENCHMARK) {
 		return this->get_benchmark_volatility();
 	}
+	// if no trades return 0
+	if (this->strategy->trades.size() == 0) {
+		this->portfolio_volatility.store(0.0f);
+		return 0.0f;
+	}
+	// if only one asset held use asset's vol to get portfolio vol
+	if (this->strategy->trades.size() == 1) {
+		return this->get_portfolio_volatility_fast();
+	}
+	// else need to use the covariance matrix
 	auto cov_matrix = this->strategy->get_covariance_matrix();
 	if (cov_matrix.is_exception()) {
 		return std::unexpected<AgisException>(AGIS_FORWARD_EXCEP(cov_matrix.get_exception()));
@@ -92,7 +118,7 @@ AgisStrategyTracers::get_portfolio_volatility()
 	// calculate vol using the covariance matrix
 	auto res = calculate_portfolio_volatility(this->portfolio_weights, cov_matrix.unwrap()->get_eigen_matrix());
 	if (!res.has_value()) return res;
-	this->portfolio_volatility = res.value();
+	this->portfolio_volatility.store(res.value());
 	return res;
 
 }

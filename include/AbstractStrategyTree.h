@@ -634,6 +634,7 @@ public:
 	}
 
 	std::expected<ExchangeView*, AgisErrorCode> apply_vol_target(ExchangeView* v) {
+		// apply a given vol target to the exchange view if it is set.
 		if (!this->vol_target.has_value()) return v;
 		auto res = v->vol_target(this->vol_target.value());
 		if (res.is_exception()) return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_CONFIGURATION);
@@ -641,6 +642,7 @@ public:
 	}
 
 	std::expected<ExchangeView*, AgisErrorCode> apply_scale(ExchangeView* v) {
+		// scale positions in the exchange view by some type if set.
 		if (this->ev_scaler_type == ExchangeViewScaler::NONE) return v;
 		auto res = v->allocation_scale(this->ev_scaler_type);
 		if (!res.has_value()) return std::unexpected<AgisErrorCode>(res.error());
