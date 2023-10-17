@@ -113,8 +113,8 @@ IncrementalCovariance::IncrementalCovariance(
     // the enclosing span assumes alignment with the closing span.
     this->enclosing_asset->add_observer(this);
     this->set_asset_ptr(this->enclosing_asset.get());
-    this->enclosing_span = enclosing_asset->__get_column((enclosing_asset->__get_close_index()));
-    this->child_span = child_asset->__get_column((child_asset->__get_close_index()));
+    this->enclosing_span = enclosing_asset->get_volatility_column();
+    this->child_span = child_asset->get_volatility_column();
     this->enclosing_span_start_index = enclosing_asset->encloses_index(child_asset).unwrap();
 }
 

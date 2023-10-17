@@ -618,7 +618,9 @@ public:
 				throw std::runtime_error("invalid exchange view operation");
 			}
 		}
-		auto res = this->scale(view);
+		auto res = this->apply_scale(&view)
+			.and_then([&](ExchangeView* v) {return this->apply_vol_target(v); }
+		);
 		if(!res.has_value()) return std::unexpected<AgisErrorCode>(res.error());
 		return std::move(view);
 	}
@@ -627,9 +629,22 @@ public:
 		this->ev_scaler_type = ev_scaler_type_;
 	}
 
-	std::expected<bool, AgisErrorCode> scale(ExchangeView& v) {
-		if (this->ev_scaler_type == ExchangeViewScaler::NONE) return true;
-		return v.allocation_scale(this->ev_scaler_type);
+	AGIS_API void set_vol_target(double vol_target_) {
+		this->vol_target = vol_target_;
+	}
+
+	std::expected<ExchangeView*, AgisErrorCode> apply_vol_target(ExchangeView* v) {
+		if (!this->vol_target.has_value()) return v;
+		auto res = v->vol_target(this->vol_target.value());
+		if (res.is_exception()) return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_CONFIGURATION);
+		return v;
+	}
+
+	std::expected<ExchangeView*, AgisErrorCode> apply_scale(ExchangeView* v) {
+		if (this->ev_scaler_type == ExchangeViewScaler::NONE) return v;
+		auto res = v->allocation_scale(this->ev_scaler_type);
+		if (!res.has_value()) return std::unexpected<AgisErrorCode>(res.error());
+		return v;
 	}
 
 	size_t get_warmup() const override {
@@ -642,6 +657,7 @@ private:
 	ExchangeViewScaler ev_scaler_type = ExchangeViewScaler::NONE;
 	double target;
 	std::optional<double> ev_opp_param;
+	std::optional<double> vol_target;
 };
 
 

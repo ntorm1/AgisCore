@@ -133,10 +133,11 @@ std::expected<bool, AgisException> Broker::load_table_tradeable_assets(const rap
 	auto& assets = assets_opt.value();
 	auto exchange_opt = this->p->_exchange_map->get_exchange(exchange_id);
 	auto& exchange = exchange_opt.value();
-	for (auto const& asset_id : assets) {
+	for (auto const& asset : assets) {
 		auto t = tradeable_asset;
-		auto res = this->set_tradeable_asset(it["asset_id"].GetString(), &t);
+		auto res = this->set_tradeable_asset(asset->get_asset_id(), &t);
 		if (!res.has_value()) return res;
+		this->p->tradeable_assets.insert({ t.asset->get_asset_index(), std::move(t) });
 	}
 
 	return true;

@@ -157,6 +157,11 @@ public:
     bool __is_valid_time(long long& datetime);
     long long __get_asset_time(bool adjust = false) const;
 
+    //==== Public Asset Virtual Methods ====//
+    virtual std::span<const double> const __get_vol_close_column() const;
+    virtual std::expected<double, AgisErrorCode> get_volatility() const;
+
+
     /// <summary>
     /// Does the asset's datetime index match the exchange's datetime index
     /// </summary>
@@ -238,7 +243,6 @@ protected:
     virtual std::expected<bool, AgisException> __build(Exchange const* exchange) noexcept { return true; };
     virtual bool __is_last_view(long long t) const noexcept;
     virtual std::expected<bool, AgisException> __set_volatility(size_t lookback);
-    virtual std::expected<double, AgisErrorCode> get_volatility() const;
 
     std::string asset_id;
     std::vector<double> volatility_vector;

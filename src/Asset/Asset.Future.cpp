@@ -107,6 +107,26 @@ Future::__build(Exchange const* exchange) noexcept
 
 
 //============================================================================
+std::span<const double> const Future::__get_vol_close_column() const
+{
+	if(!this->_table) return Asset::__get_vol_close_column();
+	auto& cont_close = this->_table->get_continous_close_vec();
+	auto& cont_close_dt_index = this->_table->get_continous_dt_vec();
+	auto t1 = this->__get_dt_index().back();
+
+	// find the index of t1 in the continous close dt index
+	auto it = std::find(cont_close_dt_index.begin(), cont_close_dt_index.end(), t1);
+	if (it == cont_close_dt_index.end()) {
+		return Asset::__get_vol_close_column();
+	}
+
+	// return the subspan of cont_close between the start and that index
+	auto idx = it - cont_close_dt_index.begin();
+	return std::span<const double>(cont_close.begin(), cont_close.begin() + idx + 1);
+}
+
+
+//============================================================================
 bool Future::__is_last_view(long long t) const noexcept
 {
 	// if on last row force last view return true

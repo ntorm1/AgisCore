@@ -591,6 +591,13 @@ std::expected<double, AgisErrorCode> Asset::get_volatility() const
 
 
 //============================================================================
+std::span<const double> const Asset::__get_vol_close_column() const
+{
+    return this->__get_column(this->close_index);
+}
+
+
+//============================================================================
 std::expected<double, AgisErrorCode> Asset::get_beta() const
 {
     if (this->beta_vector.size() && !this->__in_warmup())

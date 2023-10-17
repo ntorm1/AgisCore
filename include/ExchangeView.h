@@ -100,6 +100,11 @@ struct ExchangeViewAllocation {
 
 struct ExchangeView
 {
+private:
+	AgisResult<bool> vol_target_fast(double target);
+
+public:
+
 	std::vector<ExchangeViewAllocation> view;
 	std::optional<double> market_asset_price = std::nullopt;
 	std::optional<size_t> market_asset_index = std::nullopt;
@@ -153,6 +158,7 @@ struct ExchangeView
 	 * @return 
 	*/
 	AGIS_API AgisResult<bool> vol_target(double target);
+
 
 	/// <summary>
 	/// Generate a beta hedge for the portfolio and adjust allocation weights to match 

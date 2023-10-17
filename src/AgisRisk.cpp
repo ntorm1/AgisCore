@@ -269,7 +269,11 @@ AgisCovarianceMatrix::AgisCovarianceMatrix(
     {
         for (size_t j = 0; j < i + 1; j++)
         {
-            if (assets[i]->get_rows() <= lookback || assets[j]->get_rows() <= lookback) continue;
+            if (
+                assets[i]->__get_vol_close_column().size() <= lookback
+                ||
+                assets[j]->__get_vol_close_column().size() <= lookback
+                ) continue;
             std::shared_ptr<IncrementalCovariance> incremental_covariance;
             try {
                 auto observer = create_inc_cov_observer(

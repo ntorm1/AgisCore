@@ -65,15 +65,50 @@ std::expected<bool, AgisErrorCode> ExchangeView::allocation_scale(ExchangeViewSc
 
 
 //============================================================================
+AgisResult<bool> ExchangeView::vol_target_fast(double target)
+{
+	auto exchange_map = this->exchange->__get_exchange_map();
+	auto& alloc = this->view[0];
+	auto asset_opt = exchange_map->get_asset(alloc.asset_index);
+	if(asset_opt.is_exception()) return AgisResult<bool>(asset_opt.get_exception());
+	auto asset = asset_opt.unwrap();
+
+	auto vol_opt = asset->get_volatility();
+	if (!vol_opt.has_value()) return AgisResult<bool>(AGIS_EXCEP("invalid vol"));
+	auto vol = vol_opt.value() * asset->get_unit_multiplier();
+
+	// calculate the vol target
+	double vol_target = target / vol;
+
+	// scale exsiting allocations
+	for (auto& alloc : this->view)
+	{
+		alloc.allocation_amount *= vol_target;
+	}
+	return AgisResult<bool>(true);
+}
+
+
+//============================================================================
 AgisResult<bool> ExchangeView::vol_target(double target)
 {
+	// if the view only has one asset then volatility of the portfolio is just 
+	// the volatility of the asset
+	if (view.size() == 1) {
+		return this->vol_target_fast(target);
+	}
+
 	// extract vector representation of portfolio weights
 	auto exchange_map = this->exchange->__get_exchange_map();
 	VectorXd weights(exchange_map->get_asset_count());
 	weights.setZero();
+	// set the weights by the actual allocation amounts multiplied by the specific unit
+	// multiplier of the underlying asset. I.e. CL futures contract is 1000 barrels of oil
 	for(auto& alloc: this->view)
 	{
-		weights(alloc.asset_index) = alloc.allocation_amount;
+		auto asset = exchange_map->get_asset(alloc.asset_index);
+		if (asset.is_exception()) return AgisResult<bool>(asset.get_exception());
+		weights(alloc.asset_index) = alloc.allocation_amount * asset.unwrap()->get_unit_multiplier();
 	}
 	
 	// calculate vol of existing exchange view allocation
