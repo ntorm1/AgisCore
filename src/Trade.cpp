@@ -212,7 +212,7 @@ void Trade::evaluate(double market_price, bool on_close, bool is_reprice)
     if (strategy->tracers.has(Tracer::BETA))
     {
         auto beta_dollars = (
-            this->units * market_price * __asset->get_beta().unwrap_or(0.0f)
+            this->units * market_price * __asset->get_beta().value_or(0.0f)
             );
         strategy->tracers.net_beta_add_assign(beta_dollars);
     }

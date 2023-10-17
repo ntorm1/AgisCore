@@ -101,6 +101,9 @@ void AssetTable::__sort_table() noexcept
 //============================================================================
 std::expected<bool, AgisException> AssetTable::__build()
 {
+	this->_tradeable.clear();
+	this->_out_of_bounds.clear();
+
 	auto asset_ids = this->_exchange->get_asset_indices();
 	for (auto const& asset_id : asset_ids) {
 		auto asset = this->_exchange->get_asset(asset_id).unwrap();

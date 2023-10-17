@@ -64,32 +64,28 @@ Future::set_future_parent_contract()
 
 
 //============================================================================
+std::expected<double, AgisErrorCode> Future::get_volatility() const
+{
+	auto current_time = this->__get_asset_time(true);
+	auto& continous_dt = this->_table->get_continous_dt_vec();
+	auto it = std::find(continous_dt.begin(), continous_dt.end(), current_time);
+	if (it == continous_dt.end()) {
+		return std::unexpected<AgisErrorCode>(AgisErrorCode::OUT_OF_RANGE);
+	}
+	auto idx = it - continous_dt.begin();
+	return this->_table->get_continous_vol_vec()[idx];
+}
+
+
+//============================================================================
 std::expected<bool, AgisException>
 Future::__set_volatility(size_t lookback)
 {
-	// use the continous close vector to calculate volatility of the future
-	auto t0 = this->__get_dt_index().front();
-	auto t1 = this->__get_dt_index().back();
-	auto& continous_close = this->_table->get_continous_close_vec();
-	auto& continous_dt = this->_table->get_continous_dt_vec();
-
-	// find the first index that is equal to t0 in the continous_dt vector
-	auto it = std::find(continous_dt.begin(), continous_dt.end(), t0);
-	// find the last index that is equal to t1 in the continous_dt vector
-	auto it2 = std::find(continous_dt.begin(), continous_dt.end(), t1);
-
-	if (it == continous_dt.end() || it2 == continous_dt.end()) {
-		return std::unexpected<AgisException>(AGIS_EXCEP("Invalid futures date range"));
+	this->__set_warmup(lookback);
+	if (!this->_table) return true; // skip assets outside of table
+	if (!this->_table->get_continous_vol_vec().size()) {
+		this->_table->__set_volatility(lookback);
 	}
-
-	// get a span between the two iterators
-	auto close_span = std::span(continous_close).subspan(it - continous_dt.begin(), it2 - it + 1);
-	// set the volatility
-	if (close_span.size() <= lookback) {
-		return std::unexpected<AgisException>(AGIS_EXCEP("lookback period too large"));
-	}
-	this->volatility_vector = rolling_volatility(close_span, lookback);
-	assert(this->volatility_vector.size() == this->get_rows());
 	return true;
 }
 
@@ -194,7 +190,19 @@ FutureTable::FutureTable(
 
 
 //============================================================================
-void FutureTable::__set_child_ptrs() const noexcept
+std::expected<bool, AgisException> FutureTable::__set_volatility(size_t t) noexcept
+{
+	if (t >= this->_continous_close_vec.size()) {
+		return std::unexpected<AgisException>(AGIS_EXCEP("Invalid lookback"));
+	}
+	auto cont_close_span = std::span<const double>(this->_continous_close_vec);
+	this->_continout_vol_vec = rolling_volatility(cont_close_span, t);
+	return true;
+}
+
+
+//============================================================================
+void FutureTable::__set_child_ptrs() noexcept
 {
 	// set table pointer to child assets
 	for (auto const& asset : this->_tradeable) {
@@ -218,6 +226,11 @@ std::expected<bool, AgisException> FutureTable::__build()
 	}
 	// set the asset table pointers for each child asset
 	this->__set_child_ptrs();
+
+	// TODO: warmup messes this up
+	if (_continous_close_vec.size()) {
+		return true;
+	}
 
 	auto exchange_lock = this->_exchange->__write_lock();
 	auto exchange_dt_index = this->_exchange->__get_dt_index();
@@ -248,6 +261,10 @@ std::expected<bool, AgisException> FutureTable::__build()
 				current_asset = front;
 			}
 			_continous_close_vec.push_back(front->__get_market_price(true));
+			_continous_dt_vec.push_back(current_time);
+		}
+		else {
+			_continous_close_vec.push_back(0.0);
 			_continous_dt_vec.push_back(current_time);
 		}
 	}

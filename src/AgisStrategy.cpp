@@ -243,7 +243,7 @@ AGIS_API void AgisStrategy::strategy_allocate(
 	std::optional<TradeExitPtr> exit,	
 	AllocType alloc_type)
 {
-	if (this->apply_beta_scale) AGIS_DO_OR_THROW(exchange_view.beta_scale());
+	//if (this->apply_beta_scale) AGIS_DO_OR_THROW(exchange_view.beta_scale());
 	if (this->apply_beta_hedge) AGIS_DO_OR_THROW(exchange_view.beta_hedge(this->alloc_target));
 	if (this->alloc_type_target == AllocTypeTarget::VOL) AGIS_DO_OR_THROW(exchange_view.vol_target(this->alloc_target.value()));
 

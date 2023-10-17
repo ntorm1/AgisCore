@@ -148,7 +148,9 @@ public:
 	}
 
 	AGIS_API AgisResult<AssetPtr> get_asset(size_t index) const;
-	AGIS_API AgisResult<double> get_asset_beta(size_t index) const;
+	AGIS_API std::expected<double,AgisErrorCode> get_asset_beta(size_t index) const;
+	AGIS_API std::expected<double,AgisErrorCode> get_asset_volatility(size_t index) const;
+
 	AGIS_API AgisResult<size_t> get_column_index(std::string const& col) const;
 
 	AGIS_API [[nodiscard]] AssetType get_asset_type() const noexcept { return this->asset_type; }

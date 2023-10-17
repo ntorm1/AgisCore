@@ -553,7 +553,6 @@ bool Asset::__set_beta(AssetPtr market_asset, size_t lookback)
 std::expected<bool, AgisException> Asset::__set_volatility(size_t lookback)
 {
     // adjust the warmup to account for the lookback period
-    this->__set_warmup(lookback);
     // calculate volatility using closing prices
     auto close_span = this->__get_column(this->close_index);
 
@@ -562,6 +561,7 @@ std::expected<bool, AgisException> Asset::__set_volatility(size_t lookback)
     }
     this->volatility_vector = rolling_volatility(close_span, lookback);
     assert(this->volatility_vector.size() == this->rows);
+    this->__set_warmup(lookback);
     return true;
 }
 
@@ -577,7 +577,7 @@ bool Asset::__set_beta(std::vector<double> beta_column)
 
 
 //============================================================================
-AGIS_API std::expected<double, AgisErrorCode> Asset::get_volatility() const
+std::expected<double, AgisErrorCode> Asset::get_volatility() const
 {
     if (this->volatility_vector.size() && !this->__in_warmup())
     {
@@ -591,18 +591,18 @@ AGIS_API std::expected<double, AgisErrorCode> Asset::get_volatility() const
 
 
 //============================================================================
-AGIS_API AgisResult<double> Asset::get_beta() const
+std::expected<double, AgisErrorCode> Asset::get_beta() const
 {
     if (this->beta_vector.size() && !this->__in_warmup())
     {
-        return AgisResult<double>(this->beta_vector[this->current_index - 1]);
+        return this->beta_vector[this->current_index - 1];
     }
     else if (this->__is_market_asset) {
-        return AgisResult<double>(1.0f);
+        return 1.0f;
     }
     else
     {
-        return AgisResult<double>(AGIS_EXCEP("beta not available"));
+        return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
     }
 }
 
@@ -635,6 +635,15 @@ bool Asset::__is_valid_time(long long& datetime)
 
     if (t < w.first || t > w.second) { return false; }
     return true;
+}
+
+
+//============================================================================
+long long Asset::__get_asset_time(bool adjust) const
+{
+    if (this->current_index >= this->rows) return 0;
+    if(!adjust) return this->dt_index[this->current_index];
+    return this->dt_index[this->current_index-1];
 }
 
 

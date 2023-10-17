@@ -274,27 +274,36 @@ std::vector<std::string> ExchangeMap::get_asset_ids(std::string const& exchange_
 
 
 //============================================================================
-AGIS_API AgisResult<double> ExchangeMap::get_asset_beta(size_t index) const
+std::expected<double, AgisErrorCode> ExchangeMap::get_asset_beta(size_t index) const
 {
 	auto asset = this->get_asset(index);
-	if (asset.is_exception()) return AgisResult<double>(asset.get_exception());
+	if (asset.is_exception()) return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
 	return asset.unwrap()->get_beta();
 }
 
 
 //============================================================================
-AGIS_API AgisResult<double> Exchange::get_asset_beta(size_t index) const
+std::expected<double, AgisErrorCode> Exchange::get_asset_beta(size_t index) const
 {
 	auto asset = this->get_asset(index);
-	if (asset.is_exception()) return AgisResult<double>(asset.get_exception());
+	if (asset.is_exception()) return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
 	return asset.unwrap()->get_beta();
+}
+
+
+//============================================================================
+std::expected<double, AgisErrorCode> Exchange::get_asset_volatility(size_t index) const
+{
+	auto asset = this->get_asset(index);
+	if (asset.is_exception()) return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
+	return asset.unwrap()->get_volatility();
 }
 
 
 //============================================================================
 AgisResult<size_t> Exchange::get_column_index(std::string const& col) const
 {
-	if (!this->headers.contains(col)) return AgisResult<size_t>(AGIS_EXCEP("missing col"));
+	if (!this->headers.contains(col)) return AgisResult<size_t>(AGIS_EXCEP("missing col: " + col));
 	return AgisResult<size_t>(this->headers.at(col));
 }
 

@@ -25,17 +25,29 @@ ExchangeView::ExchangeView(const Exchange* exchange_, size_t count, bool reserve
 
 
 //============================================================================
-AgisResult<bool> ExchangeView::beta_scale()
+std::expected<bool, AgisErrorCode> ExchangeView::allocation_scale(ExchangeViewScaler t)
 {
 	double original_sum = 0;
 	double new_sum = 0;
 	// scale each position by its beta
 	for (auto& pair : this->view)
 	{
-		auto beta = this->exchange->get_asset_beta(pair.asset_index);
-		if (beta.is_exception()) return AgisResult<bool>(beta.get_exception());
+		std::expected<double, AgisErrorCode> scaler;
+		switch (t){
+		case ExchangeViewScaler::BETA: {
+			scaler = this->exchange->get_asset_beta(pair.asset_index);
+			break;
+		}
+		case ExchangeViewScaler::VOLATILITY: {
+			scaler = this->exchange->get_asset_volatility(pair.asset_index);
+			break;
+		}
+		default:
+			return std::unexpected<AgisErrorCode>(AgisErrorCode::NOT_IMPLEMENTED);
+		}
+		if (!scaler.has_value()) return std::unexpected<AgisErrorCode>(scaler.error());
 		original_sum += pair.allocation_amount;
-		pair.allocation_amount /= beta.unwrap();
+		pair.allocation_amount /= scaler.value();
 		new_sum += pair.allocation_amount;
 	}
 	// adjust scales to maintain new proportions but retarget to original leverage
@@ -43,7 +55,7 @@ AgisResult<bool> ExchangeView::beta_scale()
 	{
 		pair.allocation_amount *= original_sum / new_sum;
 	}
-	return AgisResult<bool>(true);
+	return true;
 }
 
 
@@ -93,11 +105,11 @@ AGIS_API AgisResult<bool> ExchangeView::beta_hedge(
 
 		// now we need to apply the beta hedge
 		auto beta = this->exchange->get_asset_beta(alloc.asset_index);
-		if (beta.is_exception()) return AgisResult<bool>(beta.get_exception());
+		if (!beta.has_value()) return AgisResult<bool>(AGIS_EXCEP("invalid beta"));
 		
-		double beta_hedge = -1 * alloc.allocation_amount * beta.unwrap();
+		double beta_hedge = -1 * alloc.allocation_amount * beta.value();
 		alloc.beta_hedge_size = beta_hedge;
-		alloc.beta = beta.unwrap();
+		alloc.beta = beta.value();
 		sum += abs(beta_hedge);
 		beta_hedge_total += beta_hedge;
 	}
@@ -168,8 +180,8 @@ AgisResult<double> ExchangeView::net_beta() const
 	for (auto& pair : this->view)
 	{
 		auto beta = this->exchange->get_asset_beta(pair.asset_index);
-		if (beta.is_exception()) return AgisResult<double>(beta.get_exception());
-		net_beta += pair.allocation_amount * beta.unwrap();
+		if (!beta.has_value()) return AgisResult<double>(AGIS_EXCEP("invalid beta"));
+		net_beta += pair.allocation_amount * beta.value();
 		net_beta += pair.beta_hedge_size.value_or(0);
 	}
 	return AgisResult<double>(net_beta);

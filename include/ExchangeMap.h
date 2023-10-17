@@ -82,17 +82,9 @@ public:
 	/// <returns>vector of all asset ids on a particular exchange</returns>
 	AGIS_API std::vector<std::string> get_asset_ids(std::string const& exchange_id_) const;
 
-	/// <summary>
-	/// Get the current beta of an asset
-	/// </summary>
-	/// <param name="index">unique index of the asset to look for</param>
-	/// <returns>beta if it exists</returns>
-	AGIS_API AgisResult<double> get_asset_beta(size_t index) const;
-
-
+	AGIS_API std::expected<double, AgisErrorCode> get_asset_beta(size_t index) const;
 	AGIS_API AgisResult<AssetPtr> get_asset(std::string const& asset_id) const;
 	AGIS_API AgisResult<AssetPtr> get_asset(size_t index) const;
-
 
 	/// <summary>
 	/// Remove an asset from the exchange map by asset id

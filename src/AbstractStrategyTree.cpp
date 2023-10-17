@@ -393,7 +393,13 @@ std::expected<ExchangeView, AgisErrorCode> AbstractTableViewNode::execute()
 				return this->evaluate_asset(asset, view);
 			});
 		if (!res.has_value()) {
-			return std::unexpected<AgisErrorCode>(res.error());
+			switch (res.error())
+			{
+			case AgisErrorCode::OUT_OF_RANGE:
+				continue;
+			default:
+				return std::unexpected<AgisErrorCode>(res.error());
+			}
 		}
 	}
 	return std::move(view);

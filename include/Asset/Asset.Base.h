@@ -126,10 +126,9 @@ public:
     AGIS_API void assign_asset_feature(size_t col, int index, AgisResult<double>& res);
     AGIS_API std::expected<double,AgisErrorCode> get_asset_feature(std::string const& col, int index) const;
     AGIS_API std::expected<double,AgisErrorCode> get_asset_feature(size_t col, int index) const;
-    AGIS_API std::expected<double,AgisErrorCode> get_volatility() const;
     AGIS_API AgisResult<AssetObserver*> get_observer(std::string const& id) const noexcept;
     AGIS_API std::expected<double, AgisErrorCode> get_asset_observer_result(std::string const& observer_name) const noexcept;
-    AGIS_API AgisResult<double> get_beta() const;
+    AGIS_API std::expected<double, AgisErrorCode> get_beta() const;
     AGIS_API AssetType get_asset_type() const noexcept { return this->asset_type; }
     AGIS_API const std::span<double const> get_beta_column() const;
     AGIS_API const std::span<double const> get_volatility_column() const;
@@ -156,7 +155,7 @@ public:
     void __set_unit_multiplier(size_t unit_multiplier_) noexcept { this->unit_multiplier = unit_multiplier_; }
     void __set_in_exchange_view(bool x) { this->__in_exchange_view = x; }
     bool __is_valid_time(long long& datetime);
-    long long __get_asset_time() const { return this->dt_index[this->current_index]; }
+    long long __get_asset_time(bool adjust = false) const;
 
     /// <summary>
     /// Does the asset's datetime index match the exchange's datetime index
@@ -239,6 +238,7 @@ protected:
     virtual std::expected<bool, AgisException> __build(Exchange const* exchange) noexcept { return true; };
     virtual bool __is_last_view(long long t) const noexcept;
     virtual std::expected<bool, AgisException> __set_volatility(size_t lookback);
+    virtual std::expected<double, AgisErrorCode> get_volatility() const;
 
     std::string asset_id;
     std::vector<double> volatility_vector;

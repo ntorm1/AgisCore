@@ -52,6 +52,12 @@ enum class ExchangeViewOpp
 	CONSTANT			/// applies a constant weight to each pair
 };
 
+enum class ExchangeViewScaler
+{
+	NONE,
+	BETA,
+	VOLATILITY
+};
 
 AGIS_API extern std::vector<std::string> exchange_view_opps;
 
@@ -139,13 +145,7 @@ struct ExchangeView
 	/// <returns></returns>
 	AGIS_API AgisResult<double> net_beta() const;
 
-	/// <summary>
-	/// Divide each pairs weights by it's respective beta, while maintaing the same leverage
-	/// Note: designed for use with percentage weights.
-	/// </summary>
-	/// <param name="exchange_map"></param>
-	/// <returns></returns>
-	AGIS_API AgisResult<bool> beta_scale();
+	std::expected<bool,AgisErrorCode> allocation_scale(ExchangeViewScaler t);
 
 	/**
 	 * @brief takes an exchange view with current portfolio allocations and scales it 

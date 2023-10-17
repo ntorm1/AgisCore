@@ -394,6 +394,8 @@ public:
 	{
 		this->table_nodes.push_back(table_node);
 		this->warmup = this->asset_lambda_op->get_warmup();
+		auto res = this->asset_lambda_op->build(table_node->get_exchange());
+		if (res.is_exception()) throw std::runtime_error(res.get_exception());
 	}
 
 	//============================================================================
@@ -616,7 +618,18 @@ public:
 				throw std::runtime_error("invalid exchange view operation");
 			}
 		}
+		auto res = this->scale(view);
+		if(!res.has_value()) return std::unexpected<AgisErrorCode>(res.error());
 		return std::move(view);
+	}
+
+	AGIS_API void set_ev_scaler_type(ExchangeViewScaler ev_scaler_type_) {
+		this->ev_scaler_type = ev_scaler_type_;
+	}
+
+	std::expected<bool, AgisErrorCode> scale(ExchangeView& v) {
+		if (this->ev_scaler_type == ExchangeViewScaler::NONE) return true;
+		return v.allocation_scale(this->ev_scaler_type);
 	}
 
 	size_t get_warmup() const override {
@@ -626,6 +639,7 @@ public:
 private:
 	SourceNode source_node;
 	ExchangeViewOpp ev_opp_type;
+	ExchangeViewScaler ev_scaler_type = ExchangeViewScaler::NONE;
 	double target;
 	std::optional<double> ev_opp_param;
 };
