@@ -45,7 +45,12 @@ std::expected<bool, AgisErrorCode> ExchangeView::allocation_scale(ExchangeViewSc
 		default:
 			return std::unexpected<AgisErrorCode>(AgisErrorCode::NOT_IMPLEMENTED);
 		}
-		if (!scaler.has_value()) return std::unexpected<AgisErrorCode>(scaler.error());
+		if (
+			!scaler.has_value()
+			||
+			scaler.value() == 0.0f
+		) return std::unexpected<AgisErrorCode>(scaler.error());
+
 		original_sum += pair.allocation_amount;
 		pair.allocation_amount /= scaler.value();
 		new_sum += pair.allocation_amount;

@@ -94,6 +94,7 @@ Future::__set_volatility(size_t lookback)
 std::expected<bool, AgisException>
 Future::__build(Exchange const* exchange) noexcept
 {
+	if (_last_trade_date.has_value()) return true;
 	if (this->asset_id.length() != 7)
 	{
 		return std::unexpected<AgisException>("invalid futures contract: " + this->asset_id);
@@ -227,7 +228,7 @@ std::expected<bool, AgisException> FutureTable::__build()
 	// set the asset table pointers for each child asset
 	this->__set_child_ptrs();
 
-	// TODO: warmup messes this up
+	// TODO: assumes build before warmup
 	if (_continous_close_vec.size()) {
 		return true;
 	}
