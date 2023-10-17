@@ -195,11 +195,13 @@ ExchangeMap& Hydra::__get_exchanges() noexcept
     return this->p->exchanges;
 }
 
+
+//============================================================================
 std::expected<ExchangePtr, AgisErrorCode>
 Hydra::get_exchange(std::string const& exchange_id) const
 {
     auto res = this->p->exchanges.get_exchange(exchange_id);
-    if (!res.has_value()) return res.value();
+    if (res.has_value()) return res.value();
     return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
 }
 

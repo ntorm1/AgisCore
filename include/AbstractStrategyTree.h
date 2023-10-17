@@ -60,6 +60,7 @@ class ValueReturningStatementNode : public ASTNode {
 public:
 	virtual ~ValueReturningStatementNode() {}
 	virtual ExpressionReturnType execute() = 0;
+	virtual size_t get_warmup() const = 0;
 };
 
 
@@ -96,7 +97,7 @@ public:
 	/**
 	 * @brief get the number of warmup periods required for the asset lambda node
 	*/
-	size_t get_warmup() const { return this->warmup; };
+	size_t get_warmup() const override { return this->warmup; };
 
 	/**
 	 * @brief set the type of asset lambda node
@@ -387,8 +388,8 @@ class AbstractTableViewNode : public ValueReturningStatementNode<std::expected<E
 public:
 	//============================================================================
 	AbstractTableViewNode(
-		NonNullSharedPtr<AbstractFutureTableNode> table_node,
-		NonNullUniquePtr<AbstractAssetLambdaOpp> asset_lambda_op_) :
+		std::shared_ptr<AbstractFutureTableNode> table_node,
+		std::unique_ptr<AbstractAssetLambdaOpp> asset_lambda_op_) :
 		asset_lambda_op(std::move(asset_lambda_op_))
 	{
 		this->table_nodes.push_back(table_node);
@@ -396,8 +397,7 @@ public:
 	}
 
 	//============================================================================
-	[[nodiscard]] std::expected<bool, AgisErrorCode> add_asset_table(NonNullSharedPtr<AbstractFutureTableNode> table_node);
-
+	AGIS_API [[nodiscard]] std::expected<bool, AgisErrorCode> add_asset_table(std::shared_ptr<AbstractFutureTableNode> table_node);
 
 	//============================================================================
 	std::expected<ExchangeView, AgisErrorCode> execute() override;
@@ -406,12 +406,12 @@ public:
 	std::expected<bool, AgisErrorCode> evaluate_asset(AssetPtr const& asset, ExchangeView& view) const noexcept;
 
 	//============================================================================
-	size_t get_warmup() {
+	size_t get_warmup() const override {
 		return this->warmup;
 	}
 
 private:
-	std::vector<NonNullSharedPtr<AbstractFutureTableNode>> table_nodes;
+	std::vector<std::shared_ptr<AbstractFutureTableNode>> table_nodes;
 	NonNullUniquePtr<AbstractAssetLambdaOpp> asset_lambda_op;
 	size_t warmup = 0;
 };
@@ -425,7 +425,7 @@ public:
 	AbstractExchangeViewNode(
 		std::shared_ptr<AbstractExchangeNode> exchange_node_,
 		std::unique_ptr<AbstractAssetLambdaOpp> asset_lambda_op_) :
-		exchange_node(std::move(exchange_node_)),
+		exchange_node(exchange_node_),
 		asset_lambda_op(std::move(asset_lambda_op_))
 	{
 		// extract exchange from node, copy asset pointers into the node
@@ -464,7 +464,7 @@ public:
 
 
 	//============================================================================
-	size_t get_warmup() {
+	size_t get_warmup() const override{
 		return this->warmup;
 	}
 
@@ -504,7 +504,7 @@ public:
 
 
 	//============================================================================
-	size_t get_warmup() {
+	size_t get_warmup() const override{
 		return this->ev->get_warmup();
 	}
 
@@ -530,22 +530,58 @@ private:
 class AbstractGenAllocationNode : public ValueReturningStatementNode<std::expected<ExchangeView, AgisErrorCode>> {
 public:
 	//============================================================================
+	using SourceNode = std::variant<
+		std::unique_ptr<AbstractTableViewNode>,
+		std::unique_ptr<AbstractSortNode>>;
+
+	AGIS_API ~AbstractGenAllocationNode() = default;
 	AbstractGenAllocationNode(
-		std::unique_ptr<AbstractSortNode> sort_node_,
+		SourceNode sort_node_,
 		ExchangeViewOpp ev_opp_type_,
 		double target,
 		std::optional<double> ev_opp_param
 	) :
-		sort_node(std::move(sort_node_)),
+		source_node(std::move(sort_node_)),
 		ev_opp_type(ev_opp_type_),
 		target(target),
 		ev_opp_param(ev_opp_param)
 	{}
 
+	//============================================================================
+    std::expected<ExchangeView, AgisErrorCode> vist_execute() {
+		return std::visit([](auto&& option) {
+			if constexpr (std::is_same_v<std::decay_t<decltype(option)>, std::unique_ptr<AbstractTableViewNode>>) {
+				return option->execute();
+			}
+			else if constexpr (std::is_same_v<std::decay_t<decltype(option)>, std::unique_ptr<AbstractSortNode>>) {
+				return option->execute();
+			}
+			else {
+				return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_CONFIGURATION);
+			}
+			}, source_node
+		);
+    }
+
+	//============================================================================
+	size_t vist_warmup() const {
+		return std::visit([](auto&& option) {
+			if constexpr (std::is_same_v<std::decay_t<decltype(option)>, std::unique_ptr<AbstractTableViewNode>>) {
+				return option->get_warmup();
+			}
+			else if constexpr (std::is_same_v<std::decay_t<decltype(option)>, std::unique_ptr<AbstractSortNode>>) {
+				return option->get_warmup();
+			}
+			else {
+				return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_CONFIGURATION);
+			}
+			}, source_node
+		);
+	}
 
 	//============================================================================
 	std::expected<ExchangeView, AgisErrorCode> execute() override {
-		auto view_res = sort_node->execute();
+		auto view_res = this->vist_execute();
 		if (!view_res.has_value()) return view_res;
 		ExchangeView view = std::move(view_res.value());
 		switch (this->ev_opp_type)
@@ -583,12 +619,12 @@ public:
 		return std::move(view);
 	}
 
-	size_t get_warmup() {
-		return this->sort_node->get_warmup();
+	size_t get_warmup() const override {
+		return this->vist_warmup();
 	}
 
 private:
-	NonNullUniquePtr<AbstractSortNode> sort_node;
+	SourceNode source_node;
 	ExchangeViewOpp ev_opp_type;
 	double target;
 	std::optional<double> ev_opp_param;
@@ -616,7 +652,7 @@ public:
 
 
 	//============================================================================
-	size_t get_warmup() {
+	size_t get_warmup() const override {
 		return this->gen_alloc_node->get_warmup();
 	}
 
@@ -659,13 +695,36 @@ AGIS_API std::unique_ptr<AbstractAssetLambdaOpp> create_asset_lambda_opp(
 
 
 //============================================================================
-AGIS_API std::unique_ptr<AbstractExchangeNode> create_exchange_node(
+AGIS_API std::unique_ptr<AbstractAssetLambdaOpp> create_asset_lambda_opp_r(
+	std::unique_ptr<AbstractAssetLambdaNode>&& left_node,
+	std::unique_ptr<AbstractAssetLambdaRead>&& right_read,
+	AgisOpperationType opperation
+);
+
+
+//============================================================================
+AGIS_API std::shared_ptr<AbstractExchangeNode> create_exchange_node(
 	ExchangePtr const exchange
+);
+
+
+//============================================================================
+AGIS_API std::shared_ptr<AbstractFutureTableNode> create_future_table_node(
+	std::shared_ptr<AbstractExchangeNode> exchange_node_,
+	std::string contract_id,
+	TableExtractMethod extract_method_
+);
+
+
+//============================================================================
+AGIS_API std::unique_ptr<AbstractTableViewNode> create_future_view_node(
+	std::shared_ptr<AbstractFutureTableNode> table_node,
+	std::unique_ptr<AbstractAssetLambdaOpp>& asset_lambda_op_
 );
 
 //============================================================================
 AGIS_API std::unique_ptr<AbstractExchangeViewNode> create_exchange_view_node(
-	std::unique_ptr<AbstractExchangeNode>& exchange_node,
+	std::shared_ptr<AbstractExchangeNode>& exchange_node,
 	std::unique_ptr<AbstractAssetLambdaOpp>& asset_lambda_op
 );
 
@@ -681,6 +740,15 @@ AGIS_API std::unique_ptr<AbstractSortNode> create_sort_node(
 //============================================================================
 AGIS_API std::unique_ptr<AbstractGenAllocationNode> create_gen_alloc_node(
 	std::unique_ptr<AbstractSortNode>& sort_node,
+	ExchangeViewOpp ev_opp_type,
+	double target,
+	std::optional<double> ev_opp_param
+);
+
+
+//============================================================================
+AGIS_API std::unique_ptr<AbstractGenAllocationNode> create_table_gen_alloc_node(
+	std::unique_ptr<AbstractTableViewNode>& sort_node,
 	ExchangeViewOpp ev_opp_type,
 	double target,
 	std::optional<double> ev_opp_param

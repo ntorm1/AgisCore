@@ -220,28 +220,61 @@ std::unique_ptr<AbstractAssetLambdaOpp> create_asset_lambda_opp(
 	);
 }
 
+//============================================================================
+AGIS_API std::unique_ptr<AbstractAssetLambdaOpp> create_asset_lambda_opp_r(
+	std::unique_ptr<AbstractAssetLambdaNode>&& left_node,
+	std::unique_ptr<AbstractAssetLambdaRead>&& right_read,
+	AgisOpperationType opperation)
+{
+	return create_asset_lambda_opp(left_node, right_read, opperation);
+}
+
 
 //============================================================================
-std::unique_ptr<AbstractExchangeNode> create_exchange_node(
+std::shared_ptr<AbstractExchangeNode> create_exchange_node(
 	ExchangePtr const exchange) {
-	return std::make_unique<AbstractExchangeNode>(exchange);
+	return std::make_shared<AbstractExchangeNode>(exchange);
+}
+
+
+//============================================================================
+std::shared_ptr<AbstractFutureTableNode> create_future_table_node(std::shared_ptr<AbstractExchangeNode> exchange_node_, std::string contract_id, TableExtractMethod extract_method_)
+{
+	return std::make_shared<AbstractFutureTableNode>(
+		exchange_node_,
+		contract_id,
+		extract_method_
+	);
+}
+
+
+//============================================================================
+std::unique_ptr<AbstractTableViewNode> create_future_view_node(
+	std::shared_ptr<AbstractFutureTableNode> table_node,
+	std::unique_ptr<AbstractAssetLambdaOpp>& asset_lambda_op_
+)
+{
+	return std::make_unique<AbstractTableViewNode>(
+		table_node,
+		std::move(asset_lambda_op_)
+	);
 }
 
 
 //============================================================================
 std::unique_ptr<AbstractExchangeViewNode> create_exchange_view_node(
-	std::unique_ptr<AbstractExchangeNode>& exchange_node,
+	std::shared_ptr<AbstractExchangeNode>& exchange_node,
 	std::unique_ptr<AbstractAssetLambdaOpp>& asset_lambda_op
 ) {
 	return std::make_unique<AbstractExchangeViewNode>(
-		std::move(exchange_node),
+		exchange_node,
 		std::move(asset_lambda_op)
 	);
 }
 
 
 //============================================================================
-AGIS_API std::unique_ptr<AbstractSortNode> create_sort_node(
+std::unique_ptr<AbstractSortNode> create_sort_node(
 	std::unique_ptr<AbstractExchangeViewNode>& ev,
 	int N,
 	ExchangeQueryType query_type
@@ -255,7 +288,7 @@ AGIS_API std::unique_ptr<AbstractSortNode> create_sort_node(
 
 
 //============================================================================
-AGIS_API std::unique_ptr<AbstractGenAllocationNode> create_gen_alloc_node(
+std::unique_ptr<AbstractGenAllocationNode> create_gen_alloc_node(
 	std::unique_ptr<AbstractSortNode>& sort_node,
 	ExchangeViewOpp ev_opp_type,
 	double target,
@@ -271,7 +304,23 @@ AGIS_API std::unique_ptr<AbstractGenAllocationNode> create_gen_alloc_node(
 
 
 //============================================================================
-AGIS_API std::unique_ptr<AbstractStrategyAllocationNode> create_strategy_alloc_node(
+std::unique_ptr<AbstractGenAllocationNode> create_table_gen_alloc_node(
+	std::unique_ptr<AbstractTableViewNode>& sort_node,
+	ExchangeViewOpp ev_opp_type,
+	double target,
+	std::optional<double> ev_opp_param
+) {
+	return std::make_unique<AbstractGenAllocationNode>(
+		std::move(sort_node),
+		ev_opp_type,
+		target,
+		ev_opp_param
+	);
+}
+
+
+//============================================================================
+std::unique_ptr<AbstractStrategyAllocationNode> create_strategy_alloc_node(
 	AgisStrategy* strategy_,
 	std::unique_ptr<AbstractGenAllocationNode>& gen_alloc_node_,
 	double epsilon_,
@@ -291,7 +340,7 @@ AGIS_API std::unique_ptr<AbstractStrategyAllocationNode> create_strategy_alloc_n
 
 
 //============================================================================
-std::expected<bool, AgisErrorCode> AbstractTableViewNode::add_asset_table(NonNullSharedPtr<AbstractFutureTableNode> table_node)
+std::expected<bool, AgisErrorCode> AbstractTableViewNode::add_asset_table(std::shared_ptr<AbstractFutureTableNode> table_node)
 {
 	// all asset tables must have same base exchange
 	auto& table = this->table_nodes.front();
@@ -321,6 +370,7 @@ AbstractTableViewNode::evaluate_asset(AssetPtr const& asset, ExchangeView& v) co
 	if (std::isnan(val.value())) {
 		return true;
 	}
+	// generate new allocation in the exchange view object
 	auto alloc = val.value();
 	ExchangeViewAllocation a(
 		asset->get_asset_index(),
