@@ -379,30 +379,36 @@ PortfolioPtr const PortfolioMap::__get_portfolio(std::string const& id) const
 
 
 //============================================================================
-std::expected<rapidjson::Document, AgisException> Portfolio::to_json() const
-{
-    Document j(kObjectType);
+std::expected<rapidjson::Document, AgisException> Portfolio::to_json() const {
+    rapidjson::Document j;
+    j.SetObject();  // Create a JSON object to store the data.
     j.AddMember("starting_cash", this->tracers.starting_cash.load(), j.GetAllocator());
 
-    Value strategyArray(kArrayType);
+    rapidjson::Value strategyArray(rapidjson::kArrayType);
+
     for (const auto& strategyPair : strategies) {
         const auto& strategy = strategyPair.second;
         auto strategy_json = strategy->to_json(); // Serialize the Strategy to RapidJSON
-        
+
         if (!strategy_json.has_value()) {
-            return std::unexpected<AgisException>{strategy_json.error()};
+            return std::unexpected<AgisException>(strategy_json.error());
         }
-        
+
         strategyArray.PushBack(strategy_json.value(), j.GetAllocator());
     }
 
     if (benchmark_strategy) {
         auto strategy_json = benchmark_strategy->to_json(); // Serialize the BenchmarkStrategy to RapidJSON
         if (!strategy_json.has_value()) {
-            return std::unexpected<AgisException>{strategy_json.error()};
+            return std::unexpected<AgisException>(strategy_json.error());
         }
         strategyArray.PushBack(strategy_json.value(), j.GetAllocator());
     }
+
+    // if strategy array is empty then return an empty object
+    if (strategyArray.Empty()) {
+		return j;
+	}
 
     j.AddMember("strategies", strategyArray, j.GetAllocator());
 
@@ -413,6 +419,11 @@ std::expected<rapidjson::Document, AgisException> Portfolio::to_json() const
 //============================================================================
 void PortfolioMap::restore(AgisRouter& router, const Document& j) {
     Portfolio::__reset_counter();
+
+    // if portfolios is not an array then return
+    if (!j.HasMember("portfolios")) {
+		return;
+	}
 
     const Value& portfolioArray = j["portfolios"];
     if (portfolioArray.IsArray()) {
@@ -455,23 +466,27 @@ PortfolioMap::get_portfolio_ids() const
 
 
 //============================================================================
-std::expected<rapidjson::Document, AgisException>
-PortfolioMap::to_json() const
-{
-    Document j(kObjectType);
+std::expected<rapidjson::Document, AgisException> PortfolioMap::to_json() const {
+    rapidjson::Document j;
+    j.SetObject();  // Create a JSON object to store the data.
+    auto& allocator = j.GetAllocator();
     for (const auto& pair : portfolios) {
         const std::shared_ptr<Portfolio>& portfolio = pair.second;
 
-        Document portfolioJson(kObjectType);
+        Document portfolioJson(rapidjson::kObjectType);
         auto portfolio_json = portfolio->to_json();
 
         if (!portfolio_json.has_value()) {
-            return portfolio_json;
+            return std::unexpected<AgisException>(portfolio_json.error());
         }
 
-        Value portfolio_id_value(portfolio->__get_portfolio_id().c_str(), j.GetAllocator());
-        j.AddMember(portfolio_id_value, portfolio_json.value(), j.GetAllocator());
+        // Convert the portfolio ID to a string
+        const std::string portfolio_id = portfolio->__get_portfolio_id();
+
+        // Add the portfolio JSON as a member using the portfolio ID as the key
+        j.AddMember(rapidjson::StringRef(portfolio_id.c_str()), portfolio_json.value(), allocator);
     }
+
     return j;
 }
 

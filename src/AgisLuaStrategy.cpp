@@ -44,6 +44,12 @@ void init_lua_enums(sol::state& lua)
 			{"CONSTANT", ExchangeViewOpp::CONSTANT}
 		}
 	);
+	lua.new_enum<ExchangeViewScaler>("ExchangeViewScaler",
+		{
+			{"BETA", ExchangeViewScaler::BETA},
+			{"VOLATILITY", ExchangeViewScaler::VOLATILITY},
+		}
+	);
 	lua.new_enum<AllocType>("AllocType",
 		{
 			{"UNITS", AllocType::UNITS},
@@ -54,6 +60,11 @@ void init_lua_enums(sol::state& lua)
 	lua.new_enum<AssetObserverType>("AssetObserverType",
 		{
 			{"COL_ROL_MEAN", AssetObserverType::COL_ROL_MEAN}
+		}
+	);
+	lua.new_enum<TableExtractMethod>("TableExtractMethod",
+		{
+			{"FRONT", TableExtractMethod::FRONT}
 		}
 	);
 }
@@ -71,9 +82,6 @@ void init_lua_interface(sol::state* lua_ptr) {
 	lua.new_usertype<AbstractAssetLambdaOpp>("AbstractAssetLambdaOpp",
 		sol::no_constructor
 	);
-	//lua.new_usertype<AbstractAssetLambdaFilter>("AbstractAssetLambdaFilter",
-	//	sol::no_constructor
-	//);
 	lua.new_usertype<AbstractExchangeNode>("AbstractExchangeNode",
 		sol::no_constructor
 	);
@@ -84,7 +92,9 @@ void init_lua_interface(sol::state* lua_ptr) {
 				sol::no_constructor
 	);
 	lua.new_usertype<AbstractGenAllocationNode>("AbstractGenAllocationNode",
-		sol::no_constructor
+		sol::no_constructor,
+		"set_vol_target", &AbstractGenAllocationNode::set_vol_target,
+		"set_ev_scaler_type", &AbstractGenAllocationNode::set_ev_scaler_type
 	);
 	lua.new_usertype<AbstractStrategyAllocationNode>("AbstractStrategyAllocationNode",
 		sol::no_constructor
@@ -93,9 +103,11 @@ void init_lua_interface(sol::state* lua_ptr) {
 	//lua.set_function("create_asset_lambda_filter", create_asset_lambda_filter);
 	lua.set_function("create_asset_lambda_read", create_asset_lambda_read);
 	lua.set_function("create_asset_lambda_opp", create_asset_lambda_opp);
+	lua.set_function("create_future_view_node", create_future_view_node);
 	lua.set_function("create_exchange_node", create_exchange_node);
 	lua.set_function("create_exchange_view_node", create_exchange_view_node);
 	lua.set_function("create_gen_alloc_node", create_gen_alloc_node);
+	lua.set_function("create_table_gen_alloc_node", create_table_gen_alloc_node);
 	lua.set_function("create_sort_node", create_sort_node);
 	lua.set_function("create_strategy_alloc_node", create_strategy_alloc_node);
 

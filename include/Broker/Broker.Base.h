@@ -69,7 +69,9 @@ public:
 	[[nodiscard]] AGIS_API std::expected<double, AgisException> get_margin_requirement(size_t asset_index, MarginType margin_type) noexcept;
 	[[nodiscard]] std::string const& get_id() const noexcept { return _broker_id; };
 	[[nodiscard]] size_t get_index() const noexcept { return _broker_index; };
-	[[nodiscard]] void set_order_impacts(std::reference_wrapper<OrderPtr> new_order) noexcept;
+	void set_order_impacts(std::reference_wrapper<OrderPtr> new_order) noexcept;
+	void set_slippage_impacts(std::reference_wrapper<OrderPtr> new_order) noexcept;
+	void set_slippage(double slippage) { this->_slippage = slippage; }
 
 protected:
 	std::expected<bool, AgisException> strategy_subscribe(AgisStrategy* strategy) noexcept;
@@ -83,7 +85,13 @@ private:
 	std::shared_mutex _broker_mutex;
 	std::string _broker_id;
 	size_t _broker_index = 0;
-	double _cash = 0;
+	double _cash = 0.0f;
+
+	/**
+	 * @brief pct regression of the order fill price. I.e. if buy order fills at 100
+	 * and slippage is .01 then the fill price is 101.
+	*/
+	double _slippage = 0.0f; 
 };
 
 using BrokerPtr = std::shared_ptr<Broker>;

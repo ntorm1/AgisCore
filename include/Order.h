@@ -116,6 +116,7 @@ public:
     inline static void __reset_counter() { order_counter.store(0); }
     void set_order_create_time(long long t) { this->order_create_time = t; }
     void __set_state(OrderState state) { this->order_state = state; }
+    void __set_average_price(double p) { this->avg_price = p; }
     void __set_force_close(bool force_close_) { this->force_close = force_close_; }
 
     OrderPtr generate_inverse_order();

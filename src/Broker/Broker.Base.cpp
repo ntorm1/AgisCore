@@ -393,11 +393,27 @@ void Broker::set_order_impacts(std::reference_wrapper<OrderPtr> new_order_ref) n
 
 
 //============================================================================
+void Broker::set_slippage_impacts(std::reference_wrapper<OrderPtr> new_order) noexcept
+{
+	if (this->_slippage == 0.0f) return;
+	auto units = new_order.get()->get_units();
+	auto average_price = new_order.get()->get_average_price();
+	if (units > 0) {
+		new_order.get()->__set_average_price(average_price * (1 + this->_slippage));
+	}
+	else {
+		new_order.get()->__set_average_price(average_price * (1 - this->_slippage));
+	}
+}
+
+
+//============================================================================
 void 
 Broker::__on_order_fill(std::reference_wrapper<OrderPtr> new_order) noexcept
 {
 	// lock the broker mutex to adjust broker levels 
 	std::unique_lock<std::shared_mutex> broker_lock(_broker_mutex);
+	this->set_slippage_impacts(new_order);
 	this->set_order_impacts(new_order);
 	new_order.get()->__broker = this;
 }

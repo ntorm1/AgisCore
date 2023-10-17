@@ -484,6 +484,7 @@ std::expected<bool, AgisException> Hydra::__cleanup()
 void Hydra::save_state(rapidjson::Document& j)
 {
     // Save exchanges
+    auto& allocator = j.GetAllocator();
     j.AddMember("exchanges", this->p->exchanges.to_json(), j.GetAllocator());
 
     // Save covariance matrix
@@ -501,6 +502,8 @@ void Hydra::save_state(rapidjson::Document& j)
     if (!portfolio_json.has_value()) {
         throw portfolio_json.error();
     }
+    rapidjson::Value key("portfolios", allocator);
+    j.AddMember(key, portfolio_json.value(), allocator);
     j.AddMember("portfolios", portfolio_json.value(), j.GetAllocator());
 }
 
@@ -596,6 +599,11 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
 AgisResult<bool> Hydra::restore_portfolios(Document const& j)
 {
     this->p->portfolios.restore(this->p->router, j);
+
+    // if portfolio does not exist return true
+    if (!j.HasMember("portfolios")) {
+		return AgisResult<bool>(true);
+	}
 
     const Value& portfolios = j["portfolios"];
     for (Value::ConstMemberIterator portfolio_json = portfolios.MemberBegin(); portfolio_json != portfolios.MemberEnd(); ++portfolio_json) {

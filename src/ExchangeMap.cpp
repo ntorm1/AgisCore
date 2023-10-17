@@ -12,6 +12,8 @@ using namespace rapidjson;
 //============================================================================
 void ExchangeMap::restore(rapidjson::Document const& j)
 {
+	// if exchange does not exist skip
+	if (!j.HasMember("exchanges")) return;
 	rapidjson::Value const& exchanges = j["exchanges"];
 	std::vector<std::pair<std::string, Value const&>> exchangeItems;
 
@@ -511,6 +513,13 @@ void ExchangeMap::__reset()
 	this->current_index = 0;
 
 	// reset assets that were expired and bring them back in to view
+	for (auto& asset : this->assets_expired) {
+		if (asset == nullptr) continue;
+		this->__set_asset(asset->__get_index(), asset);
+	}
+	// fill assets_expired with nullptr
+	std::fill(assets_expired.begin(), assets_expired.end(), nullptr);
+
 	for (auto& asset : this->assets)
 	{
 		this->__set_asset(asset->__get_index(), asset);
@@ -638,7 +647,7 @@ AGIS_API std::expected<bool, AgisException> ExchangeMap::__build()
 	this->is_built = true;
 	this->current_time = this->dt_index[0];
 	// empty vector to contain expired assets
-	this->assets_expired.resize(this->assets.size());
+	this->assets_expired.resize(this->assets.size(), nullptr);
 	std::fill(assets_expired.begin(), assets_expired.end(), nullptr);
 	return true;
 }
