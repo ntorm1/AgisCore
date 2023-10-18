@@ -241,7 +241,7 @@ public:
     AGIS_API inline std::vector<double> get_nlv_history() const { return this->tracers.nlv_history; }
     AGIS_API inline std::vector<double> get_cash_history() const { return this->tracers.cash_history; }
 
-    std::expected<rapidjson::Document, AgisException> to_json() const;
+    AGIS_API std::expected<rapidjson::Document, AgisException> to_json() const;
     void restore(rapidjson::Document const& strategies);
     void __reset();
     inline void __set_exchange_map(ExchangeMap const* exchange_map_) { this->exchange_map = exchange_map_; }

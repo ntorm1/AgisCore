@@ -472,10 +472,7 @@ std::expected<rapidjson::Document, AgisException> PortfolioMap::to_json() const 
     auto& allocator = j.GetAllocator();
     for (const auto& pair : portfolios) {
         const std::shared_ptr<Portfolio>& portfolio = pair.second;
-
-        Document portfolioJson(rapidjson::kObjectType);
         auto portfolio_json = portfolio->to_json();
-
         if (!portfolio_json.has_value()) {
             return std::unexpected<AgisException>(portfolio_json.error());
         }
@@ -484,10 +481,11 @@ std::expected<rapidjson::Document, AgisException> PortfolioMap::to_json() const 
         const std::string portfolio_id = portfolio->__get_portfolio_id();
 
         // Add the portfolio JSON as a member using the portfolio ID as the key
-        j.AddMember(rapidjson::StringRef(portfolio_id.c_str()), portfolio_json.value(), allocator);
+        Document portfolio_doc = std::move(portfolio_json.value());
+        rapidjson::Value key(portfolio_id.c_str(), allocator);
+        j.AddMember(key.Move(), portfolio_doc, allocator);
     }
-
-    return j;
+    return std::move(j);
 }
 
 
