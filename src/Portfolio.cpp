@@ -466,10 +466,12 @@ PortfolioMap::get_portfolio_ids() const
 
 
 //============================================================================
-std::expected<rapidjson::Document, AgisException> PortfolioMap::to_json() const {
+std::expected<rapidjson::Document, AgisException>
+PortfolioMap::to_json() const {
     rapidjson::Document j;
     j.SetObject();  // Create a JSON object to store the data.
     auto& allocator = j.GetAllocator();
+
     for (const auto& pair : portfolios) {
         const std::shared_ptr<Portfolio>& portfolio = pair.second;
         auto portfolio_json = portfolio->to_json();
