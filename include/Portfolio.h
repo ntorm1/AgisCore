@@ -383,7 +383,7 @@ public:
     AGIS_API PortfolioRef get_portfolio(std::string const& id) const;
     AGIS_API std::vector<std::string> get_portfolio_ids() const;
     AGIS_API std::expected<rapidjson::Value, AgisException> to_json(rapidjson::Document::AllocatorType& allocator) const;
-    AGIS_API void restore(AgisRouter& router, rapidjson::Document const& j);
+    AGIS_API std::expected<bool,AgisException> restore(AgisRouter& router, rapidjson::Document const& j);
 
 private:
     ankerl::unordered_dense::map<size_t, PortfolioPtr> portfolios;

@@ -377,30 +377,31 @@ bool Hydra::asset_exists(std::string asset_id) const
 
 
 //============================================================================
-AGIS_API bool Hydra::portfolio_exists(std::string const& portfolio_id) const
+bool Hydra::portfolio_exists(std::string const& portfolio_id) const
 {
     return this->p->portfolios.__portfolio_exists(portfolio_id);
 }
 
 
 //============================================================================
-AGIS_API bool Hydra::strategy_exists(std::string const& strategy_id) const
+bool Hydra::strategy_exists(std::string const& strategy_id) const
 {
     return this->strategies.__strategy_exists(strategy_id);
 }
 
 
 //============================================================================
-AGIS_API AgisResult<bool> Hydra::restore_exchanges(rapidjson::Document const& j)
+std::expected<bool, AgisException>
+Hydra::restore_exchanges(rapidjson::Document const& j)
 {
     try{
         this->p->exchanges.restore(j);
     }
 	catch (std::exception& e)
 	{
-		return AgisResult<bool>(AGIS_EXCEP(e.what()));
+		return std::unexpected<AgisException>(AGIS_EXCEP(e.what()));
 	}
-    return AgisResult<bool>(true);
+    return true;
 }
 
 //============================================================================
@@ -413,7 +414,7 @@ void Hydra::clear()
 
 
 //============================================================================
-AGIS_API std::expected<bool, AgisException> Hydra::build()
+std::expected<bool, AgisException> Hydra::build()
 {
     size_t n = this->p->exchanges.__get_dt_index(false).size();
     auto res = this->p->exchanges.__build();
@@ -507,7 +508,8 @@ Hydra::save_state(rapidjson::Document::AllocatorType& allocator)
 
 
 //============================================================================
-AgisResult<AgisStrategyPtr> strategy_from_json(
+std::expected<AgisStrategyPtr,AgisException> 
+strategy_from_json(
     PortfolioPtr const & portfolio,
     BrokerPtr broker,
     const Value& strategy_json)
@@ -555,7 +557,7 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
     }
     else if (strategy_type == AgisStrategyType::LUAJIT) {
         if (!strategy_json.HasMember("lua_script_path")) {
-            return AgisResult<AgisStrategyPtr>(AGIS_EXCEP("LUAJIT strategy missing script path"));
+            return std::unexpected<AgisException>(AGIS_EXCEP("LUAJIT strategy missing script path"));
         }
         std::string script_path = strategy_json["lua_script_path"].GetString();
         try {
@@ -569,10 +571,10 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
             );
         }
         catch (std::exception& e) {
-			return AgisResult<AgisStrategyPtr>(AGIS_EXCEP(e.what()));
+            return std::unexpected<AgisException>(AGIS_EXCEP(e.what()));
 		}
     }
-    else return AgisResult<AgisStrategyPtr>(AGIS_EXCEP("Invalid strategy type"));
+    else return std::unexpected<AgisException>(AGIS_EXCEP("Invalid strategy type"));
 
     // set stored flags on the strategy
     try {
@@ -586,49 +588,47 @@ AgisResult<AgisStrategyPtr> strategy_from_json(
         strategy->set_step_frequency(step_frequency);
     }
     catch (std::exception& e) {
-        return AgisResult<AgisStrategyPtr>(AGIS_EXCEP(e.what()));
+        return std::unexpected<AgisException>(AGIS_EXCEP(e.what()));
     }
 
-    return AgisResult<AgisStrategyPtr>(std::move(strategy));
+    return std::move(strategy);
 }
 
 
 //============================================================================
-AgisResult<bool> Hydra::restore_portfolios(Document const& j)
+std::expected<bool, AgisException>
+Hydra::restore_portfolios(Document const& j)
 {
-    this->p->portfolios.restore(this->p->router, j);
-
     // if portfolio does not exist return true
-    if (!j.HasMember("portfolios")) {
-		return AgisResult<bool>(true);
-	}
-
-    const Value& portfolios = j["portfolios"];
+    if (!j.HasMember("hydra_state") || !j["hydra_state"].HasMember("portfolios")) {
+        return true;
+    }
+    
+    AGIS_ASSIGN_OR_RETURN(res, this->p->portfolios.restore(this->p->router, j));
+    
+    // restore the exchange map pointer for the portfolio as well as the strateges
+    const Value& portfolios = j["hydra_state"]["portfolios"];
     for (Value::ConstMemberIterator portfolio_json = portfolios.MemberBegin(); portfolio_json != portfolios.MemberEnd(); ++portfolio_json) {
         std::string portfolio_id = portfolio_json->name.GetString();
         const Value& portfolio_value = portfolio_json->value;
-        const Value& strategies = portfolio_value["strategies"];
 
+        // set the exchange map pointer
         auto& portfolio = this->get_portfolio(portfolio_id);
+        portfolio->__set_exchange_map(&this->p->exchanges);
 
+        // attempt to register the strategies to the portfolio
+        JSON_GET_OR_CONTINUE(strategies, portfolio_value, "strategies");
         for (Value::ConstValueIterator strategy_json = strategies.Begin(); strategy_json != strategies.End(); ++strategy_json) {
             const AgisStrategyType strategy_type = StringToAgisStrategyType(strategy_json->FindMember("strategy_type")->value.GetString());
             if (strategy_type == AgisStrategyType::CPP) {
                 continue;
             }
-            std::expected<BrokerPtr, AgisException> broker_opt = this->p->brokers.get_broker(portfolio_value["broker_id"].GetString());
-            if (!broker_opt.has_value()){
-                return AgisResult<bool>(broker_opt.error());
-            }
-            
-            auto strategy = strategy_from_json(portfolio, broker_opt.value(), *strategy_json);
-            if (strategy.is_exception()) {
-                return AgisResult<bool>(strategy.get_exception());
-            }
-            this->register_strategy(std::move(strategy.unwrap()));
+            AGIS_ASSIGN_OR_RETURN(broker, this->p->brokers.get_broker(portfolio_value["broker_id"].GetString()));
+            AGIS_ASSIGN_OR_RETURN(strategy, strategy_from_json(portfolio, broker, *strategy_json));
+            this->register_strategy(std::move(strategy));
         }
     }
-    return AgisResult<bool>(true);
+    return true;
 }
 
 

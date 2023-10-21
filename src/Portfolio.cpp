@@ -409,28 +409,53 @@ Portfolio::to_json(rapidjson::Document::AllocatorType& allocater) const {
 
 
 //============================================================================
-void PortfolioMap::restore(AgisRouter& router, const Document& j) {
+std::expected<rapidjson::Value, AgisException>
+PortfolioMap::to_json(rapidjson::Document::AllocatorType& allocator) const {
+    rapidjson::Value j(kObjectType);
+
+    for (const auto& pair : portfolios) {
+        const std::shared_ptr<Portfolio>& portfolio = pair.second;
+        AGIS_ASSIGN_OR_RETURN(portfolio_json, portfolio->to_json(allocator));
+
+        // Convert the portfolio ID to a string
+        const std::string portfolio_id = portfolio->__get_portfolio_id();
+
+        // Add the portfolio JSON as a member using the portfolio ID as the key
+        rapidjson::Value key(portfolio_id.c_str(), allocator);
+        j.AddMember(key.Move(), portfolio_json.Move(), allocator);
+    }
+    return j;
+}
+
+
+//============================================================================
+std::expected<bool, AgisException>
+PortfolioMap::restore(AgisRouter& router, const Document& j) {
     Portfolio::__reset_counter();
 
     // if portfolios is not an array then return
-    if (!j.HasMember("portfolios")) {
-		return;
+    if (!j["hydra_state"].HasMember("portfolios")) {
+		return true;
 	}
 
-    const Value& portfolioArray = j["portfolios"];
-    if (portfolioArray.IsArray()) {
-        for (SizeType i = 0; i < portfolioArray.Size(); i++) {
-            const Value& portfolioJson = portfolioArray[i];
-
-            // Extract portfolio_id and starting_cash from the JSON
-            const std::string& portfolio_id = portfolioJson["portfolio_id"].GetString();
-            double starting_cash = portfolioJson["starting_cash"].GetDouble();
-
-            // Create a new Portfolio object and add it to the map
-            auto portfolio = std::make_shared<Portfolio>(router, portfolio_id, starting_cash);
-            this->__register_portfolio(std::move(portfolio));
-        }
+    const Value& portfolio_dict = j["hydra_state"]["portfolios"];
+    if (!portfolio_dict.IsObject()) {
+        return std::unexpected<AgisException>("invalid portfolio dict");
     }
+
+    // iterate over the portfolios
+    for (Value::ConstMemberIterator itr = portfolio_dict.MemberBegin(); itr != portfolio_dict.MemberEnd(); ++itr) {
+		const std::string& portfolio_id = itr->name.GetString();
+		const Value& portfolioJson = itr->value;
+
+		// Extract starting_cash from the JSON
+		double starting_cash = portfolioJson["starting_cash"].GetDouble();
+
+		// Create a new Portfolio object and add it to the map
+		auto portfolio = std::make_shared<Portfolio>(router, portfolio_id, starting_cash);
+		this->__register_portfolio(std::move(portfolio));
+	}
+    return true;
 }
 
 
@@ -454,26 +479,6 @@ PortfolioMap::get_portfolio_ids() const
         v.push_back(p.first);
     }
     return v;
-}
-
-
-//============================================================================
-std::expected<rapidjson::Value, AgisException>
-PortfolioMap::to_json(rapidjson::Document::AllocatorType& allocator) const {
-    rapidjson::Value j(kObjectType);
-
-    for (const auto& pair : portfolios) {
-        const std::shared_ptr<Portfolio>& portfolio = pair.second;
-        AGIS_ASSIGN_OR_RETURN(portfolio_json, portfolio->to_json(allocator));
-
-        // Convert the portfolio ID to a string
-        const std::string portfolio_id = portfolio->__get_portfolio_id();
-
-        // Add the portfolio JSON as a member using the portfolio ID as the key
-        rapidjson::Value key(portfolio_id.c_str(), allocator);
-        j.AddMember(key.Move(), portfolio_json.Move(), allocator);
-    }
-    return j;
 }
 
 

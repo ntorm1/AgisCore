@@ -54,19 +54,9 @@ public:
 	AGIS_API Hydra(int logging_ = 0, bool init_lua_state = false);
 	AGIS_API ~Hydra();
 
-	/// <summary>
-	/// Restore hydra instance from a json object
-	/// </summary>
-	/// <param name="j">Json object describin a Hydra instance</param>
-	/// <returns></returns>
-	AGIS_API AgisResult<bool> restore_portfolios(rapidjson::Document const& j);
 
-	/// <summary>
-	/// Restore the underlying data of the hydra instance
-	/// </summary>
-	/// <param name="j"></param>
-	/// <returns></returns>
-	AGIS_API AgisResult<bool> restore_exchanges(rapidjson::Document const& j);
+	AGIS_API std::expected<bool, AgisException> restore_portfolios(rapidjson::Document const& j);
+	AGIS_API std::expected<bool, AgisException> restore_exchanges(rapidjson::Document const& j);
 
 	/// <summary>
 	/// Remove everything from the instance

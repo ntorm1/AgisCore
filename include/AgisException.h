@@ -34,9 +34,19 @@ public:
     }
 };
 
-#define AGIS_ASSIGN_OR_RETURN(val, function) \
-	auto result_opt = function; \
-    if (!result_opt) { \
-		return std::unexpected<AgisException>(result_opt.error()); \
+
+#define CONCAT(a, b) CONCAT_INNER(a, b)
+#define CONCAT_INNER(a, b) a ## b
+
+#define JSON_GET_OR_CONTINUE(val, function, key) \
+    if(!function.HasMember(key)) { \
+		continue; \
 	} \
-	auto val = std::move(result_opt.value());
+    auto const& val = function[key];
+
+#define AGIS_ASSIGN_OR_RETURN(val, function) \
+	auto CONCAT(val, _opt) = function; \
+    if (!CONCAT(val, _opt)) { \
+		return std::unexpected<AgisException>(CONCAT(val, _opt).error()); \
+	} \
+	auto val = std::move(CONCAT(val, _opt).value());
