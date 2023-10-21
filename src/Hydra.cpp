@@ -481,39 +481,27 @@ std::expected<bool, AgisException> Hydra::__cleanup()
 
 
 //============================================================================
-std::expected<rapidjson::Document, AgisException>
-Hydra::save_state()
+std::expected<rapidjson::Value, AgisException>
+Hydra::save_state(rapidjson::Document::AllocatorType& allocator)
 {
-    rapidjson::Document j;
-    j.SetObject();  // Create a JSON object to store the data.
-    auto& allocator = j.GetAllocator();
+    rapidjson::Value j(kObjectType);
 
     // Save exchanges
-    j.AddMember("exchanges", this->p->exchanges.to_json(), j.GetAllocator());
+    j.AddMember("exchanges", this->p->exchanges.to_json(), allocator);
 
     // Save covariance matrix
     auto cov_matrix_res = this->p->exchanges.get_covariance_matrix();
     if (!cov_matrix_res.is_exception()) {
         auto cov_matrix = cov_matrix_res.unwrap();
         if (cov_matrix->get_lookback() != 0) {
-            j.AddMember("covariance_lookback", cov_matrix->get_lookback(), j.GetAllocator());
-            j.AddMember("covariance_step", cov_matrix->get_step_size(), j.GetAllocator());
+            j.AddMember("covariance_lookback", cov_matrix->get_lookback(), allocator);
+            j.AddMember("covariance_step", cov_matrix->get_step_size(), allocator);
         }
     }
 
     // Save portfolios
-    auto portfolio_json = this->p->portfolios.to_json();
-    if (!portfolio_json.has_value()) {
-        return std::unexpected<AgisException>(AGIS_EXCEP("Failed to save portfolios"));
-    }
-    // Create a new Document and copy the data from portfolio_json to it.
-    rapidjson::Document portfolio_doc;
-    portfolio_doc.CopyFrom(portfolio_json.value(), allocator);
-
-    std::string key_str = "portfolios";
-    rapidjson::Value key(key_str.c_str(), allocator);
-    j.AddMember(key.Move(), portfolio_doc, allocator);
-
+    AGIS_ASSIGN_OR_RETURN(portfolio_json, this->p->portfolios.to_json(allocator));
+    j.AddMember("portfolios", portfolio_json.Move(), allocator);
     return j;
 }
 

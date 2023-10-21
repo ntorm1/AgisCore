@@ -133,7 +133,6 @@ public:
     AGIS_API const std::span<double const> get_beta_column() const;
     AGIS_API const std::span<double const> get_volatility_column() const;
 
-    AGIS_API bool __is_last_row() const { return this->current_index == this->rows + 1; }
     AGIS_API double __get(std::string col, size_t row) const;
     AGIS_API inline long long __get_dt(size_t row) const { return *(this->dt_index.data() + row); };
     AGIS_API inline size_t __get_open_index() const { return this->open_index; }
@@ -160,6 +159,7 @@ public:
     //==== Public Asset Virtual Methods ====//
     virtual std::span<const double> const __get_vol_close_column() const;
     virtual std::expected<double, AgisErrorCode> get_volatility() const;
+    virtual bool __is_last_row(long long t) const { return this->current_index == this->rows + 1; }
 
 
     /// <summary>

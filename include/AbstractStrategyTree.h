@@ -637,7 +637,9 @@ public:
 		// apply a given vol target to the exchange view if it is set.
 		if (!this->vol_target.has_value()) return v;
 		auto res = v->vol_target(this->vol_target.value());
-		if (res.is_exception()) return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_CONFIGURATION);
+		if (res.is_exception()) {
+			return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_CONFIGURATION);
+		}
 		return v;
 	}
 
@@ -645,7 +647,9 @@ public:
 		// scale positions in the exchange view by some type if set.
 		if (this->ev_scaler_type == ExchangeViewScaler::NONE) return v;
 		auto res = v->allocation_scale(this->ev_scaler_type);
-		if (!res.has_value()) return std::unexpected<AgisErrorCode>(res.error());
+		if (!res.has_value()) {
+			return std::unexpected<AgisErrorCode>(res.error());
+		}
 		return v;
 	}
 

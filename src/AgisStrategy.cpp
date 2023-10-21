@@ -264,12 +264,12 @@ AGIS_API void AgisStrategy::strategy_allocate(
 				break;
 			case AllocType::DOLLARS: {
 				auto market_price = asset->__get_market_price(true);
-				size /= (market_price * asset->get_unit_multiplier());
+				size /= (market_price);
 				break; 
 			}
 			case AllocType::PCT: {
 				auto market_price = asset->__get_market_price(true);
-				size *=  (this->tracers.nlv.load() / (market_price * asset->get_unit_multiplier()));
+				size *=  (this->tracers.nlv.load() / (market_price));
 				break;
 			}
 		}

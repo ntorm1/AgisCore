@@ -157,13 +157,26 @@ void AssetTable::step()
 		this->_tradeable.pop_front();
 		this->_out_of_bounds.push_back(asset);
 	}
+
+	if (this->_out_of_bounds.empty()) {
+		return;
+	}
 	// assets are reset before tables so loop through the out of bounds assets and 
 	// move them back into the tradeable table if they are streaming
-	while (!this->_out_of_bounds.empty() && this->_out_of_bounds.front()->__is_streaming) {
-		DerivativePtr asset = this->_out_of_bounds.front();
-		this->_out_of_bounds.pop_front();
-		this->_tradeable.push_back(asset);
-	}
+
+	// iterate through out of bounds and pop if streaming
+	auto it = this->_out_of_bounds.begin();
+	while (it != this->_out_of_bounds.end()) {
+			if ((*it)->__is_streaming) {
+				this->_tradeable.push_back(*it);
+				it = this->_out_of_bounds.erase(it);
+			}
+			else {
+				++it;
+			}
+		}
+
+
 }
 
 

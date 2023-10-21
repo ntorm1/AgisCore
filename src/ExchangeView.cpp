@@ -94,6 +94,10 @@ AgisResult<bool> ExchangeView::vol_target(double target)
 {
 	// if the view only has one asset then volatility of the portfolio is just 
 	// the volatility of the asset
+	if (view.size() == 0) {
+		return AgisResult<bool>(true);
+	}
+
 	if (view.size() == 1) {
 		return this->vol_target_fast(target);
 	}

@@ -648,7 +648,7 @@ bool Asset::__is_valid_time(long long& datetime)
 //============================================================================
 long long Asset::__get_asset_time(bool adjust) const
 {
-    if (this->current_index >= this->rows) return 0;
+    if (this->current_index >= this->rows) return this->dt_index[this->dt_index.size()-1];
     if(!adjust) return this->dt_index[this->current_index];
     return this->dt_index[this->current_index-1];
 }

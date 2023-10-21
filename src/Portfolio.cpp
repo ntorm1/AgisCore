@@ -379,30 +379,22 @@ PortfolioPtr const PortfolioMap::__get_portfolio(std::string const& id) const
 
 
 //============================================================================
-std::expected<rapidjson::Document, AgisException> Portfolio::to_json() const {
-    rapidjson::Document j;
-    j.SetObject();  // Create a JSON object to store the data.
-    j.AddMember("starting_cash", this->tracers.starting_cash.load(), j.GetAllocator());
+std::expected<rapidjson::Value, AgisException>
+Portfolio::to_json(rapidjson::Document::AllocatorType& allocater) const {
+    rapidjson::Value j(kObjectType);
+    j.AddMember("starting_cash", this->tracers.starting_cash.load(), allocater);
 
     rapidjson::Value strategyArray(rapidjson::kArrayType);
 
     for (const auto& strategyPair : strategies) {
         const auto& strategy = strategyPair.second;
-        auto strategy_json = strategy->to_json(); // Serialize the Strategy to RapidJSON
-
-        if (!strategy_json.has_value()) {
-            return std::unexpected<AgisException>(strategy_json.error());
-        }
-
-        strategyArray.PushBack(strategy_json.value(), j.GetAllocator());
+        AGIS_ASSIGN_OR_RETURN(strategy_json, strategy->to_json()); // Serialize the Strategy to RapidJSON
+        strategyArray.PushBack(strategy_json, allocater);
     }
 
     if (benchmark_strategy) {
-        auto strategy_json = benchmark_strategy->to_json(); // Serialize the BenchmarkStrategy to RapidJSON
-        if (!strategy_json.has_value()) {
-            return std::unexpected<AgisException>(strategy_json.error());
-        }
-        strategyArray.PushBack(strategy_json.value(), j.GetAllocator());
+        AGIS_ASSIGN_OR_RETURN(strategy_json, benchmark_strategy->to_json()); // Serialize the BenchmarkStrategy to RapidJSON
+        strategyArray.PushBack(strategy_json, allocater);
     }
 
     // if strategy array is empty then return an empty object
@@ -410,7 +402,7 @@ std::expected<rapidjson::Document, AgisException> Portfolio::to_json() const {
 		return j;
 	}
 
-    j.AddMember("strategies", strategyArray, j.GetAllocator());
+    j.AddMember("strategies", strategyArray, allocater);
 
     return j;
 }
@@ -466,28 +458,22 @@ PortfolioMap::get_portfolio_ids() const
 
 
 //============================================================================
-std::expected<rapidjson::Document, AgisException>
-PortfolioMap::to_json() const {
-    rapidjson::Document j;
-    j.SetObject();  // Create a JSON object to store the data.
-    auto& allocator = j.GetAllocator();
+std::expected<rapidjson::Value, AgisException>
+PortfolioMap::to_json(rapidjson::Document::AllocatorType& allocator) const {
+    rapidjson::Value j(kObjectType);
 
     for (const auto& pair : portfolios) {
         const std::shared_ptr<Portfolio>& portfolio = pair.second;
-        auto portfolio_json = portfolio->to_json();
-        if (!portfolio_json.has_value()) {
-            return std::unexpected<AgisException>(portfolio_json.error());
-        }
+        AGIS_ASSIGN_OR_RETURN(portfolio_json, portfolio->to_json(allocator));
 
         // Convert the portfolio ID to a string
         const std::string portfolio_id = portfolio->__get_portfolio_id();
 
         // Add the portfolio JSON as a member using the portfolio ID as the key
-        Document portfolio_doc = std::move(portfolio_json.value());
         rapidjson::Value key(portfolio_id.c_str(), allocator);
-        j.AddMember(key.Move(), portfolio_doc, allocator);
+        j.AddMember(key.Move(), portfolio_json.Move(), allocator);
     }
-    return std::move(j);
+    return j;
 }
 
 
@@ -605,6 +591,7 @@ AgisResult<bool> Portfolio::__evaluate(bool on_close, bool is_reprice)
     }
     if (benchmark_strategy) benchmark_strategy->zero_out_tracers();
     
+    auto next_time = this->exchange_map->__get_next_market_time();
 
     // evalute all open positions and their respective trades
     for (auto it = this->positions.begin(); it != positions.end(); ++it)
@@ -620,7 +607,7 @@ AgisResult<bool> Portfolio::__evaluate(bool on_close, bool is_reprice)
         if (is_reprice) continue;
 
         // if asset expire next step clear from the portfolio
-        if (position->__asset->__is_last_row())
+        if (position->__asset->__is_last_row(next_time))
         {
             auto order = position->generate_position_inverse();
             order->__set_state(OrderState::CHEAT);

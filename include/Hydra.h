@@ -97,7 +97,7 @@ public:
 	/// </summary>
 	/// <param name="j"></param>
 	/// <returns></returns>
-	AGIS_API std::expected<rapidjson::Document, AgisException> save_state();
+	AGIS_API std::expected<rapidjson::Value, AgisException> save_state(rapidjson::Document::AllocatorType& a);
 
 	/// <summary>
 	/// Step Hydra instance one step forward in time

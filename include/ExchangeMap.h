@@ -214,6 +214,7 @@ public:
 	 * @return datetime index of the exchange
 	*/
 	AGIS_API inline long long __get_market_time() const { return this->current_time; }
+	inline long long __get_next_market_time() const { return this->next_time; }
 
 	/**
 	 * @brief get the current index location of the simulation
@@ -296,6 +297,7 @@ private:
 	TimePoint time_point;
 	long long* dt_index = nullptr;
 	long long current_time;
+	long long next_time;
 
 	size_t dt_index_size = 0;
 	size_t current_index = 0;

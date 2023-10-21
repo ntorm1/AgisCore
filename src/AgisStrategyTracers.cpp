@@ -79,8 +79,9 @@ std::expected<double, AgisException> AgisStrategyTracers::get_portfolio_volatili
 	
 	auto vol_opt = trade->__asset->get_volatility();
 	if (!vol_opt.has_value()) return std::unexpected<AgisException>(AGIS_EXCEP("invalid vol"));
-	auto vol = vol_opt.value() * trade->__asset->get_unit_multiplier();
+	auto vol = vol_opt.value(); //* trade->__asset->get_unit_multiplier();
 	vol *= (this->portfolio_weights(asset_index) /= this->nlv);
+	vol = abs(vol);
 	this->portfolio_volatility.store(vol);
 	return vol;
 }

@@ -83,6 +83,7 @@ public:
     ): Derivative(AssetType::US_FUTURE, asset_id, exchange_id, warmup, freq, time_zone) {}
 
     std::span<const double> const __get_vol_close_column() const override;
+    bool __is_last_row(long long t) const override;
 
 private:
     bool __is_last_view(long long t) const noexcept override;

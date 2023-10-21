@@ -168,17 +168,6 @@ AgisResult<U> ExtractException(AgisResult<T>& result) {
     } while (false)
 
 
-#define AGIS_ASSIGN_OR_RETURN(assignment, result, exceptionType, targetType) \
-    do { \
-        auto _result = (result); \
-        if (_result.is_exception()) { \
-            return ExtractException<exceptionType, targetType>(_result); \
-        } else { \
-            targetType _value = _result.unwrap(); \
-            assignment = _value; \
-        } \
-    } while (false)
-
 #define AGIS_EXTRACT_OR_UNWRAP(result, NewType) \
     ((result).is_exception() ? \
         return ExtractException<decltype(result)::ValueType, NewType>(result) : \

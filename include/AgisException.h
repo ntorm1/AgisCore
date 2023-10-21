@@ -33,3 +33,10 @@ public:
         return message.c_str();
     }
 };
+
+#define AGIS_ASSIGN_OR_RETURN(val, function) \
+	auto result_opt = function; \
+    if (!result_opt) { \
+		return std::unexpected<AgisException>(result_opt.error()); \
+	} \
+	auto val = std::move(result_opt.value());

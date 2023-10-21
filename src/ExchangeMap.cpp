@@ -491,9 +491,14 @@ ExchangeMap::__get_market_price(size_t asset_index, bool on_close) const noexcep
 AgisResult<std::string> ExchangeMap::get_asset_id(size_t index) const
 {
 	if (index >= this->assets.size()) return AgisResult<std::string>(AGIS_EXCEP("Index out of range"));
-	return AgisResult<std::string>(this->assets[index]->get_asset_id());
-}
+	if (this->assets[index]) {
+		return AgisResult<std::string>(this->assets[index]->get_asset_id());
+	}
+	else {
+		return AgisResult<std::string>(this->assets_expired[index]->get_asset_id());
 
+	}
+}
 
 //============================================================================
 void ExchangeMap::__goto(long long datetime)
@@ -685,6 +690,16 @@ bool ExchangeMap::step()
 	}
 
 	this->current_time = this->dt_index[this->current_index];
+
+	// get next time
+	if (this->current_index + 1 < this->dt_index_size)
+	{
+		this->next_time = this->dt_index[this->current_index + 1];
+	}
+	else
+	{
+		this->next_time = this->dt_index[this->current_index];
+	}
 
 	// set the exchagne time point 
 	this->time_point = epoch_to_tp(this->current_time);

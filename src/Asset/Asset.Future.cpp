@@ -127,6 +127,17 @@ std::span<const double> const Future::__get_vol_close_column() const
 
 
 //============================================================================
+bool Future::__is_last_row(long long t) const
+{
+	if (Asset::__is_last_row(t)) return true;
+	if (this->_last_trade_date.has_value()) {
+		return this->_last_trade_date <= t;
+	}
+	return false;
+}
+
+
+//============================================================================
 bool Future::__is_last_view(long long t) const noexcept
 {
 	// if on last row force last view return true
