@@ -25,14 +25,14 @@ ExchangeView::ExchangeView(const Exchange* exchange_, size_t count, bool reserve
 
 
 //============================================================================
-std::expected<bool, AgisErrorCode> ExchangeView::allocation_scale(ExchangeViewScaler t)
+std::expected<bool, AgisStatusCode> ExchangeView::allocation_scale(ExchangeViewScaler t)
 {
 	double original_sum = 0;
 	double new_sum = 0;
 	// scale each position by its beta
 	for (auto& pair : this->view)
 	{
-		std::expected<double, AgisErrorCode> scaler;
+		std::expected<double, AgisStatusCode> scaler;
 		switch (t){
 		case ExchangeViewScaler::BETA: {
 			scaler = this->exchange->get_asset_beta(pair.asset_index);
@@ -43,13 +43,13 @@ std::expected<bool, AgisErrorCode> ExchangeView::allocation_scale(ExchangeViewSc
 			break;
 		}
 		default:
-			return std::unexpected<AgisErrorCode>(AgisErrorCode::NOT_IMPLEMENTED);
+			return std::unexpected<AgisStatusCode>(AgisStatusCode::NOT_IMPLEMENTED);
 		}
 		if (
 			!scaler.has_value()
 			||
 			scaler.value() == 0.0f
-		) return std::unexpected<AgisErrorCode>(scaler.error());
+		) return std::unexpected<AgisStatusCode>(scaler.error());
 
 		original_sum += pair.allocation_amount;
 		pair.allocation_amount /= scaler.value();

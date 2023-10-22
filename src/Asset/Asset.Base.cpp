@@ -577,7 +577,7 @@ bool Asset::__set_beta(std::vector<double> beta_column)
 
 
 //============================================================================
-std::expected<double, AgisErrorCode> Asset::get_volatility() const
+std::expected<double, AgisStatusCode> Asset::get_volatility() const
 {
     if (this->volatility_vector.size() && !this->__in_warmup())
     {
@@ -585,7 +585,7 @@ std::expected<double, AgisErrorCode> Asset::get_volatility() const
     }
     else
     {
-        return std::unexpected<AgisErrorCode>(AgisErrorCode::OUT_OF_RANGE);
+        return std::unexpected<AgisStatusCode>(AgisStatusCode::OUT_OF_RANGE);
     }
 }
 
@@ -598,7 +598,7 @@ std::span<const double> const Asset::__get_vol_close_column() const
 
 
 //============================================================================
-std::expected<double, AgisErrorCode> Asset::get_beta() const
+std::expected<double, AgisStatusCode> Asset::get_beta() const
 {
     if (this->beta_vector.size() && !this->__in_warmup())
     {
@@ -609,7 +609,7 @@ std::expected<double, AgisErrorCode> Asset::get_beta() const
     }
     else
     {
-        return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
+        return std::unexpected<AgisStatusCode>(AgisStatusCode::INVALID_ARGUMENT);
     }
 }
 
@@ -760,21 +760,21 @@ Asset::get_column_names() const
 
 
 //============================================================================
-std::expected<double, AgisErrorCode> Asset::get_asset_feature(std::string const& col, int index) const
+std::expected<double, AgisStatusCode> Asset::get_asset_feature(std::string const& col, int index) const
 {
 #ifdef _DEBUG
 
     if (abs(index) > static_cast<int>(current_index - 1) || index > 0)
     {
-        return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
+        return std::unexpected<AgisStatusCode>(AgisStatusCode::INVALID_ARGUMENT);
     }
     if (!__is_streaming)
     {
-        return std::unexpected<AgisErrorCode>(AgisErrorCode::OUT_OF_RANGE);
+        return std::unexpected<AgisStatusCode>(AgisStatusCode::OUT_OF_RANGE);
     }
     if (!this->headers.contains(col))
     {
-        return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
+        return std::unexpected<AgisStatusCode>(AgisStatusCode::INVALID_ARGUMENT);
     }
 #endif
 
@@ -785,16 +785,16 @@ std::expected<double, AgisErrorCode> Asset::get_asset_feature(std::string const&
 
 
 //============================================================================
-std::expected<double, AgisErrorCode> Asset::get_asset_feature(size_t col, int index) const
+std::expected<double, AgisStatusCode> Asset::get_asset_feature(size_t col, int index) const
 {
 #ifdef _DEBUG
     if (abs(index) > static_cast<int>(current_index - 1) || index > 0)
     {
-        return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
+        return std::unexpected<AgisStatusCode>(AgisStatusCode::INVALID_ARGUMENT);
     }
     if (!__is_streaming)
     {
-        return std::unexpected<AgisErrorCode>(AgisErrorCode::OUT_OF_RANGE);
+        return std::unexpected<AgisStatusCode>(AgisStatusCode::OUT_OF_RANGE);
     }
 #endif
 
@@ -805,13 +805,13 @@ std::expected<double, AgisErrorCode> Asset::get_asset_feature(size_t col, int in
 
 
 //============================================================================
-std::expected<double, AgisErrorCode>
+std::expected<double, AgisStatusCode>
 Asset::get_asset_observer_result(std::string const& observer_name) const noexcept
 {
     auto it = this->observers.find(observer_name);
     if (it == this->observers.end())
     {
-        return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
+        return std::unexpected<AgisStatusCode>(AgisStatusCode::INVALID_ARGUMENT);
     }
     return (*it).second->get_result();
 }

@@ -81,6 +81,7 @@
     <IncludePath>$(oneTBBdpstdDir);$(IncludePath);$(SolutionDir)AgisCore\external\include;$(SolutionDir)AgisCore\external\sol2\include;C:\Users\natha\luajit\src;$(SolutionDir)AgisCore\include;</IncludePath>
     <LibraryPath>$(oneTBBLibDir)\vc_mt;$(LibraryPath);;C:\Users\natha\luajit\src</LibraryPath>
     <AllProjectBMIsArePublic>true</AllProjectBMIsArePublic>
+    <OutDir>$(SolutionDir)bin\$(Configuration)\net7.0</OutDir>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <VcpkgConfiguration>Debug</VcpkgConfiguration>
@@ -187,6 +188,7 @@
     <ClInclude Include="include\AgisStrategy.h" />
     <ClInclude Include="include\AgisStrategyRegistry.h" />
     <ClInclude Include="include\AgisStrategyTracers.h" />
+    <ClInclude Include="include\C\CAgis.h" />
     <ClInclude Include="include\Exchange.h" />
     <ClInclude Include="include\ExchangeMap.h" />
     <ClInclude Include="include\ExchangeView.h" />
@@ -216,6 +218,7 @@
     <ClCompile Include="include\Asset\Asset.Table.h" />
     <ClCompile Include="src\Broker\Broker.Base.cpp" />
     <ClCompile Include="include\Broker\Broker.Base.h" />
+    <ClCompile Include="src\C API\CHydra.cpp" />
     <ClCompile Include="src\ExchangeMap.cpp" />
     <ClCompile Include="src\Time\TradingCalender.cpp" />
     <ClCompile Include="include\Time\TradingCalendar.h" />

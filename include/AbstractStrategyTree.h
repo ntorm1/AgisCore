@@ -73,7 +73,7 @@ enum class AssetLambdaType {
 
 
 //============================================================================
-class AbstractAssetLambdaNode : public ValueReturningStatementNode<std::expected<double, AgisErrorCode>> {
+class AbstractAssetLambdaNode : public ValueReturningStatementNode<std::expected<double, AgisStatusCode>> {
 public:
 	/**
 	 * @brief AbstractAssetLambdaNode is a node in a chain of execution steps used to create signals
@@ -87,12 +87,12 @@ public:
 	/**
 	 * @brief prevent AbstractAssetLambdaNode from being executed directly
 	*/
-	std::expected<double, AgisErrorCode> execute() override { AGIS_NOT_IMPL };
+	std::expected<double, AgisStatusCode> execute() override { AGIS_NOT_IMPL };
 	
 	/**
 	 * @brief pure virtual function that exexutes the asset lambda node on the given asset
 	*/
-	virtual std::expected<double, AgisErrorCode> execute(std::shared_ptr<const Asset> const& asset) const = 0;
+	virtual std::expected<double, AgisStatusCode> execute(std::shared_ptr<const Asset> const& asset) const = 0;
 		
 	/**
 	 * @brief get the number of warmup periods required for the asset lambda node
@@ -142,7 +142,7 @@ public:
 
 
 	//============================================================================
-	std::expected<double, AgisErrorCode> execute(std::shared_ptr<const Asset> const& asset) const override;
+	std::expected<double, AgisStatusCode> execute(std::shared_ptr<const Asset> const& asset) const override;
 
 private:
 	std::string observer_name;
@@ -155,7 +155,7 @@ class AbstractAssetLambdaRead : public AbstractAssetLambdaNode {
 public:
 	//============================================================================
 	AbstractAssetLambdaRead(
-		std::function<std::expected<double, AgisErrorCode>(std::shared_ptr<const Asset> const&)> func_,
+		std::function<std::expected<double, AgisStatusCode>(std::shared_ptr<const Asset> const&)> func_,
 		size_t warmup_ = 0
 	) : func(func_),
 		AbstractAssetLambdaNode(AssetLambdaType::READ)
@@ -188,14 +188,14 @@ public:
 
 
 	//============================================================================
-	std::expected<double, AgisErrorCode> execute(std::shared_ptr<const Asset> const& asset) const override {
+	std::expected<double, AgisStatusCode> execute(std::shared_ptr<const Asset> const& asset) const override {
 		return this->func(asset);
 	};
 
 private:
 	std::optional<std::string> col;
 	std::optional<int> index;
-	std::function<std::expected<double, AgisErrorCode>(std::shared_ptr<const Asset> const&)> func;
+	std::function<std::expected<double, AgisStatusCode>(std::shared_ptr<const Asset> const&)> func;
 };
 
 
@@ -211,7 +211,7 @@ public:
 	);
 
 	//============================================================================
-	std::expected<double, AgisErrorCode> execute(std::shared_ptr<const Asset> const& asset) const override;
+	std::expected<double, AgisStatusCode> execute(std::shared_ptr<const Asset> const& asset) const override;
 
 private:
 	AgisLogicalOperation logical_compare;
@@ -294,13 +294,13 @@ public:
 
 
 	//============================================================================
-	std::expected<double, AgisErrorCode> execute(std::shared_ptr<const Asset> const& asset) const override {
+	std::expected<double, AgisStatusCode> execute(std::shared_ptr<const Asset> const& asset) const override {
 		// check if right opp is null or nan
 		auto res = right_read->execute(asset);
 		if (!res.has_value() || std::isnan(res.value())) return res;
 
 		// if no left node return opp applied right node
-		if(left_node == nullptr) return std::expected<double, AgisErrorCode>(
+		if(left_node == nullptr) return std::expected<double, AgisStatusCode>(
 			opperation(0.0f, res.value())
 		);
 
@@ -355,7 +355,7 @@ enum class TableExtractMethod : uint16_t {
 
 
 //============================================================================
-class AbstractFutureTableNode : public ExpressionNode<std::expected<AssetPtr, AgisErrorCode>> {
+class AbstractFutureTableNode : public ExpressionNode<std::expected<AssetPtr, AgisStatusCode>> {
 public:
 	//============================================================================
 	AbstractFutureTableNode(
@@ -366,7 +366,7 @@ public:
 
 
 	//============================================================================
-	std::expected<AssetPtr,AgisErrorCode> evaluate() const override;
+	std::expected<AssetPtr,AgisStatusCode> evaluate() const override;
 
 
 	//============================================================================
@@ -383,7 +383,7 @@ private:
 
 
 //============================================================================
-class AbstractTableViewNode : public ValueReturningStatementNode<std::expected<ExchangeView, AgisErrorCode>> {
+class AbstractTableViewNode : public ValueReturningStatementNode<std::expected<ExchangeView, AgisStatusCode>> {
 
 public:
 	//============================================================================
@@ -399,13 +399,13 @@ public:
 	}
 
 	//============================================================================
-	AGIS_API [[nodiscard]] std::expected<bool, AgisErrorCode> add_asset_table(std::shared_ptr<AbstractFutureTableNode> table_node);
+	AGIS_API [[nodiscard]] std::expected<bool, AgisStatusCode> add_asset_table(std::shared_ptr<AbstractFutureTableNode> table_node);
 
 	//============================================================================
-	std::expected<ExchangeView, AgisErrorCode> execute() override;
+	std::expected<ExchangeView, AgisStatusCode> execute() override;
 
 	//============================================================================
-	std::expected<bool, AgisErrorCode> evaluate_asset(AssetPtr const& asset, ExchangeView& view) const noexcept;
+	std::expected<bool, AgisStatusCode> evaluate_asset(AssetPtr const& asset, ExchangeView& view) const noexcept;
 
 	//============================================================================
 	size_t get_warmup() const override {
@@ -420,7 +420,7 @@ private:
 
 
 //============================================================================
-class AbstractExchangeViewNode : public ValueReturningStatementNode<std::expected<bool, AgisErrorCode>>{
+class AbstractExchangeViewNode : public ValueReturningStatementNode<std::expected<bool, AgisStatusCode>>{
 
 public:
 	//============================================================================
@@ -478,7 +478,7 @@ public:
 
 
 	//============================================================================
-	AGIS_API std::expected<bool, AgisErrorCode> execute() override;
+	AGIS_API std::expected<bool, AgisStatusCode> execute() override;
 
 private:
 	ExchangeView exchange_view;
@@ -491,7 +491,7 @@ private:
 
 
 //============================================================================
-class AbstractSortNode : ValueReturningStatementNode<std::expected<ExchangeView,AgisErrorCode>> {
+class AbstractSortNode : ValueReturningStatementNode<std::expected<ExchangeView,AgisStatusCode>> {
 public:
 	//============================================================================
 	AbstractSortNode(
@@ -512,9 +512,9 @@ public:
 
 
 	//============================================================================
-	std::expected<ExchangeView, AgisErrorCode> execute() override {
+	std::expected<ExchangeView, AgisStatusCode> execute() override {
 		auto res = this->ev->execute();
-		if(!res.has_value()) return std::unexpected<AgisErrorCode>(res.error());
+		if(!res.has_value()) return std::unexpected<AgisStatusCode>(res.error());
 		auto view = this->ev->get_view();
 		view.clean();
 		view.sort(N, query_type);
@@ -529,7 +529,7 @@ private:
 
 
 //============================================================================
-class AbstractGenAllocationNode : public ValueReturningStatementNode<std::expected<ExchangeView, AgisErrorCode>> {
+class AbstractGenAllocationNode : public ValueReturningStatementNode<std::expected<ExchangeView, AgisStatusCode>> {
 public:
 	//============================================================================
 	using SourceNode = std::variant<
@@ -550,7 +550,7 @@ public:
 	{}
 
 	//============================================================================
-    std::expected<ExchangeView, AgisErrorCode> vist_execute() {
+    std::expected<ExchangeView, AgisStatusCode> vist_execute() {
 		return std::visit([](auto&& option) {
 			if constexpr (std::is_same_v<std::decay_t<decltype(option)>, std::unique_ptr<AbstractTableViewNode>>) {
 				return option->execute();
@@ -559,7 +559,7 @@ public:
 				return option->execute();
 			}
 			else {
-				return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_CONFIGURATION);
+				return std::unexpected<AgisStatusCode>(AgisStatusCode::INVALID_CONFIGURATION);
 			}
 			}, source_node
 		);
@@ -575,14 +575,14 @@ public:
 				return option->get_warmup();
 			}
 			else {
-				return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_CONFIGURATION);
+				return std::unexpected<AgisStatusCode>(AgisStatusCode::INVALID_CONFIGURATION);
 			}
 			}, source_node
 		);
 	}
 
 	//============================================================================
-	std::expected<ExchangeView, AgisErrorCode> execute() override {
+	std::expected<ExchangeView, AgisStatusCode> execute() override {
 		auto view_res = this->vist_execute();
 		if (!view_res.has_value()) return view_res;
 		ExchangeView view = std::move(view_res.value());
@@ -621,7 +621,7 @@ public:
 		auto res = this->apply_scale(&view)
 			.and_then([&](ExchangeView* v) {return this->apply_vol_target(v); }
 		);
-		if(!res.has_value()) return std::unexpected<AgisErrorCode>(res.error());
+		if(!res.has_value()) return std::unexpected<AgisStatusCode>(res.error());
 		return std::move(view);
 	}
 
@@ -633,22 +633,22 @@ public:
 		this->vol_target = vol_target_;
 	}
 
-	std::expected<ExchangeView*, AgisErrorCode> apply_vol_target(ExchangeView* v) {
+	std::expected<ExchangeView*, AgisStatusCode> apply_vol_target(ExchangeView* v) {
 		// apply a given vol target to the exchange view if it is set.
 		if (!this->vol_target.has_value()) return v;
 		auto res = v->vol_target(this->vol_target.value());
 		if (res.is_exception()) {
-			return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_CONFIGURATION);
+			return std::unexpected<AgisStatusCode>(AgisStatusCode::INVALID_CONFIGURATION);
 		}
 		return v;
 	}
 
-	std::expected<ExchangeView*, AgisErrorCode> apply_scale(ExchangeView* v) {
+	std::expected<ExchangeView*, AgisStatusCode> apply_scale(ExchangeView* v) {
 		// scale positions in the exchange view by some type if set.
 		if (this->ev_scaler_type == ExchangeViewScaler::NONE) return v;
 		auto res = v->allocation_scale(this->ev_scaler_type);
 		if (!res.has_value()) {
-			return std::unexpected<AgisErrorCode>(res.error());
+			return std::unexpected<AgisStatusCode>(res.error());
 		}
 		return v;
 	}
@@ -668,7 +668,7 @@ private:
 
 
 //============================================================================
-class AbstractStrategyAllocationNode : public ValueReturningStatementNode<std::expected<bool,AgisErrorCode>> {
+class AbstractStrategyAllocationNode : public ValueReturningStatementNode<std::expected<bool,AgisStatusCode>> {
 public:
 	//============================================================================
 	AbstractStrategyAllocationNode(
@@ -694,9 +694,9 @@ public:
 
 
 	//============================================================================
-	std::expected<bool, AgisErrorCode> execute() override {
+	std::expected<bool, AgisStatusCode> execute() override {
 		auto ev_res = this->gen_alloc_node->execute();
-		if (!ev_res.has_value()) return std::unexpected<AgisErrorCode>(ev_res.error());
+		if (!ev_res.has_value()) return std::unexpected<AgisStatusCode>(ev_res.error());
 		auto& ev = ev_res.value();
 		this->strategy->strategy_allocate(
 			ev,

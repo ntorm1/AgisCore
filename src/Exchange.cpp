@@ -17,6 +17,9 @@ using namespace Agis;
 
 using namespace rapidjson;
 
+
+
+
 std::atomic<size_t> Exchange::exchange_counter(0);
 std::vector<std::string> exchange_view_opps = {
 	"UNIFORM", "LINEAR_DECREASE", "LINEAR_INCREASE","CONDITIONAL_SPLIT","UNIFORM_SPLIT",
@@ -162,7 +165,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 
 //============================================================================
 AGIS_API ExchangeView Exchange::get_exchange_view(
-	const std::function<std::expected<double, AgisErrorCode>(std::shared_ptr<Asset>const&)>& func,
+	const std::function<std::expected<double, AgisStatusCode>(std::shared_ptr<Asset>const&)>& func,
 	ExchangeQueryType query_type, 
 	int N,
 	bool panic,
@@ -171,7 +174,7 @@ AGIS_API ExchangeView Exchange::get_exchange_view(
 	auto number_assets = (N == -1) ? this->assets.size() : static_cast<size_t>(N);
 	ExchangeView exchange_view(this, number_assets);
 	auto& view = exchange_view.view;
-	std::expected<double, AgisErrorCode> val;
+	std::expected<double, AgisStatusCode> val;
 	for (auto const& asset : this->assets)
 	{
 		if (!asset || !asset->__in_exchange_view) continue;	// asset not in view, or disabled

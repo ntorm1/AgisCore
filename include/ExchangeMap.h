@@ -82,7 +82,7 @@ public:
 	/// <returns>vector of all asset ids on a particular exchange</returns>
 	AGIS_API std::vector<std::string> get_asset_ids(std::string const& exchange_id_) const;
 
-	AGIS_API std::expected<double, AgisErrorCode> get_asset_beta(size_t index) const;
+	AGIS_API std::expected<double, AgisStatusCode> get_asset_beta(size_t index) const;
 	AGIS_API AgisResult<AssetPtr> get_asset(std::string const& asset_id) const;
 	AGIS_API AgisResult<AssetPtr> get_asset(size_t index) const;
 
@@ -107,13 +107,9 @@ public:
 	/// <returns>id of the asset</returns>
 	AGIS_API AgisResult<std::string> get_asset_id(size_t index) const;
 
-	/// <summary>
-	/// Get a shared pointer to an existing exchange
-	/// </summary>
-	/// <param name="exchange_id">Unique id of the exchange to get</param>
-	/// <returns></returns>
-	AGIS_API std::expected<ExchangePtr, AgisException> get_exchange(const std::string& exchange_id) const;
 
+	AGIS_API std::expected<ExchangePtr, AgisException> get_exchange(const std::string& exchange_id) const;
+	std::vector<ExchangePtr> get_exchanges() const;
 
 	AGIS_API auto const& get_assets() const noexcept { return this->assets; }
 	AGIS_API bool asset_exists(std::string const& asset_id) const;

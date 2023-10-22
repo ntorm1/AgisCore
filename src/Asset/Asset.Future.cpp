@@ -64,13 +64,13 @@ Future::set_future_parent_contract()
 
 
 //============================================================================
-std::expected<double, AgisErrorCode> Future::get_volatility() const
+std::expected<double, AgisStatusCode> Future::get_volatility() const
 {
 	auto current_time = this->__get_asset_time(true);
 	auto& continous_dt = this->_table->get_continous_dt_vec();
 	auto it = std::find(continous_dt.begin(), continous_dt.end(), current_time);
 	if (it == continous_dt.end()) {
-		return std::unexpected<AgisErrorCode>(AgisErrorCode::OUT_OF_RANGE);
+		return std::unexpected<AgisStatusCode>(AgisStatusCode::OUT_OF_RANGE);
 	}
 	auto idx = it - continous_dt.begin();
 	return this->_table->get_continous_vol_vec()[idx];
@@ -201,10 +201,10 @@ FutureTable::~FutureTable()
 
 
 //============================================================================
-std::expected<FuturePtr, AgisErrorCode> FutureTable::front_month()
+std::expected<FuturePtr, AgisStatusCode> FutureTable::front_month()
 {
 	if (this->_tradeable.size() == 0) {
-		return std::unexpected<AgisErrorCode>(AgisErrorCode::OUT_OF_RANGE);
+		return std::unexpected<AgisStatusCode>(AgisStatusCode::OUT_OF_RANGE);
 	}
 	// return fron of table case as Future 
 	return std::dynamic_pointer_cast<Future>(this->_tradeable.front());

@@ -88,7 +88,7 @@ public:
 private:
     bool __is_last_view(long long t) const noexcept override;
     [[nodiscard]] std::expected<bool, AgisException> __set_volatility(size_t lookback) override;
-    std::expected<double, AgisErrorCode> get_volatility() const override;
+    std::expected<double, AgisStatusCode> get_volatility() const override;
     [[nodiscard]] std::expected<bool, AgisException> __build(Exchange const* exchange) noexcept override;
     
     std::expected<bool, AgisException> set_future_code();
@@ -110,7 +110,7 @@ public:
         std::string contract_id);
 	~FutureTable();
 
-    [[nodiscard]] AGIS_API std::expected<FuturePtr, AgisErrorCode> front_month();
+    [[nodiscard]] AGIS_API std::expected<FuturePtr, AgisStatusCode> front_month();
     std::string const& name() const override { return this->_contract_id; }
     [[nodiscard]] std::expected<bool, AgisException> __build() override; 
     

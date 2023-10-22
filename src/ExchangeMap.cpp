@@ -276,28 +276,28 @@ std::vector<std::string> ExchangeMap::get_asset_ids(std::string const& exchange_
 
 
 //============================================================================
-std::expected<double, AgisErrorCode> ExchangeMap::get_asset_beta(size_t index) const
+std::expected<double, AgisStatusCode> ExchangeMap::get_asset_beta(size_t index) const
 {
 	auto asset = this->get_asset(index);
-	if (asset.is_exception()) return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
+	if (asset.is_exception()) return std::unexpected<AgisStatusCode>(AgisStatusCode::INVALID_ARGUMENT);
 	return asset.unwrap()->get_beta();
 }
 
 
 //============================================================================
-std::expected<double, AgisErrorCode> Exchange::get_asset_beta(size_t index) const
+std::expected<double, AgisStatusCode> Exchange::get_asset_beta(size_t index) const
 {
 	auto asset = this->get_asset(index);
-	if (asset.is_exception()) return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
+	if (asset.is_exception()) return std::unexpected<AgisStatusCode>(AgisStatusCode::INVALID_ARGUMENT);
 	return asset.unwrap()->get_beta();
 }
 
 
 //============================================================================
-std::expected<double, AgisErrorCode> Exchange::get_asset_volatility(size_t index) const
+std::expected<double, AgisStatusCode> Exchange::get_asset_volatility(size_t index) const
 {
 	auto asset = this->get_asset(index);
-	if (asset.is_exception()) return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
+	if (asset.is_exception()) return std::unexpected<AgisStatusCode>(AgisStatusCode::INVALID_ARGUMENT);
 	return asset.unwrap()->get_volatility();
 }
 
@@ -395,6 +395,18 @@ std::expected<ExchangePtr, AgisException> ExchangeMap::get_exchange(std::string 
 		return std::unexpected<AgisException>(AGIS_EXCEP("missing exchange: " + exchange_id_));
 	}
 	return it->second;
+}
+
+
+//============================================================================
+std::vector<ExchangePtr> ExchangeMap::get_exchanges() const
+{
+	std::vector<ExchangePtr> exchanges;
+	for (auto& exchange : this->exchanges)
+	{
+		exchanges.push_back(exchange.second);
+	}
+	return exchanges;
 }
 
 
