@@ -76,13 +76,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(oneTBBLibDir)\vc_mt;$(LibraryPath);;C:\Users\natha\luajit\src</LibraryPath>
     <IncludePath>$(oneTBBdpstdDir);$(IncludePath);$(SolutionDir)AgisCore\external\include;$(SolutionDir)AgisCore\external\sol2\include;C:\Users\natha\luajit\src;$(SolutionDir)AgisCore\include;</IncludePath>
-    <OutDir>$(SolutionDir)bin\$(Configuration)\net7.0</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(oneTBBdpstdDir);$(IncludePath);$(SolutionDir)AgisCore\external\include;$(SolutionDir)AgisCore\external\sol2\include;C:\Users\natha\luajit\src;$(SolutionDir)AgisCore\include;</IncludePath>
     <LibraryPath>$(oneTBBLibDir)\vc_mt;$(LibraryPath);;C:\Users\natha\luajit\src</LibraryPath>
     <AllProjectBMIsArePublic>true</AllProjectBMIsArePublic>
-    <OutDir>$(SolutionDir)bin\$(Configuration)\net7.0</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)</OutDir>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <VcpkgConfiguration>Debug</VcpkgConfiguration>
