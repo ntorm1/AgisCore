@@ -43,7 +43,7 @@ AbstractFutureTableNode::AbstractFutureTableNode(
 
 
 //============================================================================
-std::expected<AssetPtr, AgisErrorCode>
+std::expected<AssetPtr, AgisStatusCode>
 AbstractFutureTableNode::evaluate() const
 {
 	switch (extract_method)
@@ -51,13 +51,13 @@ AbstractFutureTableNode::evaluate() const
 	case TableExtractMethod::FRONT:
 		return this->table->front_month();
 	default:
-		return std::unexpected<AgisErrorCode>(AgisErrorCode::NOT_IMPLEMENTED);
+		return std::unexpected<AgisStatusCode>(AgisStatusCode::NOT_IMPLEMENTED);
 	}
 }
 
 
 //============================================================================
-std::expected<double, AgisErrorCode>
+std::expected<double, AgisStatusCode>
 AbstractAssetLambdaLogical::execute(std::shared_ptr<const Asset> const& asset) const {
 	// execute left node to get value
 	auto res = left_node->execute();
@@ -87,7 +87,7 @@ AbstractAssetLambdaLogical::execute(std::shared_ptr<const Asset> const& asset) c
 
 
 //============================================================================
-std::expected<double, AgisErrorCode>
+std::expected<double, AgisStatusCode>
 AbstractAssetObserve::execute(std::shared_ptr<const Asset> const& asset) const {
 	return asset->get_asset_observer_result(this->observer_name);
 };
@@ -122,7 +122,7 @@ AgisResult<bool> AbstractAssetObserve::set_warmup(const Exchange* exchange)
 
 
 //============================================================================
-std::expected<bool, AgisErrorCode>
+std::expected<bool, AgisStatusCode>
 AbstractExchangeViewNode::execute() {
 	auto& view = exchange_view.view;
 
@@ -139,7 +139,7 @@ AbstractExchangeViewNode::execute() {
 		auto val = this->asset_lambda_op->execute(asset);
 		// forward any exceptions
 		if (!val.has_value()) {
-			return std::unexpected<AgisErrorCode>(val.error());
+			return std::unexpected<AgisStatusCode>(val.error());
 		}
 		// disable asset if nan
 		if (std::isnan(val.value())) {
@@ -340,12 +340,12 @@ std::unique_ptr<AbstractStrategyAllocationNode> create_strategy_alloc_node(
 
 
 //============================================================================
-std::expected<bool, AgisErrorCode> AbstractTableViewNode::add_asset_table(std::shared_ptr<AbstractFutureTableNode> table_node)
+std::expected<bool, AgisStatusCode> AbstractTableViewNode::add_asset_table(std::shared_ptr<AbstractFutureTableNode> table_node)
 {
 	// all asset tables must have same base exchange
 	auto& table = this->table_nodes.front();
 	if (table->get_exchange() != table_node->get_exchange()) {
-		return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
+		return std::unexpected<AgisStatusCode>(AgisStatusCode::INVALID_ARGUMENT);
 	}
 	this->table_nodes.push_back(table_node);
 	return true;
@@ -353,7 +353,7 @@ std::expected<bool, AgisErrorCode> AbstractTableViewNode::add_asset_table(std::s
 
 
 //============================================================================
-std::expected<bool, AgisErrorCode>
+std::expected<bool, AgisStatusCode>
 AbstractTableViewNode::evaluate_asset(AssetPtr const& asset, ExchangeView& v) const noexcept
 {
 	if ((!asset || !asset->__in_exchange_view) ||
@@ -364,7 +364,7 @@ AbstractTableViewNode::evaluate_asset(AssetPtr const& asset, ExchangeView& v) co
 	auto val = this->asset_lambda_op->execute(asset);
 	// forward any exceptions
 	if (!val.has_value()) {
-		return std::unexpected<AgisErrorCode>(val.error());
+		return std::unexpected<AgisStatusCode>(val.error());
 	}
 	// skip if nan
 	if (std::isnan(val.value())) {
@@ -383,7 +383,7 @@ AbstractTableViewNode::evaluate_asset(AssetPtr const& asset, ExchangeView& v) co
 
 
 //============================================================================
-std::expected<ExchangeView, AgisErrorCode> AbstractTableViewNode::execute()
+std::expected<ExchangeView, AgisStatusCode> AbstractTableViewNode::execute()
 {
 	ExchangeView view;
 	view.exchange = this->table_nodes.front()->get_exchange();
@@ -395,10 +395,10 @@ std::expected<ExchangeView, AgisErrorCode> AbstractTableViewNode::execute()
 		if (!res.has_value()) {
 			switch (res.error())
 			{
-			case AgisErrorCode::OUT_OF_RANGE:
+			case AgisStatusCode::OUT_OF_RANGE:
 				continue;
 			default:
-				return std::unexpected<AgisErrorCode>(res.error());
+				return std::unexpected<AgisStatusCode>(res.error());
 			}
 		}
 	}

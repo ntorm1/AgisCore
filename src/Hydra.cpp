@@ -197,12 +197,12 @@ ExchangeMap& Hydra::__get_exchanges() noexcept
 
 
 //============================================================================
-std::expected<ExchangePtr, AgisErrorCode>
+std::expected<ExchangePtr, AgisStatusCode>
 Hydra::get_exchange(std::string const& exchange_id) const
 {
     auto res = this->p->exchanges.get_exchange(exchange_id);
     if (res.has_value()) return res.value();
-    return std::unexpected<AgisErrorCode>(AgisErrorCode::INVALID_ARGUMENT);
+    return std::unexpected<AgisStatusCode>(AgisStatusCode::INVALID_ARGUMENT);
 }
 
 

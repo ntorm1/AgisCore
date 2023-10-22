@@ -96,12 +96,12 @@
     <ClInclude Include="include\ExchangeMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\C\CAgis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\dllmain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Exchange.cpp">
@@ -204,6 +204,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Asset\Asset.Core.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\C API\CHydra.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

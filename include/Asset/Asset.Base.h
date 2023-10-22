@@ -111,7 +111,7 @@ public:
     /// <returns></returns>
     std::vector<double> generate_baseline_returns(double starting_amount);
 
-    AGIS_API inline std::string get_asset_id() const noexcept  { return this->asset_id; }
+    AGIS_API inline std::string const& get_asset_id() const noexcept  { return this->asset_id; }
     AGIS_API inline size_t get_asset_index() const noexcept  { return this->asset_index; }
     AGIS_API inline size_t const get_size() const noexcept  { return this->rows - this->warmup; }
     AGIS_API inline size_t const get_rows() const noexcept  { return this->rows; }
@@ -124,11 +124,11 @@ public:
     AGIS_API std::vector<std::string> get_column_names() const;
     AGIS_API inline ankerl::unordered_dense::map<std::string, size_t> const& get_headers() { return this->headers; };
     AGIS_API void assign_asset_feature(size_t col, int index, AgisResult<double>& res);
-    AGIS_API std::expected<double,AgisErrorCode> get_asset_feature(std::string const& col, int index) const;
-    AGIS_API std::expected<double,AgisErrorCode> get_asset_feature(size_t col, int index) const;
+    AGIS_API std::expected<double,AgisStatusCode> get_asset_feature(std::string const& col, int index) const;
+    AGIS_API std::expected<double,AgisStatusCode> get_asset_feature(size_t col, int index) const;
     AGIS_API AgisResult<AssetObserver*> get_observer(std::string const& id) const noexcept;
-    AGIS_API std::expected<double, AgisErrorCode> get_asset_observer_result(std::string const& observer_name) const noexcept;
-    AGIS_API std::expected<double, AgisErrorCode> get_beta() const;
+    AGIS_API std::expected<double, AgisStatusCode> get_asset_observer_result(std::string const& observer_name) const noexcept;
+    AGIS_API std::expected<double, AgisStatusCode> get_beta() const;
     AGIS_API AssetType get_asset_type() const noexcept { return this->asset_type; }
     AGIS_API const std::span<double const> get_beta_column() const;
     AGIS_API const std::span<double const> get_volatility_column() const;
@@ -158,7 +158,7 @@ public:
 
     //==== Public Asset Virtual Methods ====//
     virtual std::span<const double> const __get_vol_close_column() const;
-    virtual std::expected<double, AgisErrorCode> get_volatility() const;
+    virtual std::expected<double, AgisStatusCode> get_volatility() const;
     virtual bool __is_last_row(long long t) const { return this->current_index == this->rows + 1; }
 
 

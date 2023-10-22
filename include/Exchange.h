@@ -111,7 +111,7 @@ public:
 	/// <param name="N">Number of assets to return</param>
 	/// <returns></returns>
 	AGIS_API ExchangeView get_exchange_view(
-		const std::function<std::expected<double,AgisErrorCode>(std::shared_ptr<Asset> const&)>& func,
+		const std::function<std::expected<double,AgisStatusCode>(std::shared_ptr<Asset> const&)>& func,
 		ExchangeQueryType query_type = ExchangeQueryType::Default,
 		int N = -1,
 		bool panic = false,
@@ -148,8 +148,8 @@ public:
 	}
 
 	AGIS_API AgisResult<AssetPtr> get_asset(size_t index) const;
-	AGIS_API std::expected<double,AgisErrorCode> get_asset_beta(size_t index) const;
-	AGIS_API std::expected<double,AgisErrorCode> get_asset_volatility(size_t index) const;
+	AGIS_API std::expected<double,AgisStatusCode> get_asset_beta(size_t index) const;
+	AGIS_API std::expected<double,AgisStatusCode> get_asset_volatility(size_t index) const;
 
 	AGIS_API AgisResult<size_t> get_column_index(std::string const& col) const;
 
@@ -159,7 +159,7 @@ public:
 	AGIS_API inline auto get_frequency() const { return this->freq; }
 	AGIS_API inline std::string get_source() const noexcept { return this->source_dir; }
 	AGIS_API inline std::string get_dt_format() const noexcept { return this->dt_format; }
-	AGIS_API inline std::string get_exchange_id() const noexcept { return this->exchange_id; }
+	AGIS_API inline std::string const& get_exchange_id() const noexcept { return this->exchange_id; }
 	AGIS_API inline StridedPointer<long long> const __get_dt_index() const;
 	AGIS_API inline size_t const __get_size() const { return this->dt_index_size; }
 	AGIS_API inline double __get_market_price(size_t asset_index, bool on_close) const;

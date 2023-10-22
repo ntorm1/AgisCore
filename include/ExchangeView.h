@@ -150,7 +150,7 @@ public:
 	/// <returns></returns>
 	AGIS_API AgisResult<double> net_beta() const;
 
-	std::expected<bool,AgisErrorCode> allocation_scale(ExchangeViewScaler t);
+	std::expected<bool,AgisStatusCode> allocation_scale(ExchangeViewScaler t);
 
 	/**
 	 * @brief takes an exchange view with current portfolio allocations and scales it 

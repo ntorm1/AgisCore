@@ -96,7 +96,7 @@ std::unordered_map<std::string, TradingWindow> agis_trading_window_map = {
 
 
 //============================================================================
-const std::function<std::expected<double, AgisErrorCode>(
+const std::function<std::expected<double, AgisStatusCode>(
 	const std::shared_ptr<Asset>&,
 	const std::vector<AssetLambdaScruct>& operations)> asset_feature_lambda_chain = [](
 		const std::shared_ptr<Asset>& asset,
@@ -105,7 +105,7 @@ const std::function<std::expected<double, AgisErrorCode>(
 {
 	// loop through the asset lambda structs and apply the operations
 	double result = 0;
-	std::expected<double, AgisErrorCode> asset_lambda_res;
+	std::expected<double, AgisStatusCode> asset_lambda_res;
 	for (const auto& asset_lambda : operations) {
 
 		// apply the lambda function to the asset and extract the value
@@ -139,7 +139,7 @@ const std::function<std::expected<double, AgisErrorCode>(
 
 
 //============================================================================
-const std::function<std::expected<double, AgisErrorCode>(
+const std::function<std::expected<double, AgisStatusCode>(
 	const std::shared_ptr<Asset>&,
 	const std::vector<AssetLambda>& operations)> concrete_lambda_chain = [](
 		const std::shared_ptr<Asset>& asset,
@@ -158,7 +158,7 @@ const std::function<std::expected<double, AgisErrorCode>(
 		if (std::isnan(x)) return val;
 		result = op(result, x);
 	}
-	return std::expected<double, AgisErrorCode>(result);
+	return std::expected<double, AgisStatusCode>(result);
 };
 
 
