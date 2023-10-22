@@ -76,6 +76,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(oneTBBLibDir)\vc_mt;$(LibraryPath);;C:\Users\natha\luajit\src</LibraryPath>
     <IncludePath>$(oneTBBdpstdDir);$(IncludePath);$(SolutionDir)AgisCore\external\include;$(SolutionDir)AgisCore\external\sol2\include;C:\Users\natha\luajit\src;$(SolutionDir)AgisCore\include;</IncludePath>
+    <OutDir>$(SolutionDir)bin\$(Configuration)\net7.0</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(oneTBBdpstdDir);$(IncludePath);$(SolutionDir)AgisCore\external\include;$(SolutionDir)AgisCore\external\sol2\include;C:\Users\natha\luajit\src;$(SolutionDir)AgisCore\include;</IncludePath>
@@ -151,9 +152,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;AGISCORE_EXPORTS;_WINDOWS;_USRDLL;USE_TBB;%(PreprocessorDefinitions);_UTF8</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;AGISCORE_EXPORTS;_WINDOWS;_USRDLL;USE_TBB;%(PreprocessorDefinitions);_UTF8;_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>include\pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
@@ -236,12 +237,6 @@
     <ClCompile Include="src\ExchangeView.cpp" />
     <ClCompile Include="src\Hydra.cpp" />
     <ClCompile Include="src\Order.cpp" />
-    <ClCompile Include="src\pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="src\Portfolio.cpp" />
     <ClCompile Include="src\Trade.cpp" />
     <ClCompile Include="src\Utils.cpp" />

@@ -111,7 +111,7 @@ public:
     /// <returns></returns>
     std::vector<double> generate_baseline_returns(double starting_amount);
 
-    AGIS_API inline std::string get_asset_id() const noexcept  { return this->asset_id; }
+    AGIS_API inline std::string const& get_asset_id() const noexcept  { return this->asset_id; }
     AGIS_API inline size_t get_asset_index() const noexcept  { return this->asset_index; }
     AGIS_API inline size_t const get_size() const noexcept  { return this->rows - this->warmup; }
     AGIS_API inline size_t const get_rows() const noexcept  { return this->rows; }
