@@ -137,7 +137,7 @@ AgisStrategyTracers::get_benchmark_volatility()
 		return std::unexpected<AgisException>(AGIS_FORWARD_EXCEP(cov_matrix.get_exception()));
 	}
 
-	auto bench_strategy = dynamic_cast<BenchMarkStrategy*>(this->strategy);
+	auto bench_strategy = static_cast<BenchMarkStrategy*>(this->strategy);
 	auto& eigen_matrix = cov_matrix.unwrap()->get_eigen_matrix();
 	auto variance = eigen_matrix(bench_strategy->asset_index, bench_strategy->asset_index);
 	

@@ -235,7 +235,7 @@ void Hydra::register_strategy(std::unique_ptr<AgisStrategy> strategy)
         // init lua state if needed
         if(!this->lua) this->lua = new sol::state();
         init_lua_interface(this->lua);
-        auto lua_strategy = dynamic_cast<AgisLuaStrategy*>(strategy.get());
+        auto lua_strategy = static_cast<AgisLuaStrategy*>(strategy.get());
         lua_strategy->set_lua_ptr(this->lua);
     }
 #endif

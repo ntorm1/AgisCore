@@ -207,7 +207,7 @@ std::expected<FuturePtr, AgisErrorCode> FutureTable::front_month()
 		return std::unexpected<AgisErrorCode>(AgisErrorCode::OUT_OF_RANGE);
 	}
 	// return fron of table case as Future 
-	return std::dynamic_pointer_cast<Future>(this->_tradeable.front());
+	return std::static_pointer_cast<Future>(this->_tradeable.front());
 }
 
 
@@ -238,11 +238,11 @@ void FutureTable::__set_child_ptrs() noexcept
 {
 	// set table pointer to child assets
 	for (auto const& asset : this->_tradeable) {
-		auto future = std::dynamic_pointer_cast<Future>(asset);
+		auto future = std::static_pointer_cast<Future>(asset);
 		future->_table = this;
 	}
 	for (auto const& asset : this->_out_of_bounds) {
-		auto future = std::dynamic_pointer_cast<Future>(asset);
+		auto future = std::static_pointer_cast<Future>(asset);
 		future->_table = this;
 	}
 }
